@@ -24,15 +24,14 @@ steps:
   displayName: 'Set up the Go workspace'
 
 - script: |
-      apt-get install -y nodejs
       node --version
       npm --version
-  displayName: 'Setup nodejs environment'
+  displayName: 'Get nodejs environment version'
 
 - script: |
-       make
+      make
   workingDirectory: '$(modulePath)'
-  displayName: 'Run make'
+  displayName: 'Run make command'
 
 - task: PublishBuildArtifacts@1
   inputs:

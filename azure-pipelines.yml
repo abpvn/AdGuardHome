@@ -35,4 +35,6 @@ steps:
   displayName: 'Run make'
 
 - task: PublishBuildArtifacts@1
-  inputs: AdGuardHome
+  inputs:
+    pathtoPublish: 'AdGuardHome'
+    artifactName: 'AdGuardHome'

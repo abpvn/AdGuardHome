@@ -30,6 +30,11 @@ steps:
   displayName: 'Setup nodejs environment'
 
 - script: |
-    make
+       make
   workingDirectory: '$(modulePath)'
   displayName: 'Run make'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(modulePath)/AdGuardHome'
+    artifactName: 'AdGuardHome'

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { Trans, withNamespaces } from 'react-i18next';
 
 import Card from '../ui/Card';
 import Line from '../ui/Line';
@@ -30,7 +31,7 @@ class Statistics extends Component {
                                 {dnsQueries}
                             </div>
                             <div className="card-title-stats">
-                                DNS Queries
+                                <Trans>dns_query</Trans>
                             </div>
                         </div>
                         <div className="card-chart-bg">
@@ -48,7 +49,7 @@ class Statistics extends Component {
                                 {getPercent(dnsQueries, blockedFiltering)}
                             </div>
                             <div className="card-title-stats">
-                                Blocked by <a href="#filters">Filters</a>
+                                <Trans>blocked_by</Trans> <a href="#filters"><Trans>filters</Trans></a>
                             </div>
                         </div>
                         <div className="card-chart-bg">
@@ -66,7 +67,7 @@ class Statistics extends Component {
                                 {getPercent(dnsQueries, replacedSafebrowsing)}
                             </div>
                             <div className="card-title-stats">
-                                Blocked malware/phishing
+                                <Trans>stats_malware_phishing</Trans>
                             </div>
                         </div>
                         <div className="card-chart-bg">
@@ -84,7 +85,7 @@ class Statistics extends Component {
                                 {getPercent(dnsQueries, replacedParental)}
                             </div>
                             <div className="card-title-stats">
-                                Blocked adult websites
+                                <Trans>stats_adult</Trans>
                             </div>
                         </div>
                         <div className="card-chart-bg">
@@ -106,4 +107,4 @@ Statistics.propTypes = {
     refreshButton: PropTypes.node.isRequired,
 };
 
-export default Statistics;
+export default withNamespaces()(Statistics);

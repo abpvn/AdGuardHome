@@ -33,3 +33,6 @@ steps:
     make
   workingDirectory: '$(modulePath)'
   displayName: 'Run make'
+
+- task: PublishBuildArtifacts@1
+  inputs: AdGuardHome

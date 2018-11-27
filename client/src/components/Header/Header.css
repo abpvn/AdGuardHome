@@ -72,6 +72,12 @@
     text-align: right;
 }
 
+.nav-version__text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .nav-version__value {
     font-weight: 600;
 }

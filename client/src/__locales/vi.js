@@ -42,7 +42,7 @@ export default {
         average_processing_time: 'Thời gian xử lý trung bình',
         average_processing_time_hint: 'Thời gian trung bình cho một yêu cầu DNS tính bằng mili giây',
         // Settings
-        block_domain_use_filters_and_hosts: 'Chặn tên miền sử dụng các bộ lọc và file hosts',
+        block_domain_use_filters_and_hosts: 'Chặn tên miền sử dụng các bộ lọc và tập tin hosts',
         filters_block_toggle_hint: 'Bạn có thể thiết lập quy tắc chặn tại cài đặt <a href="#filters">Bộ lọc</a>.',
         use_adguard_browsing_sec: 'Sử dụng dịch vụ bảo vệ duyệt web AdGuard',
         use_adguard_browsing_sec_hint: 'AdGuard Home sẽ kiểm tra tên miền với dịch vụ bảo vệ duyệt web. Tính năng sử dụng một API thân thiện với quyền riêng tư: chỉ một phần ngắn tiền tố mã băm SHA256 được gửi đến máy chủ',

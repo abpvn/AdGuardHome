@@ -3,6 +3,7 @@ package ratelimit
 import (
 	"errors"
 	"log"
+	"sort"
 	"strconv"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
+	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/request"
 	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
@@ -21,8 +23,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-const defaultRatelimit = 100
-const defaultMaxRateLimitedIPs = 1024 * 1024
+const defaultRatelimit = 30
+const defaultResponseSize = 1000
 
 var (
 	tokenBuckets = cache.New(time.Hour, time.Hour)
@@ -40,10 +42,34 @@ func (p *plug) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		ratelimited.Inc()
 		return 0, nil
 	}
-	return plugin.NextOrFailure(p.Name(), p.Next, ctx, w, r)
+
+	// Record response to get status code and size of the reply.
+	rw := dnstest.NewRecorder(w)
+	status, err := plugin.NextOrFailure(p.Name(), p.Next, ctx, rw, r)
+
+	size := rw.Len
+
+	if size > defaultResponseSize && state.Proto() == "udp" {
+		// For large UDP responses we call allowRequest more times
+		// The exact number of times depends on the response size
+		for i := 0; i < size/defaultResponseSize; i++ {
+			p.allowRequest(ip)
+		}
+	}
+
+	return status, err
 }
 
 func (p *plug) allowRequest(ip string) (bool, error) {
+
+	if len(p.whitelist) > 0 {
+		i := sort.SearchStrings(p.whitelist, ip)
+
+		if i < len(p.whitelist) && p.whitelist[i] == ip {
+			return true, nil
+		}
+	}
+
 	if _, found := tokenBuckets.Get(ip); !found {
 		tokenBuckets.Set(ip, rate.New(p.ratelimit, time.Second), time.Hour)
 	}
@@ -83,25 +109,45 @@ type plug struct {
 	Next plugin.Handler
 
 	// configuration for creating above
-	ratelimit int // in requests per second per IP
+	ratelimit int      // in requests per second per IP
+	whitelist []string // a list of whitelisted IP addresses
 }
 
-func setup(c *caddy.Controller) error {
+func setupPlugin(c *caddy.Controller) (*plug, error) {
+
 	p := &plug{ratelimit: defaultRatelimit}
-	config := dnsserver.GetConfig(c)
 
 	for c.Next() {
 		args := c.RemainingArgs()
-		if len(args) <= 0 {
-			continue
+		if len(args) > 0 {
+			ratelimit, err := strconv.Atoi(args[0])
+			if err != nil {
+				return nil, c.ArgErr()
+			}
+			p.ratelimit = ratelimit
 		}
-		ratelimit, err := strconv.Atoi(args[0])
-		if err != nil {
-			return c.ArgErr()
+		for c.NextBlock() {
+			switch c.Val() {
+			case "whitelist":
+				p.whitelist = c.RemainingArgs()
+
+				if len(p.whitelist) > 0 {
+					sort.Strings(p.whitelist)
+				}
+			}
 		}
-		p.ratelimit = ratelimit
 	}
 
+	return p, nil
+}
+
+func setup(c *caddy.Controller) error {
+	p, err := setupPlugin(c)
+	if err != nil {
+		return err
+	}
+
+	config := dnsserver.GetConfig(c)
 	config.AddPlugin(func(next plugin.Handler) plugin.Handler {
 		p.Next = next
 		return p

@@ -8,6 +8,8 @@ import (
 	"sync" // Include all plugins.
 
 	_ "github.com/AdguardTeam/AdGuardHome/coredns_plugin"
+	_ "github.com/AdguardTeam/AdGuardHome/coredns_plugin/ratelimit"
+	_ "github.com/AdguardTeam/AdGuardHome/coredns_plugin/refuseany"
 	_ "github.com/AdguardTeam/AdGuardHome/upstream"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/coremain"
@@ -64,6 +66,8 @@ var directives = []string{
 	"prometheus",
 	"errors",
 	"log",
+	"refuseany",
+	"ratelimit",
 	"dnsfilter",
 	"dnstap",
 	"chaos",

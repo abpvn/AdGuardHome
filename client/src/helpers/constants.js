@@ -20,3 +20,38 @@ export const REPOSITORY = {
     URL: 'https://github.com/AdguardTeam/AdGuardHome',
     TRACKERS_DB: 'https://github.com/AdguardTeam/AdGuardHome/tree/master/client/src/helpers/trackers/adguard.json',
 };
+
+export const LANGUAGES = [
+    {
+        key: 'en',
+        name: 'English',
+    },
+    {
+        key: 'es',
+        name: 'Español',
+    },
+    {
+        key: 'fr',
+        name: 'Français',
+    },
+    {
+        key: 'pt-br',
+        name: 'Português (BR)',
+    },
+    {
+        key: 'sv',
+        name: 'Svenska',
+    },
+    {
+        key: 'vi',
+        name: 'Tiếng Việt',
+    },
+    {
+        key: 'ru',
+        name: 'Русский',
+    },
+    {
+        key: 'ja',
+        name: '日本語',
+    },
+];

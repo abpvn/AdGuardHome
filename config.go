@@ -45,6 +45,7 @@ type configuration struct {
 	CoreDNS       coreDNSConfig `yaml:"coredns"`
 	Filters       []filter      `yaml:"filters"`
 	UserRules     []string      `yaml:"user_rules"`
+	Language      string        `yaml:"language"` // two-letter ISO 639-1 language code
 
 	sync.RWMutex `yaml:"-"`
 }
@@ -67,6 +68,8 @@ type coreDNSConfig struct {
 	ParentalSensitivity int             `yaml:"parental_sensitivity"`
 	BlockedResponseTTL  int             `yaml:"blocked_response_ttl"`
 	QueryLogEnabled     bool            `yaml:"querylog_enabled"`
+	Ratelimit           int             `yaml:"ratelimit"`
+	RefuseAny           bool            `yaml:"refuse_any"`
 	Pprof               string          `yaml:"-"`
 	Cache               string          `yaml:"-"`
 	Prometheus          string          `yaml:"-"`
@@ -101,6 +104,8 @@ var config = configuration{
 		SafeBrowsingEnabled: false,
 		BlockedResponseTTL:  10, // in seconds
 		QueryLogEnabled:     true,
+		Ratelimit:           20,
+		RefuseAny:           true,
 		BootstrapDNS:        "8.8.8.8:53",
 		UpstreamDNS:         defaultDNS,
 		Cache:               "cache",
@@ -252,7 +257,9 @@ const coreDNSConfigTemplate = `.:{{.Port}} {
 		{{end}}
     }{{end}}
     {{.Pprof}}
-    hosts {
+	{{if .RefuseAny}}refuseany{{end}}
+	{{if gt .Ratelimit 0}}ratelimit {{.Ratelimit}}{{end}}
+	hosts {
         fallthrough
     }
     {{if .UpstreamDNS}}upstream {{range .UpstreamDNS}}{{.}} {{end}} { bootstrap {{.BootstrapDNS}} }{{end}}

@@ -38,7 +38,7 @@ const settings = handleActions({
 });
 
 const dashboard = handleActions({
-    [actions.dnsStatusRequest]: state => ({ ...state, processing: true }),
+    [actions.dnsStatusRequest]: state => ({ ...state, processing: true, isLogined: false }),
     [actions.dnsStatusFailure]: state => ({ ...state, processing: false }),
     [actions.dnsStatusSuccess]: (state, { payload }) => {
         const {
@@ -50,6 +50,7 @@ const dashboard = handleActions({
             upstream_dns: upstreamDns,
             protection_enabled: protectionEnabled,
             language,
+            isLogined,
         } = payload;
         const newState = {
             ...state,
@@ -62,6 +63,7 @@ const dashboard = handleActions({
             upstreamDns: upstreamDns.join('\n'),
             protectionEnabled,
             language,
+            isLogined,
         };
         return newState;
     },

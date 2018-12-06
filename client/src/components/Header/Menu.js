@@ -32,7 +32,7 @@ class Menu extends Component {
                             </div>
                         </li>
                         <li className="nav-item">
-                            <NavLink to="/" exact={true} className="nav-link">
+                            <NavLink to="/dashboard" exact={true} className="nav-link">
                                 <svg className="nav-icon" fill="none" height="24" stroke="#9aa0ac" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="m3 9 9-7 9 7v11a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2-2z"/><path d="m9 22v-10h6v10"/></svg>
                                 <Trans>dashboard</Trans>
                             </NavLink>

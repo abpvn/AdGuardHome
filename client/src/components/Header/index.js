@@ -30,6 +30,11 @@ class Header extends Component {
             'badge-success': dashboard.protectionEnabled,
             'badge-danger': !dashboard.protectionEnabled,
         });
+        const menuClass = classnames({
+            'text-center': true,
+            'col-lg-6 mobile-menu': true,
+            'mobile-menu--active': this.props.isMenuOpen,
+        });
 
         return (
             <div className="header">
@@ -43,19 +48,20 @@ class Header extends Component {
                                 <Link to="/" className="nav-link pl-0 pr-1">
                                     <img src={logo} alt="" className="header-brand-img" />
                                 </Link>
-                                {!dashboard.proccessing && dashboard.isCoreRunning &&
+                                {dashboard.isLogined &&
+                                    !dashboard.proccessing && dashboard.isCoreRunning &&
                                     <span className={badgeClass}>
                                         <Trans>{dashboard.protectionEnabled ? 'on' : 'off'}</Trans>
                                     </span>
                                 }
                             </div>
                         </div>
-                        <Menu
+                        {dashboard.isLogined ? <Menu
                             location={this.props.location}
                             isMenuOpen={this.state.isMenuOpen}
                             toggleMenuOpen={this.toggleMenuOpen}
                             closeMenu={this.closeMenu}
-                        />
+                        /> : <div className={menuClass}>ABPVN DNS Login</div>}
                         <div className="col col-sm-6 col-lg-3">
                             <Version
                                 { ...this.props.dashboard }

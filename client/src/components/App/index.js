@@ -13,6 +13,7 @@ import Dashboard from '../../containers/Dashboard';
 import Settings from '../../containers/Settings';
 import Filters from '../../containers/Filters';
 import Logs from '../../containers/Logs';
+import Login from '../../containers/Login';
 import Footer from '../ui/Footer';
 import Toasts from '../Toasts';
 import Status from '../ui/Status';
@@ -77,7 +78,8 @@ class App extends Component {
                         }
                         {!dashboard.processing && dashboard.isCoreRunning &&
                             <Fragment>
-                                <Route path="/" exact component={Dashboard} />
+                                <Route path="/" exact component={Login} />
+                                <Route path="/dashboard" component={Dashboard} />
                                 <Route path="/settings" component={Settings} />
                                 <Route path="/filters" component={Filters} />
                                 <Route path="/logs" component={Logs} />

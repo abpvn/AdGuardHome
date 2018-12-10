@@ -7,8 +7,11 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/gobuffalo/packr"
 	"golang.org/x/crypto/ssh/terminal"
@@ -114,6 +117,12 @@ func main() {
 			log.Fatal(err)
 		}
 
+		// Do the upgrade if necessary
+		err = upgradeConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		// parse from config file
 		err = parseConfig()
 		if err != nil {
@@ -129,36 +138,51 @@ func main() {
 		}
 	}
 
-	// Eat all args so that coredns can start happily
-	if len(os.Args) > 1 {
-		os.Args = os.Args[:1]
-	}
-
-	// Do the upgrade if necessary
-	err := upgradeConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Save the updated config
-	err = writeConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Load filters from the disk
+	// And if any filter has zero ID, assign a new one
 	for i := range config.Filters {
-		filter := &config.Filters[i]
-		err = filter.load()
+		filter := &config.Filters[i] // otherwise we're operating on a copy
+		if filter.ID == 0 {
+			filter.ID = assignUniqueFilterID()
+		}
+		err := filter.load()
 		if err != nil {
 			// This is okay for the first start, the filter will be loaded later
 			log.Printf("Couldn't load filter %d contents due to %s", filter.ID, err)
+			// clear LastUpdated so it gets fetched right away
 		}
+		if len(filter.Rules) == 0 {
+			filter.LastUpdated = time.Time{}
+		}
+	}
+
+	// Update filters we've just loaded right away, don't wait for periodic update timer
+	go func() {
+		refreshFiltersIfNeccessary(false)
+		// Save the updated config
+		err := config.write()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	signalChannel := make(chan os.Signal)
+	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
+	go func() {
+		<-signalChannel
+		cleanup()
+		os.Exit(0)
+	}()
+
+	// Save the updated config
+	err := config.write()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	address := net.JoinHostPort(config.BindHost, strconv.Itoa(config.BindPort))
 
-	runFiltersUpdatesTimer()
+	go periodicallyRefreshFilters()
 
 	http.Handle("/", optionalAuthHandler(http.FileServer(box)))
 	registerControlHandlers()
@@ -173,6 +197,13 @@ func main() {
 	log.Fatal(http.ListenAndServe(address, nil))
 }
 
+func cleanup() {
+	err := stopDNSServer()
+	if err != nil {
+		log.Printf("Couldn't stop DNS server: %s", err)
+	}
+}
+
 func getInput() (string, error) {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Scan()
@@ -183,7 +214,7 @@ func getInput() (string, error) {
 
 func promptAndGet(prompt string) (string, error) {
 	for {
-		fmt.Printf(prompt)
+		fmt.Print(prompt)
 		input, err := getInput()
 		if err != nil {
 			log.Printf("Failed to get input, aborting: %s", err)
@@ -198,9 +229,9 @@ func promptAndGet(prompt string) (string, error) {
 
 func promptAndGetPassword(prompt string) (string, error) {
 	for {
-		fmt.Printf(prompt)
+		fmt.Print(prompt)
 		password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
-		fmt.Printf("\n")
+		fmt.Print("\n")
 		if err != nil {
 			log.Printf("Failed to get input, aborting: %s", err)
 			return "", err
@@ -220,7 +251,6 @@ func askUsernamePasswordIfPossible() error {
 	_, err := os.Stat(configfile)
 	if !os.IsNotExist(err) {
 		// do nothing, file exists
-		trace("File %s exists, won't ask for password", configfile)
 		return nil
 	}
 	if !terminal.IsTerminal(int(os.Stdin.Fd())) {
@@ -258,83 +288,5 @@ func askUsernamePasswordIfPossible() error {
 
 	config.AuthName = username
 	config.AuthPass = password
-	return nil
-}
-
-// Performs necessary upgrade operations if needed
-func upgradeConfig() error {
-
-	if config.SchemaVersion == SchemaVersion {
-		// No upgrade, do nothing
-		return nil
-	}
-
-	if config.SchemaVersion > SchemaVersion {
-		// Unexpected -- the config file is newer than we expect
-		return fmt.Errorf("configuration file is supposed to be used with a newer version of AdGuard Home, schema=%d", config.SchemaVersion)
-	}
-
-	// Perform upgrade operations for each consecutive version upgrade
-	for oldVersion, newVersion := config.SchemaVersion, config.SchemaVersion+1; newVersion <= SchemaVersion; {
-
-		err := upgradeConfigSchema(oldVersion, newVersion)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Increment old and new versions
-		oldVersion++
-		newVersion++
-	}
-
-	// Save the current schema version
-	config.SchemaVersion = SchemaVersion
-
-	return nil
-}
-
-// Upgrade from oldVersion to newVersion
-func upgradeConfigSchema(oldVersion int, newVersion int) error {
-
-	if oldVersion == 0 && newVersion == 1 {
-		log.Printf("Updating schema from %d to %d", oldVersion, newVersion)
-
-		// The first schema upgrade:
-		// Added "ID" field to "filter" -- we need to populate this field now
-		// Added "config.ourDataDir" -- where we will now store filters contents
-		for i := range config.Filters {
-
-			filter := &config.Filters[i] // otherwise we will be operating on a copy
-
-			// Set the filter ID
-			log.Printf("Seting ID=%d for filter %s", NextFilterId, filter.URL)
-			filter.ID = NextFilterId
-			NextFilterId++
-
-			// Forcibly update the filter
-			_, err := filter.update(true)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			// Saving it to the filters dir now
-			err = filter.save()
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		// No more "dnsfilter.txt", filters are now loaded from config.ourDataDir/filters/
-		dnsFilterPath := filepath.Join(config.ourBinaryDir, "dnsfilter.txt")
-		_, err := os.Stat(dnsFilterPath)
-		if !os.IsNotExist(err) {
-			log.Printf("Deleting %s as we don't need it anymore", dnsFilterPath)
-			err = os.Remove(dnsFilterPath)
-			if err != nil {
-				log.Printf("Cannot remove %s due to %s", dnsFilterPath, err)
-			}
-		}
-	}
-
 	return nil
 }

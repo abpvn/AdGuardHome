@@ -1,28 +1,24 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
-	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/AdguardTeam/AdGuardHome/upstream"
+	"github.com/AdguardTeam/AdGuardHome/dnsforward"
+	"github.com/miekg/dns"
 
-	corednsplugin "github.com/AdguardTeam/AdGuardHome/coredns_plugin"
 	"gopkg.in/asaskevich/govalidator.v4"
 )
 
 const updatePeriod = time.Minute * 30
-
-var filterTitleRegexp = regexp.MustCompile(`^! Title: +(.*)$`)
 
 // cached version.json to avoid hammering github.io for each page reload
 var versionCheckJSON []byte
@@ -36,24 +32,20 @@ var client = &http.Client{
 }
 
 // -------------------
-// coredns run control
+// dns run control
 // -------------------
-func tellCoreDNSToReload() {
-	corednsplugin.Reload <- true
-}
-
-func writeAllConfigsAndReloadCoreDNS() error {
+func writeAllConfigsAndReloadDNS() error {
 	err := writeAllConfigs()
 	if err != nil {
 		log.Printf("Couldn't write all configs: %s", err)
 		return err
 	}
-	tellCoreDNSToReload()
+	reconfigureDNSServer()
 	return nil
 }
 
 func httpUpdateConfigReloadDNSReturnOK(w http.ResponseWriter, r *http.Request) {
-	err := writeAllConfigsAndReloadCoreDNS()
+	err := writeAllConfigsAndReloadDNS()
 	if err != nil {
 		errortext := fmt.Sprintf("Couldn't write config file: %s", err)
 		log.Println(errortext)
@@ -63,7 +55,6 @@ func httpUpdateConfigReloadDNSReturnOK(w http.ResponseWriter, r *http.Request) {
 	returnOK(w, r)
 }
 
-//noinspection GoUnusedParameter
 func returnOK(w http.ResponseWriter, r *http.Request) {
 	_, err := fmt.Fprintf(w, "OK\n")
 	if err != nil {
@@ -73,16 +64,15 @@ func returnOK(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//noinspection GoUnusedParameter
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"dns_address":        config.BindHost,
-		"dns_port":           config.CoreDNS.Port,
-		"protection_enabled": config.CoreDNS.ProtectionEnabled,
-		"querylog_enabled":   config.CoreDNS.QueryLogEnabled,
+		"dns_port":           config.DNS.Port,
+		"protection_enabled": config.DNS.ProtectionEnabled,
+		"querylog_enabled":   config.DNS.QueryLogEnabled,
 		"running":            isRunning(),
-		"bootstrap_dns":      config.CoreDNS.BootstrapDNS,
-		"upstream_dns":       config.CoreDNS.UpstreamDNS,
+		"bootstrap_dns":      config.DNS.BootstrapDNS,
+		"upstream_dns":       config.DNS.UpstreamDNS,
 		"version":            VersionString,
 		"language":           config.Language,
 	}
@@ -105,12 +95,12 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleProtectionEnable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.ProtectionEnabled = true
+	config.DNS.ProtectionEnabled = true
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
 func handleProtectionDisable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.ProtectionEnabled = false
+	config.DNS.ProtectionEnabled = false
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
@@ -118,12 +108,12 @@ func handleProtectionDisable(w http.ResponseWriter, r *http.Request) {
 // stats
 // -----
 func handleQueryLogEnable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.QueryLogEnabled = true
+	config.DNS.QueryLogEnabled = true
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
 func handleQueryLogDisable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.QueryLogEnabled = false
+	config.DNS.QueryLogEnabled = false
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
@@ -145,9 +135,9 @@ func handleSetUpstreamDNS(w http.ResponseWriter, r *http.Request) {
 	hosts := strings.Fields(string(body))
 
 	if len(hosts) == 0 {
-		config.CoreDNS.UpstreamDNS = defaultDNS
+		config.DNS.UpstreamDNS = defaultDNS
 	} else {
-		config.CoreDNS.UpstreamDNS = hosts
+		config.DNS.UpstreamDNS = hosts
 	}
 
 	err = writeAllConfigs()
@@ -157,7 +147,7 @@ func handleSetUpstreamDNS(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorText, http.StatusInternalServerError)
 		return
 	}
-	tellCoreDNSToReload()
+	reconfigureDNSServer()
 	_, err = fmt.Fprintf(w, "OK %d servers\n", len(hosts))
 	if err != nil {
 		errorText := fmt.Sprintf("Couldn't write body: %s", err)
@@ -213,28 +203,35 @@ func handleTestUpstreamDNS(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkDNS(input string) error {
-
-	u, err := upstream.NewUpstream(input, config.CoreDNS.BootstrapDNS)
-
+	log.Printf("Checking if DNS %s works...", input)
+	u, err := dnsforward.AddressToUpstream(input, "")
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to choose upstream for %s: %s", input, err)
 	}
-	defer u.Close()
 
-	alive, err := upstream.IsAlive(u)
-
+	req := dns.Msg{}
+	req.Id = dns.Id()
+	req.RecursionDesired = true
+	req.Question = []dns.Question{
+		{Name: "google-public-dns-a.google.com.", Qtype: dns.TypeA, Qclass: dns.ClassINET},
+	}
+	reply, err := u.Exchange(&req)
 	if err != nil {
 		return fmt.Errorf("couldn't communicate with DNS server %s: %s", input, err)
 	}
-
-	if !alive {
-		return fmt.Errorf("DNS server has not passed the healthcheck: %s", input)
+	if len(reply.Answer) != 1 {
+		return fmt.Errorf("DNS server %s returned wrong answer", input)
+	}
+	if t, ok := reply.Answer[0].(*dns.A); ok {
+		if !net.IPv4(8, 8, 8, 8).Equal(t.A) {
+			return fmt.Errorf("DNS server %s returned wrong answer: %v", input, t.A)
+		}
 	}
 
+	log.Printf("DNS %s works OK", input)
 	return nil
 }
 
-//noinspection GoUnusedParameter
 func handleGetVersionJSON(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	if now.Sub(versionCheckLastTime) <= versionCheckPeriod && len(versionCheckJSON) != 0 {
@@ -246,7 +243,7 @@ func handleGetVersionJSON(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := client.Get(versionCheckURL)
 	if err != nil {
-		errortext := fmt.Sprintf("Couldn't get querylog from coredns: %T %s\n", err, err)
+		errortext := fmt.Sprintf("Couldn't get version check json from %s: %T %s\n", versionCheckURL, err, err)
 		log.Println(errortext)
 		http.Error(w, errortext, http.StatusBadGateway)
 		return
@@ -258,7 +255,7 @@ func handleGetVersionJSON(w http.ResponseWriter, r *http.Request) {
 	// read the body entirely
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		errortext := fmt.Sprintf("Couldn't read response body: %s", err)
+		errortext := fmt.Sprintf("Couldn't read response body from %s: %s", versionCheckURL, err)
 		log.Println(errortext)
 		http.Error(w, errortext, http.StatusBadGateway)
 		return
@@ -281,19 +278,18 @@ func handleGetVersionJSON(w http.ResponseWriter, r *http.Request) {
 // ---------
 
 func handleFilteringEnable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.FilteringEnabled = true
+	config.DNS.FilteringEnabled = true
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
 func handleFilteringDisable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.FilteringEnabled = false
+	config.DNS.FilteringEnabled = false
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
-//noinspection GoUnusedParameter
 func handleFilteringStatus(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
-		"enabled": config.CoreDNS.FilteringEnabled,
+		"enabled": config.DNS.FilteringEnabled,
 	}
 
 	config.RLock()
@@ -320,7 +316,6 @@ func handleFilteringStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleFilteringAddURL(w http.ResponseWriter, r *http.Request) {
-
 	filter := filter{}
 	err := json.NewDecoder(r.Body).Decode(&filter)
 	if err != nil {
@@ -349,9 +344,8 @@ func handleFilteringAddURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set necessary properties
-	filter.ID = NextFilterId
+	filter.ID = assignUniqueFilterID()
 	filter.Enabled = true
-	NextFilterId++
 
 	// Download the filter contents
 	ok, err := filter.update(true)
@@ -383,7 +377,8 @@ func handleFilteringAddURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// URL is deemed valid, append it to filters, update config, write new filter file and tell coredns to reload it
+	// URL is deemed valid, append it to filters, update config, write new filter file and tell dns to reload it
+	// TODO: since we directly feed filters in-memory, revisit if writing configs is always neccessary
 	config.Filters = append(config.Filters, filter)
 	err = writeAllConfigs()
 	if err != nil {
@@ -393,7 +388,7 @@ func handleFilteringAddURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tellCoreDNSToReload()
+	reconfigureDNSServer()
 
 	_, err = fmt.Fprintf(w, "OK %d rules\n", filter.RulesCount)
 	if err != nil {
@@ -430,7 +425,7 @@ func handleFilteringRemoveURL(w http.ResponseWriter, r *http.Request) {
 			newFilters = append(newFilters, filter)
 		} else {
 			// Remove the filter file
-			err := os.Remove(filter.getFilterFilePath())
+			err := os.Remove(filter.Path())
 			if err != nil {
 				errorText := fmt.Sprintf("Couldn't remove the filter file: %s", err)
 				http.Error(w, errorText, http.StatusInternalServerError)
@@ -478,7 +473,7 @@ func handleFilteringEnableURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// kick off refresh of rules from new URLs
-	checkFiltersUpdates(false)
+	refreshFiltersIfNeccessary(false)
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
@@ -534,185 +529,8 @@ func handleFilteringSetRules(w http.ResponseWriter, r *http.Request) {
 
 func handleFilteringRefresh(w http.ResponseWriter, r *http.Request) {
 	force := r.URL.Query().Get("force")
-	updated := checkFiltersUpdates(force != "")
+	updated := refreshFiltersIfNeccessary(force != "")
 	fmt.Fprintf(w, "OK %d filters updated\n", updated)
-}
-
-// Sets up a timer that will be checking for filters updates periodically
-func runFiltersUpdatesTimer() {
-	go func() {
-		for range time.Tick(time.Minute) {
-			checkFiltersUpdates(false)
-		}
-	}()
-}
-
-// Checks filters updates if necessary
-// If force is true, it ignores the filter.LastUpdated field value
-func checkFiltersUpdates(force bool) int {
-	config.Lock()
-
-	// fetch URLs
-	updateCount := 0
-	for i := range config.Filters {
-		filter := &config.Filters[i] // otherwise we will be operating on a copy
-		updated, err := filter.update(force)
-		if err != nil {
-			log.Printf("Failed to update filter %s: %s\n", filter.URL, err)
-			continue
-		}
-		if updated {
-			// Saving it to the filters dir now
-			err = filter.save()
-			if err != nil {
-				log.Printf("Failed to save the updated filter %d: %s", filter.ID, err)
-				continue
-			}
-
-			updateCount++
-		}
-	}
-	config.Unlock()
-
-	if updateCount > 0 {
-		tellCoreDNSToReload()
-	}
-	return updateCount
-}
-
-// A helper function that parses filter contents and returns a number of rules and a filter name (if there's any)
-func parseFilterContents(contents []byte) (int, string) {
-	lines := strings.Split(string(contents), "\n")
-	rulesCount := 0
-	name := ""
-	seenTitle := false
-
-	// Count lines in the filter
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if len(line) > 0 && line[0] == '!' {
-			if m := filterTitleRegexp.FindAllStringSubmatch(line, -1); len(m) > 0 && len(m[0]) >= 2 && !seenTitle {
-				name = m[0][1]
-				seenTitle = true
-			}
-		} else if len(line) != 0 {
-			rulesCount++
-		}
-	}
-
-	return rulesCount, name
-}
-
-// Checks for filters updates
-// If "force" is true -- does not check the filter's LastUpdated field
-// Call "save" to persist the filter contents
-func (filter *filter) update(force bool) (bool, error) {
-	if !filter.Enabled {
-		return false, nil
-	}
-	if !force && time.Since(filter.LastUpdated) <= updatePeriod {
-		return false, nil
-	}
-
-	log.Printf("Downloading update for filter %d from %s", filter.ID, filter.URL)
-
-	// use the same update period for failed filter downloads to avoid flooding with requests
-	filter.LastUpdated = time.Now()
-
-	resp, err := client.Get(filter.URL)
-	if resp != nil && resp.Body != nil {
-		defer resp.Body.Close()
-	}
-	if err != nil {
-		log.Printf("Couldn't request filter from URL %s, skipping: %s", filter.URL, err)
-		return false, err
-	}
-
-	if resp.StatusCode != 200 {
-		log.Printf("Got status code %d from URL %s, skipping", resp.StatusCode, filter.URL)
-		return false, fmt.Errorf("got status code != 200: %d", resp.StatusCode)
-	}
-
-	contentType := strings.ToLower(resp.Header.Get("content-type"))
-	if !strings.HasPrefix(contentType, "text/plain") {
-		log.Printf("Non-text response %s from %s, skipping", contentType, filter.URL)
-		return false, fmt.Errorf("non-text response %s", contentType)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Couldn't fetch filter contents from URL %s, skipping: %s", filter.URL, err)
-		return false, err
-	}
-
-	// Extract filter name and count number of rules
-	rulesCount, filterName := parseFilterContents(body)
-
-	if filterName != "" {
-		filter.Name = filterName
-	}
-
-	// Check if the filter has been really changed
-	if bytes.Equal(filter.contents, body) {
-		log.Printf("The filter %d text has not changed", filter.ID)
-		return false, nil
-	}
-
-	log.Printf("Filter %d has been updated: %d bytes, %d rules", filter.ID, len(body), rulesCount)
-	filter.RulesCount = rulesCount
-	filter.contents = body
-
-	return true, nil
-}
-
-// saves filter contents to the file in config.ourDataDir
-func (filter *filter) save() error {
-
-	filterFilePath := filter.getFilterFilePath()
-	log.Printf("Saving filter %d contents to: %s", filter.ID, filterFilePath)
-
-	err := writeFileSafe(filterFilePath, filter.contents)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// loads filter contents from the file in config.ourDataDir
-func (filter *filter) load() error {
-
-	if !filter.Enabled {
-		// No need to load a filter that is not enabled
-		return nil
-	}
-
-	filterFilePath := filter.getFilterFilePath()
-	log.Printf("Loading filter %d contents to: %s", filter.ID, filterFilePath)
-
-	if _, err := os.Stat(filterFilePath); os.IsNotExist(err) {
-		// do nothing, file doesn't exist
-		return err
-	}
-
-	filterFileContents, err := ioutil.ReadFile(filterFilePath)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Filter %d length is %d", filter.ID, len(filterFileContents))
-	filter.contents = filterFileContents
-
-	// Now extract the rules count
-	rulesCount, _ := parseFilterContents(filter.contents)
-	filter.RulesCount = rulesCount
-
-	return nil
-}
-
-// Path to the filter contents
-func (filter *filter) getFilterFilePath() string {
-	return filepath.Join(config.ourBinaryDir, config.ourDataDir, FiltersDir, strconv.FormatInt(filter.ID, 10)+".txt")
 }
 
 // ------------
@@ -720,19 +538,18 @@ func (filter *filter) getFilterFilePath() string {
 // ------------
 
 func handleSafeBrowsingEnable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.SafeBrowsingEnabled = true
+	config.DNS.SafeBrowsingEnabled = true
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
 func handleSafeBrowsingDisable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.SafeBrowsingEnabled = false
+	config.DNS.SafeBrowsingEnabled = false
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
-//noinspection GoUnusedParameter
 func handleSafeBrowsingStatus(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
-		"enabled": config.CoreDNS.SafeBrowsingEnabled,
+		"enabled": config.DNS.SafeBrowsingEnabled,
 	}
 	jsonVal, err := json.Marshal(data)
 	if err != nil {
@@ -795,23 +612,22 @@ func handleParentalEnable(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Sensitivity must be set to valid value", 400)
 		return
 	}
-	config.CoreDNS.ParentalSensitivity = i
-	config.CoreDNS.ParentalEnabled = true
+	config.DNS.ParentalSensitivity = i
+	config.DNS.ParentalEnabled = true
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
 func handleParentalDisable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.ParentalEnabled = false
+	config.DNS.ParentalEnabled = false
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
-//noinspection GoUnusedParameter
 func handleParentalStatus(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
-		"enabled": config.CoreDNS.ParentalEnabled,
+		"enabled": config.DNS.ParentalEnabled,
 	}
-	if config.CoreDNS.ParentalEnabled {
-		data["sensitivity"] = config.CoreDNS.ParentalSensitivity
+	if config.DNS.ParentalEnabled {
+		data["sensitivity"] = config.DNS.ParentalSensitivity
 	}
 	jsonVal, err := json.Marshal(data)
 	if err != nil {
@@ -836,19 +652,18 @@ func handleParentalStatus(w http.ResponseWriter, r *http.Request) {
 // ------------
 
 func handleSafeSearchEnable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.SafeSearchEnabled = true
+	config.DNS.SafeSearchEnabled = true
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
 func handleSafeSearchDisable(w http.ResponseWriter, r *http.Request) {
-	config.CoreDNS.SafeSearchEnabled = false
+	config.DNS.SafeSearchEnabled = false
 	httpUpdateConfigReloadDNSReturnOK(w, r)
 }
 
-//noinspection GoUnusedParameter
 func handleSafeSearchStatus(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
-		"enabled": config.CoreDNS.SafeSearchEnabled,
+		"enabled": config.DNS.SafeSearchEnabled,
 	}
 	jsonVal, err := json.Marshal(data)
 	if err != nil {
@@ -872,17 +687,17 @@ func registerControlHandlers() {
 	http.HandleFunc("/control/status", optionalAuth(ensureGET(handleStatus)))
 	http.HandleFunc("/control/enable_protection", optionalAuth(ensurePOST(handleProtectionEnable)))
 	http.HandleFunc("/control/disable_protection", optionalAuth(ensurePOST(handleProtectionDisable)))
-	http.HandleFunc("/control/querylog", optionalAuth(ensureGET(corednsplugin.HandleQueryLog)))
+	http.HandleFunc("/control/querylog", optionalAuth(ensureGET(dnsforward.HandleQueryLog)))
 	http.HandleFunc("/control/querylog_enable", optionalAuth(ensurePOST(handleQueryLogEnable)))
 	http.HandleFunc("/control/querylog_disable", optionalAuth(ensurePOST(handleQueryLogDisable)))
 	http.HandleFunc("/control/set_upstream_dns", optionalAuth(ensurePOST(handleSetUpstreamDNS)))
 	http.HandleFunc("/control/test_upstream_dns", optionalAuth(ensurePOST(handleTestUpstreamDNS)))
 	http.HandleFunc("/control/i18n/change_language", optionalAuth(ensurePOST(handleI18nChangeLanguage)))
 	http.HandleFunc("/control/i18n/current_language", optionalAuth(ensureGET(handleI18nCurrentLanguage)))
-	http.HandleFunc("/control/stats_top", optionalAuth(ensureGET(corednsplugin.HandleStatsTop)))
-	http.HandleFunc("/control/stats", optionalAuth(ensureGET(corednsplugin.HandleStats)))
-	http.HandleFunc("/control/stats_history", optionalAuth(ensureGET(corednsplugin.HandleStatsHistory)))
-	http.HandleFunc("/control/stats_reset", optionalAuth(ensurePOST(corednsplugin.HandleStatsReset)))
+	http.HandleFunc("/control/stats_top", optionalAuth(ensureGET(dnsforward.HandleStatsTop)))
+	http.HandleFunc("/control/stats", optionalAuth(ensureGET(dnsforward.HandleStats)))
+	http.HandleFunc("/control/stats_history", optionalAuth(ensureGET(dnsforward.HandleStatsHistory)))
+	http.HandleFunc("/control/stats_reset", optionalAuth(ensurePOST(dnsforward.HandleStatsReset)))
 	http.HandleFunc("/control/version.json", optionalAuth(handleGetVersionJSON))
 	http.HandleFunc("/control/filtering/enable", optionalAuth(ensurePOST(handleFilteringEnable)))
 	http.HandleFunc("/control/filtering/disable", optionalAuth(ensurePOST(handleFilteringDisable)))

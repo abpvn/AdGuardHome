@@ -19,8 +19,7 @@ import (
 // ----------------------------------
 
 // Writes data first to a temporary file and then renames it to what's specified in path
-func writeFileSafe(path string, data []byte) error {
-
+func safeWriteFile(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
@@ -32,12 +31,7 @@ func writeFileSafe(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	err = os.Rename(tmpPath, path)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.Rename(tmpPath, path)
 }
 
 // ----------------------------------
@@ -135,6 +129,13 @@ func parseParametersFromBody(r io.Reader) (map[string]string, error) {
 // ---------------------
 // debug logging helpers
 // ---------------------
+func _Func() string {
+	pc := make([]uintptr, 10) // at least 1 entry needed
+	runtime.Callers(2, pc)
+	f := runtime.FuncForPC(pc[0])
+	return path.Base(f.Name())
+}
+
 func trace(format string, args ...interface{}) {
 	pc := make([]uintptr, 10) // at least 1 entry needed
 	runtime.Callers(2, pc)

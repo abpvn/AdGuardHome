@@ -75,7 +75,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		"upstream_dns":       config.DNS.UpstreamDNS,
 		"version":            VersionString,
 		"language":           config.Language,
-		"isLogined": isLogined(),
+		"isLogined":          isLogined(),
 	}
 
 	jsonVal, err := json.Marshal(data)
@@ -95,8 +95,9 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func isLogined() {
-	return false;
+func isLogined() bool {
+	isLogined := false
+	return isLogined
 }
 
 func handleProtectionEnable(w http.ResponseWriter, r *http.Request) {

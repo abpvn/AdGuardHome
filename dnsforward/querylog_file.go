@@ -5,11 +5,11 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/AdguardTeam/golibs/log"
 	"github.com/go-test/deep"
 )
 
@@ -19,7 +19,23 @@ var (
 
 const enableGzip = false
 
-func flushToFile(buffer []*logEntry) error {
+// flushLogBuffer flushes the current buffer to file and resets the current buffer
+func (l *queryLog) flushLogBuffer() error {
+	// flush remainder to file
+	l.logBufferLock.Lock()
+	flushBuffer := l.logBuffer
+	l.logBuffer = nil
+	l.logBufferLock.Unlock()
+	err := l.flushToFile(flushBuffer)
+	if err != nil {
+		log.Error("Saving querylog to file failed: %s", err)
+		return err
+	}
+	return nil
+}
+
+// flushToFile saves the specified log entries to the query log file
+func (l *queryLog) flushToFile(buffer []*logEntry) error {
 	if len(buffer) == 0 {
 		return nil
 	}
@@ -30,40 +46,40 @@ func flushToFile(buffer []*logEntry) error {
 	for _, entry := range buffer {
 		err := e.Encode(entry)
 		if err != nil {
-			log.Printf("Failed to marshal entry: %s", err)
+			log.Error("Failed to marshal entry: %s", err)
 			return err
 		}
 	}
 
 	elapsed := time.Since(start)
-	log.Printf("%d elements serialized via json in %v: %d kB, %v/entry, %v/entry", len(buffer), elapsed, b.Len()/1024, float64(b.Len())/float64(len(buffer)), elapsed/time.Duration(len(buffer)))
+	log.Debug("%d elements serialized via json in %v: %d kB, %v/entry, %v/entry", len(buffer), elapsed, b.Len()/1024, float64(b.Len())/float64(len(buffer)), elapsed/time.Duration(len(buffer)))
 
 	err := checkBuffer(buffer, b)
 	if err != nil {
-		log.Printf("failed to check buffer: %s", err)
+		log.Error("failed to check buffer: %s", err)
 		return err
 	}
 
 	var zb bytes.Buffer
-	filename := queryLogFileName
+	filename := l.logFile
 
 	// gzip enabled?
 	if enableGzip {
 		filename += ".gz"
 
 		zw := gzip.NewWriter(&zb)
-		zw.Name = queryLogFileName
+		zw.Name = l.logFile
 		zw.ModTime = time.Now()
 
 		_, err = zw.Write(b.Bytes())
 		if err != nil {
-			log.Printf("Couldn't compress to gzip: %s", err)
+			log.Error("Couldn't compress to gzip: %s", err)
 			zw.Close()
 			return err
 		}
 
 		if err = zw.Close(); err != nil {
-			log.Printf("Couldn't close gzip writer: %s", err)
+			log.Error("Couldn't close gzip writer: %s", err)
 			return err
 		}
 	} else {
@@ -74,18 +90,18 @@ func flushToFile(buffer []*logEntry) error {
 	defer fileWriteLock.Unlock()
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		log.Printf("failed to create file \"%s\": %s", filename, err)
+		log.Error("failed to create file \"%s\": %s", filename, err)
 		return err
 	}
 	defer f.Close()
 
 	n, err := f.Write(zb.Bytes())
 	if err != nil {
-		log.Printf("Couldn't write to file: %s", err)
+		log.Error("Couldn't write to file: %s", err)
 		return err
 	}
 
-	log.Printf("ok \"%s\": %v bytes written", filename, n)
+	log.Debug("ok \"%s\": %v bytes written", filename, n)
 
 	return nil
 }
@@ -99,32 +115,32 @@ func checkBuffer(buffer []*logEntry, b bytes.Buffer) error {
 		entry := &logEntry{}
 		err := d.Decode(entry)
 		if err != nil {
-			log.Printf("Failed to decode: %s", err)
+			log.Error("Failed to decode: %s", err)
 			return err
 		}
 		if diff := deep.Equal(entry, buffer[i]); diff != nil {
-			log.Printf("decoded buffer differs: %s", diff)
+			log.Error("decoded buffer differs: %s", diff)
 			return fmt.Errorf("decoded buffer differs: %s", diff)
 		}
 		i++
 	}
 	if i != l {
 		err := fmt.Errorf("check fail: %d vs %d entries", l, i)
-		log.Print(err)
+		log.Error("%v", err)
 		return err
 	}
-	log.Printf("check ok: %d entries", i)
+	log.Debug("check ok: %d entries", i)
 
 	return nil
 }
 
-func rotateQueryLog() error {
-	from := queryLogFileName
-	to := queryLogFileName + ".1"
+func (l *queryLog) rotateQueryLog() error {
+	from := l.logFile
+	to := l.logFile + ".1"
 
 	if enableGzip {
-		from = queryLogFileName + ".gz"
-		to = queryLogFileName + ".gz.1"
+		from = l.logFile + ".gz"
+		to = l.logFile + ".gz.1"
 	}
 
 	if _, err := os.Stat(from); os.IsNotExist(err) {
@@ -134,39 +150,39 @@ func rotateQueryLog() error {
 
 	err := os.Rename(from, to)
 	if err != nil {
-		log.Printf("Failed to rename querylog: %s", err)
+		log.Error("Failed to rename querylog: %s", err)
 		return err
 	}
 
-	log.Printf("Rotated from %s to %s successfully", from, to)
+	log.Debug("Rotated from %s to %s successfully", from, to)
 
 	return nil
 }
 
-func periodicQueryLogRotate() {
+func (l *queryLog) periodicQueryLogRotate() {
 	for range time.Tick(queryLogRotationPeriod) {
-		err := rotateQueryLog()
+		err := l.rotateQueryLog()
 		if err != nil {
-			log.Printf("Failed to rotate querylog: %s", err)
+			log.Error("Failed to rotate querylog: %s", err)
 			// do nothing, continue rotating
 		}
 	}
 }
 
-func genericLoader(onEntry func(entry *logEntry) error, needMore func() bool, timeWindow time.Duration) error {
+func (l *queryLog) genericLoader(onEntry func(entry *logEntry) error, needMore func() bool, timeWindow time.Duration) error {
 	now := time.Now()
 	// read from querylog files, try newest file first
-	files := []string{}
+	var files []string
 
 	if enableGzip {
 		files = []string{
-			queryLogFileName + ".gz",
-			queryLogFileName + ".gz.1",
+			l.logFile + ".gz",
+			l.logFile + ".gz.1",
 		}
 	} else {
 		files = []string{
-			queryLogFileName,
-			queryLogFileName + ".1",
+			l.logFile,
+			l.logFile + ".1",
 		}
 	}
 
@@ -182,7 +198,7 @@ func genericLoader(onEntry func(entry *logEntry) error, needMore func() bool, ti
 
 		f, err := os.Open(file)
 		if err != nil {
-			log.Printf("Failed to open file \"%s\": %s", file, err)
+			log.Error("Failed to open file \"%s\": %s", file, err)
 			// try next file
 			continue
 		}
@@ -191,15 +207,12 @@ func genericLoader(onEntry func(entry *logEntry) error, needMore func() bool, ti
 		var d *json.Decoder
 
 		if enableGzip {
-			trace("Creating gzip reader")
 			zr, err := gzip.NewReader(f)
 			if err != nil {
-				log.Printf("Failed to create gzip reader: %s", err)
+				log.Error("Failed to create gzip reader: %s", err)
 				continue
 			}
 			defer zr.Close()
-
-			trace("Creating json decoder")
 			d = json.NewDecoder(zr)
 		} else {
 			d = json.NewDecoder(f)
@@ -218,13 +231,13 @@ func genericLoader(onEntry func(entry *logEntry) error, needMore func() bool, ti
 			var entry logEntry
 			err := d.Decode(&entry)
 			if err != nil {
-				log.Printf("Failed to decode: %s", err)
+				log.Error("Failed to decode: %s", err)
 				// next entry can be fine, try more
 				continue
 			}
 
 			if now.Sub(entry.Time) > timeWindow {
-				// trace("skipping entry") // debug logging
+				// log.Tracef("skipping entry") // debug logging
 				continue
 			}
 
@@ -247,7 +260,7 @@ func genericLoader(onEntry func(entry *logEntry) error, needMore func() bool, ti
 			perunit = elapsed / time.Duration(i)
 			avg = sum / time.Duration(i)
 		}
-		log.Printf("file \"%s\": read %d entries in %v, %v/entry, %v over %v, %v avg", file, i, elapsed, perunit, over, max, avg)
+		log.Debug("file \"%s\": read %d entries in %v, %v/entry, %v over %v, %v avg", file, i, elapsed, perunit, over, max, avg)
 	}
 	return nil
 }

@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
+
+	"github.com/AdguardTeam/golibs/log"
 )
 
 // --------------------
@@ -20,6 +21,9 @@ var allowedLanguages = map[string]bool{
 	"ja":    true,
 	"sv":    true,
 	"pt-br": true,
+	"zh-tw": true,
+	"bg":    true,
+	"zh-cn": true,
 }
 
 func isLanguageAllowed(language string) bool {
@@ -32,9 +36,9 @@ func handleI18nCurrentLanguage(w http.ResponseWriter, r *http.Request) {
 	log.Printf("config.Language is %s", config.Language)
 	_, err := fmt.Fprintf(w, "%s\n", config.Language)
 	if err != nil {
-		errortext := fmt.Sprintf("Unable to write response json: %s", err)
-		log.Println(errortext)
-		http.Error(w, errortext, http.StatusInternalServerError)
+		errorText := fmt.Sprintf("Unable to write response json: %s", err)
+		log.Println(errorText)
+		http.Error(w, errorText, http.StatusInternalServerError)
 		return
 	}
 }

@@ -1,16 +1,16 @@
 package dnsforward
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
+	"net"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/dnsfilter"
+	"github.com/AdguardTeam/golibs/log"
 	"github.com/miekg/dns"
 )
 
@@ -23,13 +23,27 @@ const (
 	queryLogTopSize        = 500             // Keep in memory only top N values
 )
 
-var (
+// queryLog is a structure that writes and reads the DNS query log
+type queryLog struct {
+	logFile    string  // path to the log file
+	runningTop *dayTop // current top charts
+
 	logBufferLock sync.RWMutex
 	logBuffer     []*logEntry
 
 	queryLogCache []*logEntry
 	queryLogLock  sync.RWMutex
-)
+}
+
+// newQueryLog creates a new instance of the query log
+func newQueryLog(baseDir string) *queryLog {
+	l := &queryLog{
+		logFile:    filepath.Join(baseDir, queryLogFileName),
+		runningTop: &dayTop{},
+	}
+	l.runningTop.init()
+	return l
+}
 
 type logEntry struct {
 	Question []byte
@@ -41,23 +55,25 @@ type logEntry struct {
 	Upstream string `json:",omitempty"` // if empty, means it was cached
 }
 
-func logRequest(question *dns.Msg, answer *dns.Msg, result *dnsfilter.Result, elapsed time.Duration, ip string, upstream string) {
+func (l *queryLog) logRequest(question *dns.Msg, answer *dns.Msg, result *dnsfilter.Result, elapsed time.Duration, addr net.Addr, upstream string) *logEntry {
 	var q []byte
 	var a []byte
 	var err error
+	ip := getIPString(addr)
 
 	if question != nil {
 		q, err = question.Pack()
 		if err != nil {
 			log.Printf("failed to pack question for querylog: %s", err)
-			return
+			return nil
 		}
 	}
+
 	if answer != nil {
 		a, err = answer.Pack()
 		if err != nil {
 			log.Printf("failed to pack answer for querylog: %s", err)
-			return
+			return nil
 		}
 	}
 
@@ -77,49 +93,56 @@ func logRequest(question *dns.Msg, answer *dns.Msg, result *dnsfilter.Result, el
 	}
 	var flushBuffer []*logEntry
 
-	logBufferLock.Lock()
-	logBuffer = append(logBuffer, &entry)
-	if len(logBuffer) >= logBufferCap {
-		flushBuffer = logBuffer
-		logBuffer = nil
+	l.logBufferLock.Lock()
+	l.logBuffer = append(l.logBuffer, &entry)
+	if len(l.logBuffer) >= logBufferCap {
+		flushBuffer = l.logBuffer
+		l.logBuffer = nil
 	}
-	logBufferLock.Unlock()
-	queryLogLock.Lock()
-	queryLogCache = append(queryLogCache, &entry)
-	if len(queryLogCache) > queryLogSize {
-		toremove := len(queryLogCache) - queryLogSize
-		queryLogCache = queryLogCache[toremove:]
+	l.logBufferLock.Unlock()
+	l.queryLogLock.Lock()
+	l.queryLogCache = append(l.queryLogCache, &entry)
+	if len(l.queryLogCache) > queryLogSize {
+		toremove := len(l.queryLogCache) - queryLogSize
+		l.queryLogCache = l.queryLogCache[toremove:]
 	}
-	queryLogLock.Unlock()
+	l.queryLogLock.Unlock()
 
 	// add it to running top
-	err = runningTop.addEntry(&entry, question, now)
+	err = l.runningTop.addEntry(&entry, question, now)
 	if err != nil {
 		log.Printf("Failed to add entry to running top: %s", err)
 		// don't do failure, just log
 	}
 
-	incrementCounters(&entry)
-
 	// if buffer needs to be flushed to disk, do it now
 	if len(flushBuffer) > 0 {
 		// write to file
 		// do it in separate goroutine -- we are stalling DNS response this whole time
-		go flushToFile(flushBuffer)
+		go func() {
+			err := l.flushToFile(flushBuffer)
+			if err != nil {
+				log.Printf("Failed to flush the query log: %s", err)
+			}
+		}()
 	}
+
+	return &entry
 }
 
-func HandleQueryLog(w http.ResponseWriter, r *http.Request) {
-	queryLogLock.RLock()
-	values := make([]*logEntry, len(queryLogCache))
-	copy(values, queryLogCache)
-	queryLogLock.RUnlock()
+// getQueryLogJson returns a map with the current query log ready to be converted to a JSON
+func (l *queryLog) getQueryLog() []map[string]interface{} {
+	l.queryLogLock.RLock()
+	values := make([]*logEntry, len(l.queryLogCache))
+	copy(values, l.queryLogCache)
+	l.queryLogLock.RUnlock()
 
 	// reverse it so that newest is first
 	for left, right := 0, len(values)-1; left < right; left, right = left+1, right-1 {
 		values[left], values[right] = values[right], values[left]
 	}
 
+	// iterate
 	var data = []map[string]interface{}{}
 	for _, entry := range values {
 		var q *dns.Msg
@@ -164,65 +187,72 @@ func HandleQueryLog(w http.ResponseWriter, r *http.Request) {
 			jsonEntry["filterId"] = entry.Result.FilterID
 		}
 
-		if a != nil && len(a.Answer) > 0 {
-			var answers = []map[string]interface{}{}
-			for _, k := range a.Answer {
-				header := k.Header()
-				answer := map[string]interface{}{
-					"type": dns.TypeToString[header.Rrtype],
-					"ttl":  header.Ttl,
-				}
-				// try most common record types
-				switch v := k.(type) {
-				case *dns.A:
-					answer["value"] = v.A
-				case *dns.AAAA:
-					answer["value"] = v.AAAA
-				case *dns.MX:
-					answer["value"] = fmt.Sprintf("%v %v", v.Preference, v.Mx)
-				case *dns.CNAME:
-					answer["value"] = v.Target
-				case *dns.NS:
-					answer["value"] = v.Ns
-				case *dns.SPF:
-					answer["value"] = v.Txt
-				case *dns.TXT:
-					answer["value"] = v.Txt
-				case *dns.PTR:
-					answer["value"] = v.Ptr
-				case *dns.SOA:
-					answer["value"] = fmt.Sprintf("%v %v %v %v %v %v %v", v.Ns, v.Mbox, v.Serial, v.Refresh, v.Retry, v.Expire, v.Minttl)
-				case *dns.CAA:
-					answer["value"] = fmt.Sprintf("%v %v \"%v\"", v.Flag, v.Tag, v.Value)
-				case *dns.HINFO:
-					answer["value"] = fmt.Sprintf("\"%v\" \"%v\"", v.Cpu, v.Os)
-				case *dns.RRSIG:
-					answer["value"] = fmt.Sprintf("%v %v %v %v %v %v %v %v %v", dns.TypeToString[v.TypeCovered], v.Algorithm, v.Labels, v.OrigTtl, v.Expiration, v.Inception, v.KeyTag, v.SignerName, v.Signature)
-				default:
-					// type unknown, marshall it as-is
-					answer["value"] = v
-				}
-				answers = append(answers, answer)
-			}
+		answers := answerToMap(a)
+		if answers != nil {
 			jsonEntry["answer"] = answers
 		}
 
 		data = append(data, jsonEntry)
 	}
 
-	jsonVal, err := json.Marshal(data)
-	if err != nil {
-		errorText := fmt.Sprintf("Couldn't marshal data into json: %s", err)
-		log.Println(errorText)
-		http.Error(w, errorText, http.StatusInternalServerError)
-		return
+	return data
+}
+
+func answerToMap(a *dns.Msg) []map[string]interface{} {
+	if a == nil || len(a.Answer) == 0 {
+		return nil
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(jsonVal)
-	if err != nil {
-		errorText := fmt.Sprintf("Unable to write response json: %s", err)
-		log.Println(errorText)
-		http.Error(w, errorText, http.StatusInternalServerError)
+	var answers = []map[string]interface{}{}
+	for _, k := range a.Answer {
+		header := k.Header()
+		answer := map[string]interface{}{
+			"type": dns.TypeToString[header.Rrtype],
+			"ttl":  header.Ttl,
+		}
+		// try most common record types
+		switch v := k.(type) {
+		case *dns.A:
+			answer["value"] = v.A
+		case *dns.AAAA:
+			answer["value"] = v.AAAA
+		case *dns.MX:
+			answer["value"] = fmt.Sprintf("%v %v", v.Preference, v.Mx)
+		case *dns.CNAME:
+			answer["value"] = v.Target
+		case *dns.NS:
+			answer["value"] = v.Ns
+		case *dns.SPF:
+			answer["value"] = v.Txt
+		case *dns.TXT:
+			answer["value"] = v.Txt
+		case *dns.PTR:
+			answer["value"] = v.Ptr
+		case *dns.SOA:
+			answer["value"] = fmt.Sprintf("%v %v %v %v %v %v %v", v.Ns, v.Mbox, v.Serial, v.Refresh, v.Retry, v.Expire, v.Minttl)
+		case *dns.CAA:
+			answer["value"] = fmt.Sprintf("%v %v \"%v\"", v.Flag, v.Tag, v.Value)
+		case *dns.HINFO:
+			answer["value"] = fmt.Sprintf("\"%v\" \"%v\"", v.Cpu, v.Os)
+		case *dns.RRSIG:
+			answer["value"] = fmt.Sprintf("%v %v %v %v %v %v %v %v %v", dns.TypeToString[v.TypeCovered], v.Algorithm, v.Labels, v.OrigTtl, v.Expiration, v.Inception, v.KeyTag, v.SignerName, v.Signature)
+		default:
+			// type unknown, marshall it as-is
+			answer["value"] = v
+		}
+		answers = append(answers, answer)
 	}
+
+	return answers
+}
+
+// getIPString is a helper function that extracts IP address from net.Addr
+func getIPString(addr net.Addr) string {
+	switch addr := addr.(type) {
+	case *net.UDPAddr:
+		return addr.IP.String()
+	case *net.TCPAddr:
+		return addr.IP.String()
+	}
+	return ""
 }

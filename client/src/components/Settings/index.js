@@ -2,6 +2,8 @@ import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { withNamespaces, Trans } from 'react-i18next';
 import Upstream from './Upstream';
+import Dhcp from './Dhcp';
+import Encryption from './Encryption';
 import Checkbox from '../ui/Checkbox';
 import Loading from '../ui/Loading';
 import PageTitle from '../ui/PageTitle';
@@ -34,23 +36,10 @@ class Settings extends Component {
 
     componentDidMount() {
         this.props.initSettings(this.settings);
+        this.props.getDhcpStatus();
+        this.props.getDhcpInterfaces();
+        this.props.getTlsStatus();
     }
-
-    handleUpstreamChange = (value) => {
-        this.props.handleUpstreamChange({ upstreamDns: value });
-    };
-
-    handleUpstreamSubmit = () => {
-        this.props.setUpstream(this.props.dashboard.upstreamDns);
-    };
-
-    handleUpstreamTest = () => {
-        if (this.props.dashboard.upstreamDns.length > 0) {
-            this.props.testUpstream(this.props.dashboard.upstreamDns);
-        } else {
-            this.props.addErrorToast({ error: this.props.t('no_servers_specified') });
-        }
-    };
 
     renderSettings = (settings) => {
         if (Object.keys(settings).length > 0) {
@@ -70,8 +59,7 @@ class Settings extends Component {
     }
 
     render() {
-        const { settings, t } = this.props;
-        const { upstreamDns } = this.props.dashboard;
+        const { settings, dashboard, t } = this.props;
         return (
             <Fragment>
                 <PageTitle title={ t('settings') } />
@@ -86,11 +74,25 @@ class Settings extends Component {
                                     </div>
                                 </Card>
                                 <Upstream
-                                    upstreamDns={upstreamDns}
+                                    upstreamDns={dashboard.upstreamDns}
+                                    bootstrapDns={dashboard.bootstrapDns}
+                                    allServers={dashboard.allServers}
+                                    setUpstream={this.props.setUpstream}
+                                    testUpstream={this.props.testUpstream}
                                     processingTestUpstream={settings.processingTestUpstream}
-                                    handleUpstreamChange={this.handleUpstreamChange}
-                                    handleUpstreamSubmit={this.handleUpstreamSubmit}
-                                    handleUpstreamTest={this.handleUpstreamTest}
+                                    processingSetUpstream={settings.processingSetUpstream}
+                                />
+                                <Encryption
+                                    encryption={this.props.encryption}
+                                    setTlsConfig={this.props.setTlsConfig}
+                                    validateTlsConfig={this.props.validateTlsConfig}
+                                />
+                                <Dhcp
+                                    dhcp={this.props.dhcp}
+                                    toggleDhcp={this.props.toggleDhcp}
+                                    getDhcpStatus={this.props.getDhcpStatus}
+                                    findActiveDhcp={this.props.findActiveDhcp}
+                                    setDhcpConfig={this.props.setDhcpConfig}
                                 />
                             </div>
                         </div>
@@ -108,7 +110,6 @@ Settings.propTypes = {
     toggleSetting: PropTypes.func,
     handleUpstreamChange: PropTypes.func,
     setUpstream: PropTypes.func,
-    upstream: PropTypes.string,
     t: PropTypes.func,
 };
 

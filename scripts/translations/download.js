@@ -4,7 +4,19 @@ const crypto = require('crypto');
 const requestPromise = require('request-promise');
 
 const LOCALES_DIR = '../../client/src/__locales';
-const LOCALES_LIST = ['en', 'ru', 'vi', 'es', 'fr', 'ja', 'sv', 'pt-br'];
+const LOCALES_LIST = [
+    'en',
+    'ru',
+    'vi',
+    'es',
+    'fr',
+    'ja',
+    'sv',
+    'pt-br',
+    'zh-tw',
+    'bg',
+    'zh-cn',
+];
 
 /**
  * Hash content

@@ -6,7 +6,7 @@ import escapeRegExp from 'lodash/escapeRegExp';
 import endsWith from 'lodash/endsWith';
 import { Trans, withNamespaces } from 'react-i18next';
 
-import { formatTime } from '../../helpers/helpers';
+import { formatTime, getClientName } from '../../helpers/helpers';
 import { getTrackerData } from '../../helpers/trackers/trackers';
 import PageTitle from '../ui/PageTitle';
 import Card from '../ui/Card';
@@ -77,6 +77,7 @@ class Logs extends Component {
                     type="button"
                     className={`btn btn-sm ${buttonClass}`}
                     onClick={() => this.toggleBlocking(buttonType, domain)}
+                    disabled={this.props.filtering.processingRules}
                 >
                     <Trans>{buttonText}</Trans>
                 </button>
@@ -85,7 +86,7 @@ class Logs extends Component {
     }
 
     renderLogs(logs) {
-        const { t } = this.props;
+        const { t, dashboard } = this.props;
         const columns = [{
             Header: t('time_table_header'),
             accessor: 'time',
@@ -131,7 +132,14 @@ class Logs extends Component {
                     } else {
                         const filterItem = Object.keys(filters)
                             .filter(key => filters[key].id === filterId);
-                        filterName = filters[filterItem].name;
+
+                        if (typeof filterItem !== 'undefined' && typeof filters[filterItem] !== 'undefined') {
+                            filterName = filters[filterItem].name;
+                        }
+
+                        if (!filterName) {
+                            filterName = t('unknown_filter', { filterId });
+                        }
                     }
                 }
 
@@ -188,11 +196,19 @@ class Logs extends Component {
             Cell: (row) => {
                 const { reason } = row.original;
                 const isFiltered = row ? reason.indexOf('Filtered') === 0 : false;
+                const clientName = getClientName(dashboard.clients, row.value);
+                let client;
+
+                if (clientName) {
+                    client = <span>{clientName} <small>({row.value})</small></span>;
+                } else {
+                    client = row.value;
+                }
 
                 return (
                     <Fragment>
                         <div className="logs__row">
-                            {row.value}
+                            {client}
                         </div>
                         {this.renderBlockingButton(isFiltered, row.original.domain)}
                     </Fragment>
@@ -262,7 +278,7 @@ class Logs extends Component {
         saveAs(dataBlob, DOWNLOAD_LOG_FILENAME);
     };
 
-    renderButtons(queryLogEnabled) {
+    renderButtons(queryLogEnabled, logStatusProcessing) {
         if (queryLogEnabled) {
             return (
                 <Fragment>
@@ -270,6 +286,7 @@ class Logs extends Component {
                         className="btn btn-gray btn-sm mr-2"
                         type="submit"
                         onClick={() => this.props.toggleLogStatus(queryLogEnabled)}
+                        disabled={logStatusProcessing}
                     ><Trans>disabled_log_btn</Trans></button>
                     <button
                         className="btn btn-primary btn-sm mr-2"
@@ -290,6 +307,7 @@ class Logs extends Component {
                 className="btn btn-success btn-sm mr-2"
                 type="submit"
                 onClick={() => this.props.toggleLogStatus(queryLogEnabled)}
+                disabled={logStatusProcessing}
             ><Trans>enabled_log_btn</Trans></button>
         );
     }
@@ -301,13 +319,22 @@ class Logs extends Component {
             <Fragment>
                 <PageTitle title={ t('query_log') } subtitle={ t('last_dns_queries') }>
                     <div className="page-title__actions">
-                        {this.renderButtons(queryLogEnabled)}
+                        {this.renderButtons(queryLogEnabled, dashboard.logStatusProcessing)}
                     </div>
                 </PageTitle>
                 <Card>
-                    {queryLogEnabled && queryLogs.getLogsProcessing && <Loading />}
-                    {queryLogEnabled && !queryLogs.getLogsProcessing &&
-                        this.renderLogs(queryLogs.logs)}
+                    {
+                        queryLogEnabled
+                        && queryLogs.getLogsProcessing
+                        && dashboard.processingClients
+                        && <Loading />
+                    }
+                    {
+                        queryLogEnabled
+                        && !queryLogs.getLogsProcessing
+                        && !dashboard.processingClients
+                        && this.renderLogs(queryLogs.logs)
+                    }
                 </Card>
             </Fragment>
         );
@@ -325,6 +352,8 @@ Logs.propTypes = {
     userRules: PropTypes.string,
     setRules: PropTypes.func,
     addSuccessToast: PropTypes.func,
+    processingRules: PropTypes.bool,
+    logStatusProcessing: PropTypes.bool,
     t: PropTypes.func,
 };
 

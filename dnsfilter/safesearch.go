@@ -1,13 +1,22 @@
 package dnsfilter
 
 var safeSearchDomains = map[string]string{
-	"yandex.com": "213.180.193.56",
-	"yandex.ru":  "213.180.193.56",
-	"yandex.ua":  "213.180.193.56",
-	"yandex.by":  "213.180.193.56",
-	"yandex.kz":  "213.180.193.56",
+	"yandex.com":     "213.180.193.56",
+	"yandex.ru":      "213.180.193.56",
+	"yandex.ua":      "213.180.193.56",
+	"yandex.by":      "213.180.193.56",
+	"yandex.kz":      "213.180.193.56",
+	"www.yandex.com": "213.180.193.56",
+	"www.yandex.ru":  "213.180.193.56",
+	"www.yandex.ua":  "213.180.193.56",
+	"www.yandex.by":  "213.180.193.56",
+	"www.yandex.kz":  "213.180.193.56",
 
 	"www.bing.com": "strict.bing.com",
+
+	"duckduckgo.com":       "safe.duckduckgo.com",
+	"www.duckduckgo.com":   "safe.duckduckgo.com",
+	"start.duckduckgo.com": "safe.duckduckgo.com",
 
 	"www.google.com":    "forcesafesearch.google.com",
 	"www.google.ad":     "forcesafesearch.google.com",

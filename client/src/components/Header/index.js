@@ -6,13 +6,12 @@ import { Trans, withNamespaces } from 'react-i18next';
 
 import Menu from './Menu';
 import Version from './Version';
-import logo from './logo.svg';
+import logo from '../ui/svg/logo.svg';
 import './Header.css';
 
 class Header extends Component {
     state = {
         isMenuOpen: false,
-        isDropdownOpen: false,
     };
 
     toggleMenuOpen = () => {
@@ -25,6 +24,7 @@ class Header extends Component {
 
     render() {
         const { dashboard } = this.props;
+        const { isMenuOpen } = this.state;
         const badgeClass = classnames({
             'badge dns-status': true,
             'badge-success': dashboard.protectionEnabled,
@@ -58,7 +58,7 @@ class Header extends Component {
                         </div>
                         {dashboard.isLogined ? <Menu
                             location={this.props.location}
-                            isMenuOpen={this.state.isMenuOpen}
+                            isMenuOpen={isMenuOpen}
                             toggleMenuOpen={this.toggleMenuOpen}
                             closeMenu={this.closeMenu}
                         /> : <div className={menuClass}>ABPVN DNS Login</div>}

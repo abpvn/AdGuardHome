@@ -1,6 +1,5 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import 'whatwg-fetch';
 import { Trans, withNamespaces } from 'react-i18next';
 
 import Statistics from './Statistics';
@@ -25,12 +24,17 @@ class Dashboard extends Component {
     }
 
     getToggleFilteringButton = () => {
-        const { protectionEnabled } = this.props.dashboard;
+        const { protectionEnabled, processingProtection } = this.props.dashboard;
         const buttonText = protectionEnabled ? 'disable_protection' : 'enable_protection';
         const buttonClass = protectionEnabled ? 'btn-gray' : 'btn-success';
 
         return (
-            <button type="button" className={`btn btn-sm mr-2 ${buttonClass}`} onClick={() => this.props.toggleProtection(protectionEnabled)}>
+            <button
+                type="button"
+                className={`btn btn-sm mr-2 ${buttonClass}`}
+                onClick={() => this.props.toggleProtection(protectionEnabled)}
+                disabled={processingProtection}
+            >
                 <Trans>{buttonText}</Trans>
             </button>
         );
@@ -42,6 +46,7 @@ class Dashboard extends Component {
             dashboard.processing ||
             dashboard.processingStats ||
             dashboard.processingStatsHistory ||
+            dashboard.processingClients ||
             dashboard.processingTopStats;
 
         const refreshFullButton = <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => this.getAllStats()}><Trans>refresh_statics</Trans></button>;
@@ -90,6 +95,7 @@ class Dashboard extends Component {
                                         dnsQueries={dashboard.stats.dns_queries}
                                         refreshButton={refreshButton}
                                         topClients={dashboard.topStats.top_clients}
+                                        clients={dashboard.clients}
                                     />
                                 </div>
                                 <div className="col-lg-6">
@@ -125,6 +131,7 @@ Dashboard.propTypes = {
     isCoreRunning: PropTypes.bool,
     getFiltering: PropTypes.func,
     toggleProtection: PropTypes.func,
+    processingProtection: PropTypes.bool,
     t: PropTypes.func,
 };
 

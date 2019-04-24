@@ -3,7 +3,8 @@ import round from 'lodash/round';
 import { t } from 'i18next';
 import { showLoading, hideLoading } from 'react-redux-loading-bar';
 
-import { normalizeHistory, normalizeFilteringStatus, normalizeLogs } from '../helpers/helpers';
+import { normalizeHistory, normalizeFilteringStatus, normalizeLogs, normalizeTextarea } from '../helpers/helpers';
+import { SETTINGS_NAMES } from '../helpers/constants';
 import Api from '../api/Api';
 
 const apiClient = new Api();
@@ -18,9 +19,8 @@ export const showSettingsFailure = createAction('SETTINGS_FAILURE_SHOW');
 export const toggleSetting = (settingKey, status) => async (dispatch) => {
     let successMessage = '';
     try {
-        // TODO move setting keys to constants
         switch (settingKey) {
-            case 'filtering':
+            case SETTINGS_NAMES.filtering:
                 if (status) {
                     successMessage = 'disabled_filtering_toast';
                     await apiClient.disableFiltering();
@@ -30,7 +30,7 @@ export const toggleSetting = (settingKey, status) => async (dispatch) => {
                 }
                 dispatch(toggleSettingStatus({ settingKey }));
                 break;
-            case 'safebrowsing':
+            case SETTINGS_NAMES.safebrowsing:
                 if (status) {
                     successMessage = 'disabled_safe_browsing_toast';
                     await apiClient.disableSafebrowsing();
@@ -40,7 +40,7 @@ export const toggleSetting = (settingKey, status) => async (dispatch) => {
                 }
                 dispatch(toggleSettingStatus({ settingKey }));
                 break;
-            case 'parental':
+            case SETTINGS_NAMES.parental:
                 if (status) {
                     successMessage = 'disabled_parental_toast';
                     await apiClient.disableParentalControl();
@@ -50,7 +50,7 @@ export const toggleSetting = (settingKey, status) => async (dispatch) => {
                 }
                 dispatch(toggleSettingStatus({ settingKey }));
                 break;
-            case 'safesearch':
+            case SETTINGS_NAMES.safesearch:
                 if (status) {
                     successMessage = 'disabled_safe_search_toast';
                     await apiClient.disableSafesearch();
@@ -139,6 +139,36 @@ export const toggleProtection = status => async (dispatch) => {
     }
 };
 
+export const getVersionRequest = createAction('GET_VERSION_REQUEST');
+export const getVersionFailure = createAction('GET_VERSION_FAILURE');
+export const getVersionSuccess = createAction('GET_VERSION_SUCCESS');
+
+export const getVersion = () => async (dispatch) => {
+    dispatch(getVersionRequest());
+    try {
+        const newVersion = await apiClient.getGlobalVersion();
+        dispatch(getVersionSuccess(newVersion));
+    } catch (error) {
+        dispatch(addErrorToast({ error }));
+        dispatch(getVersionFailure());
+    }
+};
+
+export const getClientsRequest = createAction('GET_CLIENTS_REQUEST');
+export const getClientsFailure = createAction('GET_CLIENTS_FAILURE');
+export const getClientsSuccess = createAction('GET_CLIENTS_SUCCESS');
+
+export const getClients = () => async (dispatch) => {
+    dispatch(getClientsRequest());
+    try {
+        const clients = await apiClient.getGlobalClients();
+        dispatch(getClientsSuccess(clients));
+    } catch (error) {
+        dispatch(addErrorToast({ error }));
+        dispatch(getClientsFailure());
+    }
+};
+
 export const dnsStatusRequest = createAction('DNS_STATUS_REQUEST');
 export const dnsStatusFailure = createAction('DNS_STATUS_FAILURE');
 export const dnsStatusSuccess = createAction('DNS_STATUS_SUCCESS');
@@ -148,6 +178,8 @@ export const getDnsStatus = () => async (dispatch) => {
     try {
         const dnsStatus = await apiClient.getGlobalStatus();
         dispatch(dnsStatusSuccess(dnsStatus));
+        dispatch(getVersion());
+        dispatch(getClients());
     } catch (error) {
         dispatch(addErrorToast({ error }));
         dispatch(initSettingsFailure());
@@ -202,21 +234,6 @@ export const getStats = () => async (dispatch) => {
     } catch (error) {
         dispatch(addErrorToast({ error }));
         dispatch(getStatsFailure());
-    }
-};
-
-export const getVersionRequest = createAction('GET_VERSION_REQUEST');
-export const getVersionFailure = createAction('GET_VERSION_FAILURE');
-export const getVersionSuccess = createAction('GET_VERSION_SUCCESS');
-
-export const getVersion = () => async (dispatch) => {
-    dispatch(getVersionRequest());
-    try {
-        const newVersion = await apiClient.getGlobalVersion();
-        dispatch(getVersionSuccess(newVersion));
-    } catch (error) {
-        dispatch(addErrorToast({ error }));
-        dispatch(getVersionFailure());
     }
 };
 
@@ -352,11 +369,11 @@ export const refreshFiltersFailure = createAction('FILTERING_REFRESH_FAILURE');
 export const refreshFiltersSuccess = createAction('FILTERING_REFRESH_SUCCESS');
 
 export const refreshFilters = () => async (dispatch) => {
-    dispatch(refreshFiltersRequest);
+    dispatch(refreshFiltersRequest());
     dispatch(showLoading());
     try {
         const refreshText = await apiClient.refreshFilters();
-        dispatch(refreshFiltersSuccess);
+        dispatch(refreshFiltersSuccess());
 
         if (refreshText.includes('OK')) {
             if (refreshText.includes('OK 0')) {
@@ -434,7 +451,6 @@ export const downloadQueryLogRequest = createAction('DOWNLOAD_QUERY_LOG_REQUEST'
 export const downloadQueryLogFailure = createAction('DOWNLOAD_QUERY_LOG_FAILURE');
 export const downloadQueryLogSuccess = createAction('DOWNLOAD_QUERY_LOG_SUCCESS');
 
-// TODO create some common flasher with all server errors
 export const downloadQueryLog = () => async (dispatch) => {
     let data;
     dispatch(downloadQueryLogRequest());
@@ -453,10 +469,18 @@ export const setUpstreamRequest = createAction('SET_UPSTREAM_REQUEST');
 export const setUpstreamFailure = createAction('SET_UPSTREAM_FAILURE');
 export const setUpstreamSuccess = createAction('SET_UPSTREAM_SUCCESS');
 
-export const setUpstream = url => async (dispatch) => {
+export const setUpstream = config => async (dispatch) => {
     dispatch(setUpstreamRequest());
     try {
-        await apiClient.setUpstream(url);
+        const values = { ...config };
+        values.bootstrap_dns = (
+            values.bootstrap_dns && normalizeTextarea(values.bootstrap_dns)
+        ) || [];
+        values.upstream_dns = (
+            values.upstream_dns && normalizeTextarea(values.upstream_dns)
+        ) || [];
+
+        await apiClient.setUpstream(values);
         dispatch(addSuccessToast('updated_upstream_dns_toast'));
         dispatch(setUpstreamSuccess());
     } catch (error) {
@@ -469,11 +493,18 @@ export const testUpstreamRequest = createAction('TEST_UPSTREAM_REQUEST');
 export const testUpstreamFailure = createAction('TEST_UPSTREAM_FAILURE');
 export const testUpstreamSuccess = createAction('TEST_UPSTREAM_SUCCESS');
 
-export const testUpstream = servers => async (dispatch) => {
+export const testUpstream = config => async (dispatch) => {
     dispatch(testUpstreamRequest());
     try {
-        const upstreamResponse = await apiClient.testUpstream(servers);
+        const values = { ...config };
+        values.bootstrap_dns = (
+            values.bootstrap_dns && normalizeTextarea(values.bootstrap_dns)
+        ) || [];
+        values.upstream_dns = (
+            values.upstream_dns && normalizeTextarea(values.upstream_dns)
+        ) || [];
 
+        const upstreamResponse = await apiClient.testUpstream(values);
         const testMessages = Object.keys(upstreamResponse).map((key) => {
             const message = upstreamResponse[key];
             if (message !== 'OK') {
@@ -520,5 +551,134 @@ export const getLanguage = () => async (dispatch) => {
     } catch (error) {
         dispatch(addErrorToast({ error }));
         dispatch(getLanguageFailure());
+    }
+};
+
+export const getDhcpStatusRequest = createAction('GET_DHCP_STATUS_REQUEST');
+export const getDhcpStatusSuccess = createAction('GET_DHCP_STATUS_SUCCESS');
+export const getDhcpStatusFailure = createAction('GET_DHCP_STATUS_FAILURE');
+
+export const getDhcpStatus = () => async (dispatch) => {
+    dispatch(getDhcpStatusRequest());
+    try {
+        const status = await apiClient.getDhcpStatus();
+        dispatch(getDhcpStatusSuccess(status));
+    } catch (error) {
+        dispatch(addErrorToast({ error }));
+        dispatch(getDhcpStatusFailure());
+    }
+};
+
+export const getDhcpInterfacesRequest = createAction('GET_DHCP_INTERFACES_REQUEST');
+export const getDhcpInterfacesSuccess = createAction('GET_DHCP_INTERFACES_SUCCESS');
+export const getDhcpInterfacesFailure = createAction('GET_DHCP_INTERFACES_FAILURE');
+
+export const getDhcpInterfaces = () => async (dispatch) => {
+    dispatch(getDhcpInterfacesRequest());
+    try {
+        const interfaces = await apiClient.getDhcpInterfaces();
+        dispatch(getDhcpInterfacesSuccess(interfaces));
+    } catch (error) {
+        dispatch(addErrorToast({ error }));
+        dispatch(getDhcpInterfacesFailure());
+    }
+};
+
+export const findActiveDhcpRequest = createAction('FIND_ACTIVE_DHCP_REQUEST');
+export const findActiveDhcpSuccess = createAction('FIND_ACTIVE_DHCP_SUCCESS');
+export const findActiveDhcpFailure = createAction('FIND_ACTIVE_DHCP_FAILURE');
+
+export const findActiveDhcp = name => async (dispatch) => {
+    dispatch(findActiveDhcpRequest());
+    try {
+        const activeDhcp = await apiClient.findActiveDhcp(name);
+        dispatch(findActiveDhcpSuccess(activeDhcp));
+    } catch (error) {
+        dispatch(addErrorToast({ error }));
+        dispatch(findActiveDhcpFailure());
+    }
+};
+
+export const setDhcpConfigRequest = createAction('SET_DHCP_CONFIG_REQUEST');
+export const setDhcpConfigSuccess = createAction('SET_DHCP_CONFIG_SUCCESS');
+export const setDhcpConfigFailure = createAction('SET_DHCP_CONFIG_FAILURE');
+
+// TODO rewrite findActiveDhcp part
+export const setDhcpConfig = values => async (dispatch, getState) => {
+    const { config } = getState().dhcp;
+    const updatedConfig = { ...config, ...values };
+    dispatch(setDhcpConfigRequest());
+    if (values.interface_name) {
+        dispatch(findActiveDhcpRequest());
+        try {
+            const activeDhcp = await apiClient.findActiveDhcp(values.interface_name);
+            dispatch(findActiveDhcpSuccess(activeDhcp));
+            if (!activeDhcp.found) {
+                try {
+                    await apiClient.setDhcpConfig(updatedConfig);
+                    dispatch(setDhcpConfigSuccess(updatedConfig));
+                    dispatch(addSuccessToast('dhcp_config_saved'));
+                } catch (error) {
+                    dispatch(addErrorToast({ error }));
+                    dispatch(setDhcpConfigFailure());
+                }
+            } else {
+                dispatch(addErrorToast({ error: 'dhcp_found' }));
+            }
+        } catch (error) {
+            dispatch(addErrorToast({ error }));
+            dispatch(findActiveDhcpFailure());
+        }
+    } else {
+        try {
+            await apiClient.setDhcpConfig(updatedConfig);
+            dispatch(setDhcpConfigSuccess(updatedConfig));
+            dispatch(addSuccessToast('dhcp_config_saved'));
+        } catch (error) {
+            dispatch(addErrorToast({ error }));
+            dispatch(setDhcpConfigFailure());
+        }
+    }
+};
+
+export const toggleDhcpRequest = createAction('TOGGLE_DHCP_REQUEST');
+export const toggleDhcpFailure = createAction('TOGGLE_DHCP_FAILURE');
+export const toggleDhcpSuccess = createAction('TOGGLE_DHCP_SUCCESS');
+
+// TODO rewrite findActiveDhcp part
+export const toggleDhcp = config => async (dispatch) => {
+    dispatch(toggleDhcpRequest());
+
+    if (config.enabled) {
+        try {
+            await apiClient.setDhcpConfig({ ...config, enabled: false });
+            dispatch(toggleDhcpSuccess());
+            dispatch(addSuccessToast('disabled_dhcp'));
+        } catch (error) {
+            dispatch(addErrorToast({ error }));
+            dispatch(toggleDhcpFailure());
+        }
+    } else {
+        dispatch(findActiveDhcpRequest());
+        try {
+            const activeDhcp = await apiClient.findActiveDhcp(config.interface_name);
+            dispatch(findActiveDhcpSuccess(activeDhcp));
+
+            if (!activeDhcp.found) {
+                try {
+                    await apiClient.setDhcpConfig({ ...config, enabled: true });
+                    dispatch(toggleDhcpSuccess());
+                    dispatch(addSuccessToast('enabled_dhcp'));
+                } catch (error) {
+                    dispatch(addErrorToast({ error }));
+                    dispatch(toggleDhcpFailure());
+                }
+            } else {
+                dispatch(addErrorToast({ error: 'dhcp_found' }));
+            }
+        } catch (error) {
+            dispatch(addErrorToast({ error }));
+            dispatch(findActiveDhcpFailure());
+        }
     }
 };

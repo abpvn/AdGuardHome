@@ -3,12 +3,12 @@ package dnsfilter
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"regexp"
@@ -17,6 +17,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AdguardTeam/dnsproxy/upstream"
+	"github.com/AdguardTeam/golibs/log"
 	"github.com/bluele/gcache"
 	"golang.org/x/net/publicsuffix"
 )
@@ -35,7 +37,7 @@ const defaultParentalURL = "http://%s/check-parental-control-hash?prefixes=%s&se
 // ErrInvalidSyntax is returned by AddRule when the rule is invalid
 var ErrInvalidSyntax = errors.New("dnsfilter: invalid rule syntax")
 
-// ErrInvalidSyntax is returned by AddRule when the rule was already added to the filter
+// ErrAlreadyExists is returned by AddRule when the rule was already added to the filter
 var ErrAlreadyExists = errors.New("dnsfilter: rule was already added")
 
 const shortcutLength = 6 // used for rule search optimization, 6 hits the sweet spot
@@ -45,10 +47,11 @@ const enableDelayedCompilation = true // flag for debugging, must be true in pro
 
 // Config allows you to configure DNS filtering with New() or just change variables directly.
 type Config struct {
-	ParentalSensitivity int  `yaml:"parental_sensitivity"` // must be either 3, 10, 13 or 17
-	ParentalEnabled     bool `yaml:"parental_enabled"`
-	SafeSearchEnabled   bool `yaml:"safesearch_enabled"`
-	SafeBrowsingEnabled bool `yaml:"safebrowsing_enabled"`
+	ParentalSensitivity int    `yaml:"parental_sensitivity"` // must be either 3, 10, 13 or 17
+	ParentalEnabled     bool   `yaml:"parental_enabled"`
+	SafeSearchEnabled   bool   `yaml:"safesearch_enabled"`
+	SafeBrowsingEnabled bool   `yaml:"safebrowsing_enabled"`
+	ResolverAddress     string // DNS server address
 }
 
 type privateConfig struct {
@@ -91,10 +94,11 @@ type LookupStats struct {
 	PendingMax int64  // maximum number of pending HTTP requests
 }
 
-// Stats store LookupStats for both safebrowsing and parental
+// Stats store LookupStats for safebrowsing, parental and safesearch
 type Stats struct {
 	Safebrowsing LookupStats
 	Parental     LookupStats
+	Safesearch   LookupStats
 }
 
 // Dnsfilter holds added rules and performs hostname matches against the rules
@@ -115,6 +119,7 @@ type Dnsfilter struct {
 	privateConfig
 }
 
+// Filter represents a filter list
 type Filter struct {
 	ID    int64    `json:"id"`         // auto-assigned when filter is added (see nextFilterID), json by default keeps ID uppercase but we need lowercase
 	Rules []string `json:"-" yaml:"-"` // not in yaml or json
@@ -127,16 +132,26 @@ type Reason int
 
 const (
 	// reasons for not filtering
-	NotFilteredNotFound  Reason = iota // host was not find in any checks, default value for result
-	NotFilteredWhiteList               // the host is explicitly whitelisted
-	NotFilteredError                   // there was a transitive error during check
+
+	// NotFilteredNotFound - host was not find in any checks, default value for result
+	NotFilteredNotFound Reason = iota
+	// NotFilteredWhiteList - the host is explicitly whitelisted
+	NotFilteredWhiteList
+	// NotFilteredError - there was a transitive error during check
+	NotFilteredError
 
 	// reasons for filtering
-	FilteredBlackList    // the host was matched to be advertising host
-	FilteredSafeBrowsing // the host was matched to be malicious/phishing
-	FilteredParental     // the host was matched to be outside of parental control settings
-	FilteredInvalid      // the request was invalid and was not processed
-	FilteredSafeSearch   // the host was replaced with safesearch variant
+
+	// FilteredBlackList - the host was matched to be advertising host
+	FilteredBlackList
+	// FilteredSafeBrowsing - the host was matched to be malicious/phishing
+	FilteredSafeBrowsing
+	// FilteredParental - the host was matched to be outside of parental control settings
+	FilteredParental
+	// FilteredInvalid - the request was invalid and was not processed
+	FilteredInvalid
+	// FilteredSafeSearch - the host was replaced with safesearch variant
+	FilteredSafeSearch
 )
 
 // these variables need to survive coredns reload
@@ -144,14 +159,17 @@ var (
 	stats             Stats
 	safebrowsingCache gcache.Cache
 	parentalCache     gcache.Cache
+	safeSearchCache   gcache.Cache
 )
+
+var resolverAddr string // DNS server address
 
 // Result holds state of hostname check
 type Result struct {
 	IsFiltered bool   `json:",omitempty"` // True if the host name is filtered
 	Reason     Reason `json:",omitempty"` // Reason for blocking / unblocking
 	Rule       string `json:",omitempty"` // Original rule text
-	Ip         net.IP `json:",omitempty"` // Not nil only in the case of a hosts file syntax
+	IP         net.IP `json:",omitempty"` // Not nil only in the case of a hosts file syntax
 	FilterID   int64  `json:",omitempty"` // Filter ID the rule belongs to
 }
 
@@ -175,6 +193,19 @@ func (d *Dnsfilter) CheckHost(host string) (Result, error) {
 	}
 	if result.Reason.Matched() {
 		return result, nil
+	}
+
+	// check safeSearch if no match
+	if d.SafeSearchEnabled {
+		result, err = d.checkSafeSearch(host)
+		if err != nil {
+			log.Printf("Failed to safesearch HTTP lookup, ignoring check: %v", err)
+			return Result{}, nil
+		}
+
+		if result.Reason.Matched() {
+			return result, nil
+		}
 	}
 
 	// check safebrowsing if no match
@@ -228,7 +259,6 @@ func newRulesTable() *rulesTable {
 
 func (r *rulesTable) Add(rule *rule) {
 	r.Lock()
-
 	if rule.ip != nil {
 		// Hosts syntax
 		r.rulesByHost[rule.text] = rule
@@ -476,7 +506,7 @@ func (rule *rule) match(host string) (Result, error) {
 			IsFiltered: true,
 			Reason:     FilteredBlackList,
 			Rule:       rule.originalText,
-			Ip:         rule.ip,
+			IP:         rule.ip,
 			FilterID:   rule.listID,
 		}, nil
 	}
@@ -574,7 +604,76 @@ func hostnameToHashParam(host string, addslash bool) (string, map[string]bool) {
 	return hashparam.String(), hashes
 }
 
+func (d *Dnsfilter) checkSafeSearch(host string) (Result, error) {
+	if log.GetLevel() >= log.DEBUG {
+		timer := log.StartTimer()
+		defer timer.LogElapsed("SafeSearch HTTP lookup for %s", host)
+	}
+
+	if safeSearchCache == nil {
+		safeSearchCache = gcache.New(defaultCacheSize).LRU().Expiration(defaultCacheTime).Build()
+	}
+
+	// Check cache. Return cached result if it was found
+	cachedValue, isFound, err := getCachedReason(safeSearchCache, host)
+	if isFound {
+		atomic.AddUint64(&stats.Safesearch.CacheHits, 1)
+		log.Tracef("%s: found in SafeSearch cache", host)
+		return cachedValue, nil
+	}
+
+	if err != nil {
+		return Result{}, err
+	}
+
+	safeHost, ok := d.SafeSearchDomain(host)
+	if !ok {
+		return Result{}, nil
+	}
+
+	res := Result{IsFiltered: true, Reason: FilteredSafeSearch}
+	if ip := net.ParseIP(safeHost); ip != nil {
+		res.IP = ip
+		err = safeSearchCache.Set(host, res)
+		if err != nil {
+			return Result{}, nil
+		}
+
+		return res, nil
+	}
+
+	// TODO this address should be resolved with upstream that was configured in dnsforward
+	addrs, err := net.LookupIP(safeHost)
+	if err != nil {
+		log.Tracef("SafeSearchDomain for %s was found but failed to lookup for %s cause %s", host, safeHost, err)
+		return Result{}, err
+	}
+
+	for _, i := range addrs {
+		if ipv4 := i.To4(); ipv4 != nil {
+			res.IP = ipv4
+			break
+		}
+	}
+
+	if len(res.IP) == 0 {
+		return Result{}, fmt.Errorf("no ipv4 addresses in safe search response for %s", safeHost)
+	}
+
+	// Cache result
+	err = safeSearchCache.Set(host, res)
+	if err != nil {
+		return Result{}, nil
+	}
+	return res, nil
+}
+
 func (d *Dnsfilter) checkSafeBrowsing(host string) (Result, error) {
+	if log.GetLevel() >= log.DEBUG {
+		timer := log.StartTimer()
+		defer timer.LogElapsed("SafeBrowsing HTTP lookup for %s", host)
+	}
+
 	// prevent recursion -- checking the host of safebrowsing server makes no sense
 	if host == d.safeBrowsingServer {
 		return Result{}, nil
@@ -616,6 +715,11 @@ func (d *Dnsfilter) checkSafeBrowsing(host string) (Result, error) {
 }
 
 func (d *Dnsfilter) checkParental(host string) (Result, error) {
+	if log.GetLevel() >= log.DEBUG {
+		timer := log.StartTimer()
+		defer timer.LogElapsed("Parental HTTP lookup for %s", host)
+	}
+
 	// prevent recursion -- checking the host of parental safety server makes no sense
 	if host == d.parentalServer {
 		return Result{}, nil
@@ -661,8 +765,11 @@ func (d *Dnsfilter) checkParental(host string) (Result, error) {
 	return result, err
 }
 
+type formatHandler func(hashparam string) string
+type bodyHandler func(body []byte, hashes map[string]bool) (Result, error)
+
 // real implementation of lookup/check
-func (d *Dnsfilter) lookupCommon(host string, lookupstats *LookupStats, cache gcache.Cache, hashparamNeedSlash bool, format func(hashparam string) string, handleBody func(body []byte, hashes map[string]bool) (Result, error)) (Result, error) {
+func (d *Dnsfilter) lookupCommon(host string, lookupstats *LookupStats, cache gcache.Cache, hashparamNeedSlash bool, format formatHandler, handleBody bodyHandler) (Result, error) {
 	// if host ends with a dot, trim it
 	host = strings.ToLower(strings.Trim(host, "."))
 
@@ -670,6 +777,7 @@ func (d *Dnsfilter) lookupCommon(host string, lookupstats *LookupStats, cache gc
 	cachedValue, isFound, err := getCachedReason(cache, host)
 	if isFound {
 		atomic.AddUint64(&lookupstats.CacheHits, 1)
+		log.Tracef("%s: found in the lookup cache", host)
 		return cachedValue, nil
 	}
 	if err != nil {
@@ -774,43 +882,43 @@ func (d *Dnsfilter) AddRule(input string, filterListID int64) error {
 	}
 
 	// Start parsing the rule
-	rule := rule{
+	r := rule{
 		text:         input, // will be modified
 		originalText: input,
 		listID:       filterListID,
 	}
 
 	// Mark rule as whitelist if it starts with @@
-	if strings.HasPrefix(rule.text, "@@") {
-		rule.isWhitelist = true
-		rule.text = rule.text[2:]
+	if strings.HasPrefix(r.text, "@@") {
+		r.isWhitelist = true
+		r.text = r.text[2:]
 	}
 
-	err := rule.parseOptions()
+	err := r.parseOptions()
 	if err != nil {
 		return err
 	}
 
-	rule.extractShortcut()
+	r.extractShortcut()
 
 	if !enableDelayedCompilation {
-		err := rule.compile()
+		err := r.compile()
 		if err != nil {
 			return err
 		}
 	}
 
 	destination := d.blackList
-	if rule.isImportant {
+	if r.isImportant {
 		destination = d.important
-	} else if rule.isWhitelist {
+	} else if r.isWhitelist {
 		destination = d.whiteList
 	}
 
 	d.storageMutex.Lock()
 	d.storage[input] = true
 	d.storageMutex.Unlock()
-	destination.Add(&rule)
+	destination.Add(&r)
 	return nil
 }
 
@@ -835,13 +943,13 @@ func (d *Dnsfilter) parseEtcHosts(input string, filterListID int64) bool {
 	d.storageMutex.Unlock()
 
 	for _, host := range fields[1:] {
-		rule := rule{
+		r := rule{
 			text:         host,
 			originalText: input,
 			listID:       filterListID,
 			ip:           addr,
 		}
-		d.blackList.Add(&rule)
+		d.blackList.Add(&r)
 	}
 	return true
 }
@@ -870,6 +978,47 @@ func (d *Dnsfilter) matchHost(host string) (Result, error) {
 // lifecycle helper functions
 //
 
+// Connect to a remote server resolving hostname using our own DNS server
+func customDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	log.Tracef("network:%v  addr:%v", network, addr)
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	dialer := &net.Dialer{
+		Timeout: time.Minute * 5,
+	}
+
+	if net.ParseIP(host) != nil {
+		con, err := dialer.DialContext(ctx, network, addr)
+		return con, err
+	}
+
+	r := upstream.NewResolver(resolverAddr, 30*time.Second)
+	addrs, e := r.LookupIPAddr(ctx, host)
+	log.Tracef("LookupIPAddr: %s: %v", host, addrs)
+	if e != nil {
+		return nil, e
+	}
+
+	var firstErr error
+	firstErr = nil
+	for _, a := range addrs {
+		addr = fmt.Sprintf("%s:%s", a.String(), port)
+		con, err := dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		return con, err
+	}
+	return nil, firstErr
+}
+
 // New creates properly initialized DNS Filter that is ready to be used
 func New(c *Config) *Dnsfilter {
 	d := new(Dnsfilter)
@@ -879,15 +1028,20 @@ func New(c *Config) *Dnsfilter {
 	d.whiteList = newRulesTable()
 	d.blackList = newRulesTable()
 
-	// Customize the Transport to have larger connection pool
-	defaultRoundTripper := http.DefaultTransport
-	defaultTransportPointer, ok := defaultRoundTripper.(*http.Transport)
-	if !ok {
-		panic(fmt.Sprintf("defaultRoundTripper not an *http.Transport"))
+	// Customize the Transport to have larger connection pool,
+	// We are not (re)using http.DefaultTransport because of race conditions found by tests
+	d.transport = &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		MaxIdleConns:          defaultHTTPMaxIdleConnections, // default 100
+		MaxIdleConnsPerHost:   defaultHTTPMaxIdleConnections, // default 2
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
 	}
-	d.transport = defaultTransportPointer                           // dereference it to get a copy of the struct that the pointer points to
-	d.transport.MaxIdleConns = defaultHTTPMaxIdleConnections        // default 100
-	d.transport.MaxIdleConnsPerHost = defaultHTTPMaxIdleConnections // default 2
+	if c != nil && len(c.ResolverAddress) != 0 {
+		resolverAddr = c.ResolverAddress
+		d.transport.DialContext = customDialContext
+	}
 	d.client = http.Client{
 		Transport: d.transport,
 		Timeout:   defaultHTTPTimeout,
@@ -912,15 +1066,6 @@ func (d *Dnsfilter) Destroy() {
 //
 // config manipulation helpers
 //
-
-// IsParentalSensitivityValid checks if sensitivity is valid value
-func IsParentalSensitivityValid(sensitivity int) bool {
-	switch sensitivity {
-	case 3, 10, 13, 17:
-		return true
-	}
-	return false
-}
 
 // SetSafeBrowsingServer lets you optionally change hostname of safesearch lookup
 func (d *Dnsfilter) SetSafeBrowsingServer(host string) {

@@ -11,10 +11,20 @@
     <a href="https://adguard.com/">AdGuard.com</a> |
     <a href="https://github.com/AdguardTeam/AdGuardHome/wiki">Wiki</a> |
     <a href="https://reddit.com/r/Adguard">Reddit</a> |
-    <a href="https://twitter.com/AdGuard">Twitter</a>
+    <a href="https://twitter.com/AdGuard">Twitter</a> |
+    <a href="https://t.me/adguard_en">Telegram</a>
     <br /><br />
     <a href="https://travis-ci.org/AdguardTeam/AdGuardHome">
       <img src="https://travis-ci.org/AdguardTeam/AdGuardHome.svg" alt="Build status" />
+    </a>
+    <a href="https://codecov.io/github/AdguardTeam/AdGuardHome?branch=master">
+      <img src="https://img.shields.io/codecov/c/github/AdguardTeam/AdGuardHome/master.svg" alt="Code Coverage" />
+    </a>
+    <a href="https://goreportcard.com/report/AdguardTeam/AdGuardHome">
+      <img src="https://goreportcard.com/badge/github.com/AdguardTeam/AdGuardHome" alt="Go Report Card" />
+    </a>
+    <a href="https://golangci.com/r/github.com/AdguardTeam/AdGuardHome">
+      <img src="https://golangci.com/badges/github.com/AdguardTeam/AdGuardHome.svg" alt="GolangCI" />
     </a>
     <a href="https://github.com/AdguardTeam/AdGuardHome/releases">
         <img src="https://img.shields.io/github/release/AdguardTeam/AdGuardHome/all.svg" alt="Latest release" />
@@ -29,118 +39,39 @@
 
 <hr />
 
-# AdGuard Home
-
 AdGuard Home is a network-wide software for blocking ads & tracking. After you set it up, it'll cover ALL your home devices, and you don't need any client-side software for that.
 
-## How does AdGuard Home work?
+It operates as a DNS server that re-routes tracking domains to a "black hole," thus preventing your devices from connecting to those servers. It's based on software we use for our public [AdGuard DNS](https://adguard.com/en/adguard-dns/overview.html) servers -- both share a lot of common code.
 
-AdGuard Home operates as a DNS server that re-routes tracking domains to a "black hole," thus preventing your devices from connecting to those servers. It's based on software we use for our public [AdGuard DNS](https://adguard.com/en/adguard-dns/overview.html) servers -- both share a lot of common code.
+* [Getting Started](#getting-started)
+* [How to build from source](#how-to-build)
+* [Contributing](#contributing)
+* [Reporting issues](#reporting-issues)
+* [Acknowledgments](#acknowledgments)
 
-## How is this different from public AdGuard DNS servers?
+<a id="getting-started"></a>
+## Getting Started
 
-Running your own AdGuard Home server allows you to do much more than using a public DNS server.
+Please read the [Getting Started](https://github.com/AdguardTeam/AdGuardHome/wiki/Getting-Started) article on our Wiki to learn how to install AdGuard Home, and how to configure your devices to use it.
 
-* Choose what exactly will the server block or not block;
-* Monitor your network activity;
-* Add your own custom filtering rules;
+Alternatively, you can use our [official Docker image](https://hub.docker.com/r/adguard/adguardhome). 
 
-In the future, AdGuard Home is supposed to become more than just a DNS server.
+### Guides
 
-## Installation
+* [Configuration](https://github.com/AdguardTeam/AdGuardHome/wiki/Configuration)
+* [AdGuard Home as a DNS-over-HTTPS or DNS-over-TLS server](https://github.com/AdguardTeam/AdGuardHome/wiki/Encryption)
+* [How to install and run AdGuard Home on Raspberry Pi](https://github.com/AdguardTeam/AdGuardHome/wiki/Raspberry-Pi)
+* [How to install and run AdGuard Home on a Virtual Private Server](https://github.com/AdguardTeam/AdGuardHome/wiki/VPS)
 
-### Mac
-
-Download this file: [AdGuardHome_v0.91_MacOS.zip](https://github.com/AdguardTeam/AdGuardHome/releases/download/v0.91/AdGuardHome_v0.91_MacOS.zip), then unpack it and follow ["How to run"](#how-to-run) instructions below.
-
-### Linux 64-bit Intel
-
-Download this file: [AdGuardHome_v0.91_linux_amd64.tar.gz](https://github.com/AdguardTeam/AdGuardHome/releases/download/v0.91/AdGuardHome_v0.91_linux_amd64.tar.gz), then unpack it and follow ["How to run"](#how-to-run) instructions below.
-
-### Linux 32-bit Intel
-
-Download this file: [AdGuardHome_v0.91_linux_386.tar.gz](https://github.com/AdguardTeam/AdGuardHome/releases/download/v0.91/AdGuardHome_v0.91_linux_386.tar.gz), then unpack it and follow ["How to run"](#how-to-run) instructions below.
-
-### Raspberry Pi (32-bit ARM)
-
-Download this file: [AdGuardHome_v0.91_linux_arm.tar.gz](https://github.com/AdguardTeam/AdGuardHome/releases/download/v0.91/AdGuardHome_v0.91_linux_arm.tar.gz), then unpack it and follow ["How to run"](#how-to-run) instructions below.
-
-## How to update
-
-We have not yet implemented an auto-update of AdGuard Home, but it is planned for future versions: #448.
-
-At the moment, the update procedure is manual:
-
-1. Download the new AdGuard Home binary.
-2. Replace the old file with the new one.
-3. Restart AdGuard Home.
-
-## How to run
-
-DNS works on port 53, which requires superuser privileges. Therefore, you need to run it with `sudo` in terminal:
-
-```bash
-sudo ./AdGuardHome
-```
-
-Now open the browser and navigate to http://localhost:3000/ to control your AdGuard Home service.
-
-### Running without superuser
-
-You can run AdGuard Home without superuser privileges, but you need to instruct it to use a different port rather than 53. You can do that by editing `AdGuardHome.yaml` and finding these two lines:
-
-```yaml
-dns:
-  port: 53
-```
-
-You can change port 53 to anything above 1024 to avoid requiring superuser privileges.
-
-If the file does not exist, create it in the same folder, type these two lines down and save.
-
-### Additional configuration
-
-Upon the first execution, a file named `AdGuardHome.yaml` will be created, with default values written in it. You can modify the file while your AdGuard Home service is not running. Otherwise, any changes to the file will be lost because the running program will overwrite them.
-
-Settings are stored in [YAML format](https://en.wikipedia.org/wiki/YAML), possible parameters that you can configure are listed below:
-
- * `bind_host` — Web interface IP address to listen on.
- * `bind_port` — Web interface IP port to listen on.
- * `auth_name` — Web interface optional authorization username.
- * `auth_pass` — Web interface optional authorization password.
- * `dns` — DNS configuration section.
-   * `port` — DNS server port to listen on.
-   * `protection_enabled` — Whether any kind of filtering and protection should be done, when off it works as a plain dns forwarder.
-   * `filtering_enabled` — Filtering of DNS requests based on filter lists.
-   * `blocked_response_ttl` — For how many seconds the clients should cache a filtered response. Low values are useful on LAN if you change filters very often, high values are useful to increase performance and save traffic.
-   * `querylog_enabled` — Query logging (also used to calculate top 50 clients, blocked domains and requested domains for statistical purposes).
-   * `ratelimit` — DDoS protection, specifies in how many packets per second a client should receive. Anything above that is silently dropped. To disable set 0, default is 20. Safe to disable if DNS server is not available from internet.
-   * `ratelimit_whitelist` — If you want exclude some IP addresses from ratelimiting but keep ratelimiting on for others, put them here.
-   * `refuse_any` — Another DDoS protection mechanism. Requests of type ANY are rarely needed, so refusing to serve them mitigates against attackers trying to use your DNS as a reflection. Safe to disable if DNS server is not available from internet.
-   * `bootstrap_dns` — DNS server used for initial hostname resolution in case if upstream server name is a hostname.
-   * `parental_sensitivity` — Age group for parental control-based filtering, must be either 3, 10, 13 or 17 if enabled.
-   * `parental_enabled` — Parental control-based DNS requests filtering.
-   * `safesearch_enabled` — Enforcing "Safe search" option for search engines, when possible.
-   * `safebrowsing_enabled` — Filtering of DNS requests based on safebrowsing.
-   * `upstream_dns` — List of upstream DNS servers.
- * `filters` — List of filters, each filter has the following values:
-   * `enabled` — Current filter's status (enabled/disabled).
-   * `url` — URL pointing to the filter contents (filtering rules).
-   * `name` — Name of the filter. If it's an adguard syntax filter it will get updated automatically, otherwise it stays unchanged.
-   * `last_updated` — Time when the filter was last updated from server.
-   * `ID` - filter ID (must be unique).
- * `user_rules` — User-specified filtering rules.
-
-Removing an entry from settings file will reset it to the default value. Deleting the file will reset all settings to the default values.
-
+<a id="how-to-build"></a>
 ## How to build from source
 
 ### Prerequisites
 
 You will need:
 
- * [go](https://golang.org/dl/) v1.11 or later.
- * [node.js](https://nodejs.org/en/download/)
+ * [go](https://golang.org/dl/) v1.12 or later.
+ * [node.js](https://nodejs.org/en/download/) v10 or later.
 
 You can either install it via the provided links or use [brew.sh](https://brew.sh/) if you're on Mac:
 
@@ -158,6 +89,7 @@ cd AdGuardHome
 make
 ```
 
+<a id="contributing"></a>
 ## Contributing
 
 You are welcome to fork this repository, make your changes and submit a pull request — https://github.com/AdguardTeam/AdGuardHome/pulls
@@ -196,10 +128,12 @@ node upload.js
 node download.js
 ```
 
+<a id="reporting-issues"></a>
 ## Reporting issues
 
 If you run into any problem or have a suggestion, head to [this page](https://github.com/AdguardTeam/AdGuardHome/issues) and click on the `New issue` button.
 
+<a id="acknowledgments"></a>
 ## Acknowledgments
 
 This software wouldn't have been possible without:
@@ -209,6 +143,8 @@ This software wouldn't have been possible without:
    * [gcache](https://github.com/bluele/gcache)
    * [miekg's dns](https://github.com/miekg/dns)
    * [go-yaml](https://github.com/go-yaml/yaml)
+   * [service](https://godoc.org/github.com/kardianos/service)
+   * [dnsproxy](https://github.com/AdguardTeam/dnsproxy)
  * [Node.js](https://nodejs.org/) and it's libraries:
    * [React.js](https://reactjs.org)
    * [Tabler](https://github.com/tabler/tabler)

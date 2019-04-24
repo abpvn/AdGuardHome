@@ -68,7 +68,7 @@ class Filters extends Component {
 
     render() {
         const { t } = this.props;
-        const { filters, userRules } = this.props.filtering;
+        const { filters, userRules, processingRefreshFilters } = this.props.filtering;
         return (
             <div>
                 <PageTitle title={ t('filters') } />
@@ -82,13 +82,34 @@ class Filters extends Component {
                                 <ReactTable
                                     data={filters}
                                     columns={this.columns}
-                                    showPagination={false}
+                                    showPagination={true}
+                                    defaultPageSize={10}
+                                    minRows={4}
+                                    // Text
+                                    previousText={ t('previous_btn') }
+                                    nextText={ t('next_btn') }
+                                    loadingText={ t('loading_table_status') }
+                                    pageText={ t('page_table_footer_text') }
+                                    ofText={ t('of_table_footer_text') }
+                                    rowsText={ t('rows_table_footer_text') }
                                     noDataText={ t('no_filters_added') }
-                                    minRows={4} // TODO find out what to show if rules.length is 0
                                 />
                                 <div className="card-actions">
-                                    <button className="btn btn-success btn-standart mr-2" type="submit" onClick={this.props.toggleFilteringModal}><Trans>add_filter_btn</Trans></button>
-                                    <button className="btn btn-primary btn-standart" type="submit" onClick={this.props.refreshFilters}><Trans>check_updates_btn</Trans></button>
+                                    <button
+                                        className="btn btn-success btn-standard mr-2"
+                                        type="submit"
+                                        onClick={this.props.toggleFilteringModal}
+                                    >
+                                        <Trans>add_filter_btn</Trans>
+                                    </button>
+                                    <button
+                                        className="btn btn-primary btn-standard"
+                                        type="submit"
+                                        onClick={this.props.refreshFilters}
+                                        disabled={processingRefreshFilters}
+                                    >
+                                        <Trans>check_updates_btn</Trans>
+                                    </button>
                                 </div>
                             </Card>
                         </div>
@@ -106,6 +127,7 @@ class Filters extends Component {
                     toggleModal={this.props.toggleFilteringModal}
                     addFilter={this.props.addFilter}
                     isFilterAdded={this.props.filtering.isFilterAdded}
+                    processingAddFilter={this.props.filtering.processingAddFilter}
                     title={ t('new_filter_btn') }
                     inputDescription={ t('enter_valid_filter_url') }
                 />
@@ -122,6 +144,8 @@ Filters.propTypes = {
         filters: PropTypes.array,
         isFilteringModalOpen: PropTypes.bool.isRequired,
         isFilterAdded: PropTypes.bool,
+        processingAddFilter: PropTypes.bool,
+        processingRefreshFilters: PropTypes.bool,
     }),
     removeFilter: PropTypes.func.isRequired,
     toggleFilterStatus: PropTypes.func.isRequired,

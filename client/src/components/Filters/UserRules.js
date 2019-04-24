@@ -25,7 +25,7 @@ class UserRules extends Component {
                     <textarea className="form-control form-control--textarea-large" value={this.props.userRules} onChange={this.handleChange} />
                     <div className="card-actions">
                         <button
-                            className="btn btn-success btn-standart"
+                            className="btn btn-success btn-standard"
                             type="submit"
                             onClick={this.handleSubmit}
                         >
@@ -51,6 +51,9 @@ class UserRules extends Component {
                         </li>
                         <li>
                             <code>{ t('example_comment_hash') }</code> - { t('example_comment_meaning') }
+                        </li>
+                        <li>
+                            <code>/REGEX/</code> - { t('example_regex_meaning') }
                         </li>
                     </ol>
                 </div>

@@ -5,10 +5,14 @@ const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const webpack = require('webpack');
 const flexBugsFixes = require('postcss-flexbugs-fixes');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 const RESOURCES_PATH = path.resolve(__dirname);
 const ENTRY_REACT = path.resolve(RESOURCES_PATH, 'src/index.js');
+const ENTRY_INSTALL = path.resolve(RESOURCES_PATH, 'src/install/index.js');
 const HTML_PATH = path.resolve(RESOURCES_PATH, 'public/index.html');
+const HTML_INSTALL_PATH = path.resolve(RESOURCES_PATH, 'public/install.html');
+const FAVICON_PATH = path.resolve(RESOURCES_PATH, 'public/favicon.ico');
 
 const PUBLIC_PATH = path.resolve(__dirname, '../build/static');
 
@@ -16,7 +20,8 @@ const config = {
     target: 'web',
     context: RESOURCES_PATH,
     entry: {
-        bundle: ENTRY_REACT,
+        main: ENTRY_REACT,
+        install: ENTRY_INSTALL,
     },
     output: {
         path: PUBLIC_PATH,
@@ -101,11 +106,22 @@ const config = {
         new HtmlWebpackPlugin({
             inject: true,
             cache: false,
+            chunks: ['main'],
             template: HTML_PATH,
+        }),
+        new HtmlWebpackPlugin({
+            inject: true,
+            cache: false,
+            chunks: ['install'],
+            filename: 'install.html',
+            template: HTML_INSTALL_PATH,
         }),
         new ExtractTextPlugin({
             filename: '[name].[contenthash].css',
         }),
+        new CopyPlugin([
+            { from: FAVICON_PATH, to: PUBLIC_PATH },
+        ]),
     ],
 };
 

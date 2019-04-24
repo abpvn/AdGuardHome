@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"path"
@@ -17,6 +18,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/AdguardTeam/golibs/log"
 	"github.com/shirou/gopsutil/process"
 	"go.uber.org/goleak"
 )
@@ -24,8 +26,8 @@ import (
 // first in file because it must be run first
 func TestLotsOfRulesMemoryUsage(t *testing.T) {
 	start := getRSS()
-	trace("RSS before loading rules - %d kB\n", start/1024)
-	dumpMemProfile(_Func() + "1.pprof")
+	log.Tracef("RSS before loading rules - %d kB\n", start/1024)
+	dumpMemProfile("tests/" + _Func() + "1.pprof")
 
 	d := NewForTest()
 	defer d.Destroy()
@@ -35,8 +37,8 @@ func TestLotsOfRulesMemoryUsage(t *testing.T) {
 	}
 
 	afterLoad := getRSS()
-	trace("RSS after loading rules - %d kB (%d kB diff)\n", afterLoad/1024, (afterLoad-start)/1024)
-	dumpMemProfile(_Func() + "2.pprof")
+	log.Tracef("RSS after loading rules - %d kB (%d kB diff)\n", afterLoad/1024, (afterLoad-start)/1024)
+	dumpMemProfile("tests/" + _Func() + "2.pprof")
 
 	tests := []struct {
 		host  string
@@ -58,8 +60,8 @@ func TestLotsOfRulesMemoryUsage(t *testing.T) {
 		}
 	}
 	afterMatch := getRSS()
-	trace("RSS after matching - %d kB (%d kB diff)\n", afterMatch/1024, (afterMatch-afterLoad)/1024)
-	dumpMemProfile(_Func() + "3.pprof")
+	log.Tracef("RSS after matching - %d kB (%d kB diff)\n", afterMatch/1024, (afterMatch-afterLoad)/1024)
+	dumpMemProfile("tests/" + _Func() + "3.pprof")
 }
 
 func getRSS() uint64 {
@@ -68,6 +70,9 @@ func getRSS() uint64 {
 		panic(err)
 	}
 	minfo, err := proc.MemoryInfo()
+	if err != nil {
+		panic(err)
+	}
 	return minfo.RSS
 }
 
@@ -85,23 +90,23 @@ func dumpMemProfile(name string) {
 	}
 }
 
-const topHostsFilename = "../tests/top-1m.csv"
+const topHostsFilename = "tests/top-1m.csv"
 
 func fetchTopHostsFromNet() {
-	trace("Fetching top hosts from network")
+	log.Tracef("Fetching top hosts from network")
 	resp, err := http.Get("http://s3-us-west-1.amazonaws.com/umbrella-static/top-1m.csv.zip")
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
 
-	trace("Reading zipfile body")
+	log.Tracef("Reading zipfile body")
 	zipfile, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
 	}
 
-	trace("Opening zipfile")
+	log.Tracef("Opening zipfile")
 	r, err := zip.NewReader(bytes.NewReader(zipfile), int64(len(zipfile)))
 	if err != nil {
 		panic(err)
@@ -111,19 +116,19 @@ func fetchTopHostsFromNet() {
 		panic(fmt.Errorf("zipfile must have only one entry: %+v", r))
 	}
 	f := r.File[0]
-	trace("Unpacking file %s from zipfile", f.Name)
+	log.Tracef("Unpacking file %s from zipfile", f.Name)
 	rc, err := f.Open()
 	if err != nil {
 		panic(err)
 	}
-	trace("Reading file %s contents", f.Name)
+	log.Tracef("Reading file %s contents", f.Name)
 	body, err := ioutil.ReadAll(rc)
 	if err != nil {
 		panic(err)
 	}
 	rc.Close()
 
-	trace("Writing file %s contents to disk", f.Name)
+	log.Tracef("Writing file %s contents to disk", f.Name)
 	err = ioutil.WriteFile(topHostsFilename+".tmp", body, 0644)
 	if err != nil {
 		panic(err)
@@ -144,17 +149,17 @@ func getTopHosts() {
 
 func TestLotsOfRulesLotsOfHostsMemoryUsage(t *testing.T) {
 	start := getRSS()
-	trace("RSS before loading rules - %d kB\n", start/1024)
-	dumpMemProfile(_Func() + "1.pprof")
+	log.Tracef("RSS before loading rules - %d kB\n", start/1024)
+	dumpMemProfile("tests/" + _Func() + "1.pprof")
 
 	d := NewForTest()
 	defer d.Destroy()
 	mustLoadTestRules(d)
-	trace("Have %d rules", d.Count())
+	log.Tracef("Have %d rules", d.Count())
 
 	afterLoad := getRSS()
-	trace("RSS after loading rules - %d kB (%d kB diff)\n", afterLoad/1024, (afterLoad-start)/1024)
-	dumpMemProfile(_Func() + "2.pprof")
+	log.Tracef("RSS after loading rules - %d kB (%d kB diff)\n", afterLoad/1024, (afterLoad-start)/1024)
+	dumpMemProfile("tests/" + _Func() + "2.pprof")
 
 	getTopHosts()
 	hostnames, err := os.Open(topHostsFilename)
@@ -163,8 +168,8 @@ func TestLotsOfRulesLotsOfHostsMemoryUsage(t *testing.T) {
 	}
 	defer hostnames.Close()
 	afterHosts := getRSS()
-	trace("RSS after loading hosts - %d kB (%d kB diff)\n", afterHosts/1024, (afterHosts-afterLoad)/1024)
-	dumpMemProfile(_Func() + "2.pprof")
+	log.Tracef("RSS after loading hosts - %d kB (%d kB diff)\n", afterHosts/1024, (afterHosts-afterLoad)/1024)
+	dumpMemProfile("tests/" + _Func() + "2.pprof")
 
 	{
 		scanner := bufio.NewScanner(hostnames)
@@ -182,8 +187,8 @@ func TestLotsOfRulesLotsOfHostsMemoryUsage(t *testing.T) {
 	}
 
 	afterMatch := getRSS()
-	trace("RSS after matching - %d kB (%d kB diff)\n", afterMatch/1024, (afterMatch-afterLoad)/1024)
-	dumpMemProfile(_Func() + "3.pprof")
+	log.Tracef("RSS after matching - %d kB (%d kB diff)\n", afterMatch/1024, (afterMatch-afterLoad)/1024)
+	dumpMemProfile("tests/" + _Func() + "3.pprof")
 }
 
 func TestRuleToRegexp(t *testing.T) {
@@ -236,7 +241,7 @@ func TestSuffixRule(t *testing.T) {
 			t.Errorf("Result suffix does not match for \"%s\": got \"%s\" expected \"%s\"", testcase.rule, suffix, testcase.suffix)
 			continue
 		}
-		// trace("\"%s\": %v: %s", testcase.rule, isSuffix, suffix)
+		// log.Tracef("\"%s\": %v: %s", testcase.rule, isSuffix, suffix)
 	}
 }
 
@@ -281,7 +286,7 @@ func (d *Dnsfilter) checkMatch(t *testing.T, hostname string) {
 	}
 }
 
-func (d *Dnsfilter) checkMatchIp(t *testing.T, hostname string, ip string) {
+func (d *Dnsfilter) checkMatchIP(t *testing.T, hostname string, ip string) {
 	t.Helper()
 	ret, err := d.CheckHost(hostname)
 	if err != nil {
@@ -290,8 +295,8 @@ func (d *Dnsfilter) checkMatchIp(t *testing.T, hostname string, ip string) {
 	if !ret.IsFiltered {
 		t.Errorf("Expected hostname %s to match", hostname)
 	}
-	if ret.Ip == nil || ret.Ip.String() != ip {
-		t.Errorf("Expected ip %s to match, actual: %v", ip, ret.Ip)
+	if ret.IP == nil || ret.IP.String() != ip {
+		t.Errorf("Expected ip %s to match, actual: %v", ip, ret.IP)
 	}
 }
 
@@ -307,7 +312,7 @@ func (d *Dnsfilter) checkMatchEmpty(t *testing.T, hostname string) {
 }
 
 func loadTestRules(d *Dnsfilter) error {
-	filterFileName := "../tests/dns.txt"
+	filterFileName := "tests/dns.txt"
 	file, err := os.Open(filterFileName)
 	if err != nil {
 		return err
@@ -367,8 +372,8 @@ func TestEtcHostsMatching(t *testing.T) {
 	text := fmt.Sprintf("   %s  google.com www.google.com   # enforce google's safesearch   ", addr)
 
 	d.checkAddRule(t, text)
-	d.checkMatchIp(t, "google.com", addr)
-	d.checkMatchIp(t, "www.google.com", addr)
+	d.checkMatchIP(t, "google.com", addr)
+	d.checkMatchIP(t, "www.google.com", addr)
 	d.checkMatchEmpty(t, "subdomain.google.com")
 	d.checkMatchEmpty(t, "example.org")
 }
@@ -601,6 +606,155 @@ func TestSafeBrowsingCustomServerFail(t *testing.T) {
 	d.SetHTTPTimeout(time.Second * 5)
 	d.SetSafeBrowsingServer(address) // this will ensure that test fails
 	d.checkMatchEmpty(t, "wmconvirus.narod.ru")
+}
+
+func TestCheckHostSafeSearchYandex(t *testing.T) {
+	d := NewForTest()
+	defer d.Destroy()
+
+	// Enable safesearch
+	d.SafeSearchEnabled = true
+
+	// Slice of yandex domains
+	yandex := []string{"yAndeX.ru", "YANdex.COM", "yandex.ua", "yandex.by", "yandex.kz", "www.yandex.com"}
+
+	// Check host for each domain
+	for _, host := range yandex {
+		result, err := d.CheckHost(host)
+		if err != nil {
+			t.Errorf("SafeSearch doesn't work for yandex domain `%s` cause %s", host, err)
+		}
+
+		if result.IP.String() != "213.180.193.56" {
+			t.Errorf("SafeSearch doesn't work for yandex domain `%s`", host)
+		}
+	}
+}
+
+func TestCheckHostSafeSearchGoogle(t *testing.T) {
+	d := NewForTest()
+	defer d.Destroy()
+
+	// Enable safesearch
+	d.SafeSearchEnabled = true
+
+	// Slice of google domains
+	googleDomains := []string{"www.google.com", "www.google.im", "www.google.co.in", "www.google.iq", "www.google.is", "www.google.it", "www.google.je"}
+
+	// Check host for each domain
+	for _, host := range googleDomains {
+		result, err := d.CheckHost(host)
+		if err != nil {
+			t.Errorf("SafeSearch doesn't work for %s cause %s", host, err)
+		}
+
+		if result.IP == nil {
+			t.Errorf("SafeSearch doesn't work for %s", host)
+		}
+	}
+}
+
+func TestSafeSearchCacheYandex(t *testing.T) {
+	d := NewForTest()
+	defer d.Destroy()
+	domain := "yandex.ru"
+
+	var result Result
+	var err error
+
+	// Check host with disabled safesearch
+	result, err = d.CheckHost(domain)
+	if err != nil {
+		t.Fatalf("Cannot check host due to %s", err)
+	}
+	if result.IP != nil {
+		t.Fatalf("SafeSearch is not enabled but there is an answer for `%s` !", domain)
+	}
+
+	// Enable safesearch
+	d.SafeSearchEnabled = true
+	result, err = d.CheckHost(domain)
+	if err != nil {
+		t.Fatalf("CheckHost for safesearh domain %s failed cause %s", domain, err)
+	}
+
+	// Fir yandex we already know valid ip
+	if result.IP.String() != "213.180.193.56" {
+		t.Fatalf("Wrong IP for %s safesearch: %s", domain, result.IP.String())
+	}
+
+	// Check cache
+	cachedValue, isFound, err := getCachedReason(safeSearchCache, domain)
+
+	if err != nil {
+		t.Fatalf("An error occured during cache search for %s: %s", domain, err)
+	}
+
+	if !isFound {
+		t.Fatalf("Safesearch cache doesn't work for %s!", domain)
+	}
+
+	if cachedValue.IP.String() != "213.180.193.56" {
+		t.Fatalf("Wrong IP in cache for %s safesearch: %s", domain, cachedValue.IP.String())
+	}
+}
+
+func TestSafeSearchCacheGoogle(t *testing.T) {
+	d := NewForTest()
+	defer d.Destroy()
+	domain := "www.google.ru"
+	result, err := d.CheckHost(domain)
+	if err != nil {
+		t.Fatalf("Cannot check host due to %s", err)
+	}
+	if result.IP != nil {
+		t.Fatalf("SafeSearch is not enabled but there is an answer!")
+	}
+
+	// Enable safesearch and check host
+	d.SafeSearchEnabled = true
+
+	// Let's lookup for safesearch domain
+	safeDomain, ok := d.SafeSearchDomain(domain)
+	if !ok {
+		t.Fatalf("Failed to get safesearch domain for %s", domain)
+	}
+
+	ips, err := net.LookupIP(safeDomain)
+	if err != nil {
+		t.Fatalf("Failed to lookup for %s", safeDomain)
+	}
+
+	ip := ips[0]
+	for _, i := range ips {
+		if len(i) == net.IPv6len && i.To4() != nil {
+			ip = i
+		}
+	}
+
+	result, err = d.CheckHost(domain)
+	if err != nil {
+		t.Fatalf("CheckHost for safesearh domain %s failed cause %s", domain, err)
+	}
+
+	if result.IP.String() != ip.String() {
+		t.Fatalf("Wrong IP for %s safesearch: %s", domain, result.IP.String())
+	}
+
+	// Check cache
+	cachedValue, isFound, err := getCachedReason(safeSearchCache, domain)
+
+	if err != nil {
+		t.Fatalf("An error occured during cache search for %s: %s", domain, err)
+	}
+
+	if !isFound {
+		t.Fatalf("Safesearch cache doesn't work for %s!", domain)
+	}
+
+	if cachedValue.IP.String() != ip.String() {
+		t.Fatalf("Wrong IP in cache for %s safesearch: %s", domain, cachedValue.IP.String())
+	}
 }
 
 func TestParentalControl(t *testing.T) {
@@ -865,7 +1019,7 @@ func BenchmarkLotsOfRulesLotsOfHosts(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		havedata := scanner.Scan()
 		if !havedata {
-			hostnames.Seek(0, 0)
+			_, _ = hostnames.Seek(0, 0)
 			scanner = bufio.NewScanner(hostnames)
 			havedata = scanner.Scan()
 		}
@@ -902,7 +1056,7 @@ func BenchmarkLotsOfRulesLotsOfHostsParallel(b *testing.B) {
 		for pb.Next() {
 			havedata := scanner.Scan()
 			if !havedata {
-				hostnames.Seek(0, 0)
+				_, _ = hostnames.Seek(0, 0)
 				scanner = bufio.NewScanner(hostnames)
 				havedata = scanner.Scan()
 			}

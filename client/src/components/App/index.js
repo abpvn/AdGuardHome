@@ -1,6 +1,7 @@
 import React, { Component, Fragment } from 'react';
 import { HashRouter, Route } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import { withNamespaces } from 'react-i18next';
 import LoadingBar from 'react-redux-loading-bar';
 
 import 'react-table/react-table.css';
@@ -14,16 +15,17 @@ import Settings from '../../containers/Settings';
 import Filters from '../../containers/Filters';
 import Logs from '../../containers/Logs';
 import Login from '../../containers/Login';
-import Footer from '../ui/Footer';
+import SetupGuide from '../../containers/SetupGuide';
 import Toasts from '../Toasts';
+import Footer from '../ui/Footer';
 import Status from '../ui/Status';
-import Update from '../ui/Update';
+import UpdateTopline from '../ui/UpdateTopline';
+import EncryptionTopline from '../ui/EncryptionTopline';
 import i18n from '../../i18n';
 
 class App extends Component {
     componentDidMount() {
         this.props.getDnsStatus();
-        this.props.getVersion();
     }
 
     componentDidUpdate(prevProps) {
@@ -51,7 +53,7 @@ class App extends Component {
     }
 
     render() {
-        const { dashboard } = this.props;
+        const { dashboard, encryption } = this.props;
         const updateAvailable =
             !dashboard.processingVersions &&
             dashboard.isCoreRunning &&
@@ -61,10 +63,13 @@ class App extends Component {
             <HashRouter hashType='noslash'>
                 <Fragment>
                     {updateAvailable &&
-                        <Update
-                            announcement={dashboard.announcement}
-                            announcementUrl={dashboard.announcementUrl}
+                        <UpdateTopline
+                            url={dashboard.announcementUrl}
+                            version={dashboard.version}
                         />
+                    }
+                    {!encryption.processing &&
+                        <EncryptionTopline notAfter={encryption.not_after} />
                     }
                     <LoadingBar className="loading-bar" updateTime={1000} />
                     <Route component={Header} />
@@ -83,6 +88,7 @@ class App extends Component {
                                 <Route path="/settings" component={Settings} />
                                 <Route path="/filters" component={Filters} />
                                 <Route path="/logs" component={Logs} />
+                                <Route path="/guide" component={SetupGuide} />
                             </Fragment>
                         }
                     </div>
@@ -100,8 +106,8 @@ App.propTypes = {
     dashboard: PropTypes.object,
     isCoreRunning: PropTypes.bool,
     error: PropTypes.string,
-    getVersion: PropTypes.func,
     changeLanguage: PropTypes.func,
+    encryption: PropTypes.object,
 };
 
-export default App;
+export default withNamespaces()(App);

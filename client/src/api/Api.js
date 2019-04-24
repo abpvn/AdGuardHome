@@ -15,7 +15,11 @@ export default class Api {
             return response.data;
         } catch (error) {
             console.error(error);
-            throw new Error(`${this.baseUrl}/${path} | ${error.response.data} | ${error.response.status}`);
+            const errorPath = `${this.baseUrl}/${path}`;
+            if (error.response) {
+                throw new Error(`${errorPath} | ${error.response.data} | ${error.response.status}`);
+            }
+            throw new Error(`${errorPath} | ${error.message ? error.message : error}`);
         }
     }
 
@@ -30,11 +34,12 @@ export default class Api {
     GLOBAL_QUERY_LOG = { path: 'querylog', method: 'GET' };
     GLOBAL_QUERY_LOG_ENABLE = { path: 'querylog_enable', method: 'POST' };
     GLOBAL_QUERY_LOG_DISABLE = { path: 'querylog_disable', method: 'POST' };
-    GLOBAL_SET_UPSTREAM_DNS = { path: 'set_upstream_dns', method: 'POST' };
+    GLOBAL_SET_UPSTREAM_DNS = { path: 'set_upstreams_config', method: 'POST' };
     GLOBAL_TEST_UPSTREAM_DNS = { path: 'test_upstream_dns', method: 'POST' };
     GLOBAL_VERSION = { path: 'version.json', method: 'GET' };
     GLOBAL_ENABLE_PROTECTION = { path: 'enable_protection', method: 'POST' };
     GLOBAL_DISABLE_PROTECTION = { path: 'disable_protection', method: 'POST' };
+    GLOBAL_CLIENTS = { path: 'clients', method: 'GET' }
 
     restartGlobalFiltering() {
         const { path, method } = this.GLOBAL_RESTART;
@@ -106,7 +111,7 @@ export default class Api {
         const { path, method } = this.GLOBAL_SET_UPSTREAM_DNS;
         const config = {
             data: url,
-            header: { 'Content-Type': 'text/plain' },
+            headers: { 'Content-Type': 'application/json' },
         };
         return this.makeRequest(path, method, config);
     }
@@ -115,7 +120,7 @@ export default class Api {
         const { path, method } = this.GLOBAL_TEST_UPSTREAM_DNS;
         const config = {
             data: servers,
-            header: { 'Content-Type': 'text/plain' },
+            headers: { 'Content-Type': 'application/json' },
         };
         return this.makeRequest(path, method, config);
     }
@@ -135,13 +140,18 @@ export default class Api {
         return this.makeRequest(path, method);
     }
 
+    getGlobalClients() {
+        const { path, method } = this.GLOBAL_CLIENTS;
+        return this.makeRequest(path, method);
+    }
+
     // Filtering
     FILTERING_STATUS = { path: 'filtering/status', method: 'GET' };
     FILTERING_ENABLE = { path: 'filtering/enable', method: 'POST' };
     FILTERING_DISABLE = { path: 'filtering/disable', method: 'POST' };
-    FILTERING_ADD_FILTER = { path: 'filtering/add_url', method: 'PUT' };
-    FILTERING_REMOVE_FILTER = { path: 'filtering/remove_url', method: 'DELETE' };
-    FILTERING_SET_RULES = { path: 'filtering/set_rules', method: 'PUT' };
+    FILTERING_ADD_FILTER = { path: 'filtering/add_url', method: 'POST' };
+    FILTERING_REMOVE_FILTER = { path: 'filtering/remove_url', method: 'POST' };
+    FILTERING_SET_RULES = { path: 'filtering/set_rules', method: 'POST' };
     FILTERING_ENABLE_FILTER = { path: 'filtering/enable_url', method: 'POST' };
     FILTERING_DISABLE_FILTER = { path: 'filtering/disable_url', method: 'POST' };
     FILTERING_REFRESH = { path: 'filtering/refresh', method: 'POST' };
@@ -299,6 +309,96 @@ export default class Api {
         const parameters = {
             data: lang,
             headers: { 'Content-Type': 'text/plain' },
+        };
+        return this.makeRequest(path, method, parameters);
+    }
+
+    // DHCP
+    DHCP_STATUS = { path: 'dhcp/status', method: 'GET' };
+    DHCP_SET_CONFIG = { path: 'dhcp/set_config', method: 'POST' };
+    DHCP_FIND_ACTIVE = { path: 'dhcp/find_active_dhcp', method: 'POST' };
+    DHCP_INTERFACES = { path: 'dhcp/interfaces', method: 'GET' };
+
+    getDhcpStatus() {
+        const { path, method } = this.DHCP_STATUS;
+        return this.makeRequest(path, method);
+    }
+
+    getDhcpInterfaces() {
+        const { path, method } = this.DHCP_INTERFACES;
+        return this.makeRequest(path, method);
+    }
+
+    setDhcpConfig(config) {
+        const { path, method } = this.DHCP_SET_CONFIG;
+        const parameters = {
+            data: config,
+            headers: { 'Content-Type': 'application/json' },
+        };
+        return this.makeRequest(path, method, parameters);
+    }
+
+    findActiveDhcp(name) {
+        const { path, method } = this.DHCP_FIND_ACTIVE;
+        const parameters = {
+            data: name,
+            headers: { 'Content-Type': 'text/plain' },
+        };
+        return this.makeRequest(path, method, parameters);
+    }
+
+    // Installation
+    INSTALL_GET_ADDRESSES = { path: 'install/get_addresses', method: 'GET' };
+    INSTALL_CONFIGURE = { path: 'install/configure', method: 'POST' };
+    INSTALL_CHECK_CONFIG = { path: 'install/check_config', method: 'POST' };
+
+    getDefaultAddresses() {
+        const { path, method } = this.INSTALL_GET_ADDRESSES;
+        return this.makeRequest(path, method);
+    }
+
+    setAllSettings(config) {
+        const { path, method } = this.INSTALL_CONFIGURE;
+        const parameters = {
+            data: config,
+            headers: { 'Content-Type': 'application/json' },
+        };
+        return this.makeRequest(path, method, parameters);
+    }
+
+    checkConfig(config) {
+        const { path, method } = this.INSTALL_CHECK_CONFIG;
+        const parameters = {
+            data: config,
+            headers: { 'Content-Type': 'application/json' },
+        };
+        return this.makeRequest(path, method, parameters);
+    }
+
+    // DNS-over-HTTPS and DNS-over-TLS
+    TLS_STATUS = { path: 'tls/status', method: 'GET' };
+    TLS_CONFIG = { path: 'tls/configure', method: 'POST' };
+    TLS_VALIDATE = { path: 'tls/validate', method: 'POST' };
+
+    getTlsStatus() {
+        const { path, method } = this.TLS_STATUS;
+        return this.makeRequest(path, method);
+    }
+
+    setTlsConfig(config) {
+        const { path, method } = this.TLS_CONFIG;
+        const parameters = {
+            data: config,
+            headers: { 'Content-Type': 'application/json' },
+        };
+        return this.makeRequest(path, method, parameters);
+    }
+
+    validateTlsConfig(config) {
+        const { path, method } = this.TLS_VALIDATE;
+        const parameters = {
+            data: config,
+            headers: { 'Content-Type': 'application/json' },
         };
         return this.makeRequest(path, method, parameters);
     }

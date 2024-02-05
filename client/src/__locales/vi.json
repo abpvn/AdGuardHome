@@ -737,5 +737,6 @@
     "saturday_short": "Thứ 7",
     "upstream_dns_cache_configuration": "Cấu hình bộ nhớ đệm upstream của các máy chủ DNS",
     "enable_upstream_dns_cache": "Bật bộ nhớ cache cho cấu hình ngược dòng của máy chủ upstream của khách hàng này",
-    "dns_cache_size": "Kích thước bộ nhớ cache DNS, tính bằng byte"
+    "dns_cache_size": "Kích thước bộ nhớ cache DNS, tính bằng byte",
+    "use_global_filters": "Dùng bộ lọc toàn cầu"
 }

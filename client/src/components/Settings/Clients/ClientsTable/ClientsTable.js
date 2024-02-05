@@ -117,10 +117,13 @@ const ClientsTable = ({
             ids: [''],
             tags: [],
             use_global_settings: true,
+            use_global_filters: true,
             use_global_blocked_services: true,
             blocked_services_schedule: {
                 time_zone: LOCAL_TIMEZONE_VALUE,
             },
+            filters: [],
+            whitelist_filters: [],
             safe_search: { ...(safesearch || {}) },
         };
     };

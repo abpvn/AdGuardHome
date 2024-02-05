@@ -26,7 +26,7 @@ const Modal = ({
 
     return (
         <ReactModal
-            className="Modal__Bootstrap modal-dialog modal-dialog-centered modal-dialog--clients"
+            className="Modal__Bootstrap modal-dialog modal-dialog-centered modal-dialog--static-leases"
             closeTimeoutMS={0}
             isOpen={isModalOpen}
             onRequestClose={toggleModal}

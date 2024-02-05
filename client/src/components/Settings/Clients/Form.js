@@ -10,6 +10,9 @@ import Select from 'react-select';
 
 import i18n from '../../../i18n';
 import Tabs from '../../ui/Tabs';
+import Card from '../../ui/Card';
+import Table from '../../Filters/Table';
+import Actions from '../../Filters/Actions';
 import Examples from '../Dns/Upstream/Examples';
 import { ScheduleForm } from '../../Filters/Services/ScheduleForm';
 import {
@@ -45,6 +48,13 @@ const settingsCheckboxes = [
     {
         name: 'parental_enabled',
         placeholder: 'use_adguard_parental',
+    },
+];
+
+const filtersCheckboxes = [
+    {
+        name: 'use_global_filters',
+        placeholder: 'use_global_filters',
     },
 ];
 
@@ -145,6 +155,7 @@ let Form = (props) => {
         change,
         submitting,
         useGlobalSettings,
+        useGLobalFilters,
         useGlobalServices,
         blockedServicesSchedule,
         toggleClientModal,
@@ -222,6 +233,68 @@ let Form = (props) => {
                         />
                     </div>
                 ))}
+            </div>,
+        },
+        filters: {
+            title: 'filters',
+            component: <div label="filters" title={props.t('filters')}>
+                {filtersCheckboxes.map((setting) => (
+                    <div className="form__group" key={setting.name}>
+                        <Field
+                            name={setting.name}
+                            type="checkbox"
+                            component={CheckboxField}
+                            placeholder={t(setting.placeholder)}
+                        />
+                    </div>
+                ))}
+                {!useGLobalFilters && <>
+                    <div className="form__label--bot form__label--bold">
+                        {t('dns_blocklists')}
+                    </div>
+                    <div className="row">
+                        <div className="col-md-12">
+                            <Card subtitle={t('filters_and_hosts_hint')}>
+                                <Table
+                                    filters={initialValues.whitelist_filters}
+                                    loading={false}
+                                    processingConfigFilter={true}
+                                    toggleFilteringModal={() => {}}
+                                    handleDelete={() => {}}
+                                    toggleFilter={() => {}}
+                                />
+                                <Actions
+                                    handleAdd={() => {}}
+                                    handleRefresh={() => {}}
+                                    processingRefreshFilters={true}
+                                />
+                            </Card>
+                        </div>
+                    </div>
+                    <div className="form__label--bot form__label--bold">
+                        {t('dns_allowlists')}
+                    </div>
+                    <div className="row">
+                        <div className="col-md-12">
+                            <Card subtitle={t('filters_and_hosts_hint')}>
+                                <Table
+                                    whitelist={true}
+                                    filters={initialValues.whitelist_filters}
+                                    loading={false}
+                                    processingConfigFilter={true}
+                                    toggleFilteringModal={() => {}}
+                                    handleDelete={() => {}}
+                                    toggleFilter={() => {}}
+                                />
+                                <Actions
+                                    handleAdd={() => {}}
+                                    handleRefresh={() => {}}
+                                    processingRefreshFilters={true}
+                                />
+                            </Card>
+                        </div>
+                    </div>
+                </>}
             </div>,
         },
         block_services: {
@@ -458,6 +531,7 @@ Form.propTypes = {
     submitting: PropTypes.bool.isRequired,
     toggleClientModal: PropTypes.func.isRequired,
     useGlobalSettings: PropTypes.bool,
+    useGLobalFilters: PropTypes.bool,
     useGlobalServices: PropTypes.bool,
     blockedServicesSchedule: PropTypes.object,
     t: PropTypes.func.isRequired,
@@ -472,10 +546,12 @@ const selector = formValueSelector(FORM_NAME.CLIENT);
 
 Form = connect((state) => {
     const useGlobalSettings = selector(state, 'use_global_settings');
+    const useGLobalFilters = selector(state, 'use_global_filters');
     const useGlobalServices = selector(state, 'use_global_blocked_services');
     const blockedServicesSchedule = selector(state, 'blocked_services_schedule');
     return {
         useGlobalSettings,
+        useGLobalFilters,
         useGlobalServices,
         blockedServicesSchedule,
     };

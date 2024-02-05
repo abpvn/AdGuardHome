@@ -184,9 +184,11 @@ type clientObject struct {
 
 	Name string `yaml:"name"`
 
-	IDs       []string `yaml:"ids"`
-	Tags      []string `yaml:"tags"`
-	Upstreams []string `yaml:"upstreams"`
+	IDs              []string               `yaml:"ids"`
+	Tags             []string               `yaml:"tags"`
+	Filters          []filtering.FilterYAML `yaml:"filters"`
+	WhitelistFilters []filtering.FilterYAML `yaml:"whitelist_filters"`
+	Upstreams        []string               `yaml:"upstreams"`
 
 	// UID is the unique identifier of the persistent client.
 	UID UID `yaml:"uid"`
@@ -204,6 +206,7 @@ type clientObject struct {
 	ParentalEnabled          bool `yaml:"parental_enabled"`
 	SafeBrowsingEnabled      bool `yaml:"safebrowsing_enabled"`
 	UseGlobalBlockedServices bool `yaml:"use_global_blocked_services"`
+	UseGlobalFilters         bool `yaml:"use_global_filters"`
 
 	IgnoreQueryLog   bool `yaml:"ignore_querylog"`
 	IgnoreStatistics bool `yaml:"ignore_statistics"`
@@ -231,6 +234,7 @@ func (o *clientObject) toPersistent(
 		IgnoreStatistics:      o.IgnoreStatistics,
 		UpstreamsCacheEnabled: o.UpstreamsCacheEnabled,
 		UpstreamsCacheSize:    o.UpstreamsCacheSize,
+		UseGlobalFilters:      o.UseGlobalFilters,
 	}
 
 	err = cli.setIDs(o.IDs)
@@ -266,6 +270,7 @@ func (o *clientObject) toPersistent(
 	cli.BlockedServices = o.BlockedServices.Clone()
 
 	cli.setTags(o.Tags, allTags)
+	cli.setFilters(o.WhitelistFilters, o.Filters)
 
 	return cli, nil
 }
@@ -305,9 +310,11 @@ func (clients *clientsContainer) forConfig() (objs []*clientObject) {
 
 			BlockedServices: cli.BlockedServices.Clone(),
 
-			IDs:       cli.ids(),
-			Tags:      stringutil.CloneSlice(cli.Tags),
-			Upstreams: stringutil.CloneSlice(cli.Upstreams),
+			IDs:              cli.ids(),
+			Tags:             stringutil.CloneSlice(cli.Tags),
+			Filters:          cli.Filters,
+			WhitelistFilters: cli.WhitelistFilters,
+			Upstreams:        stringutil.CloneSlice(cli.Upstreams),
 
 			UID: cli.UID,
 
@@ -321,6 +328,7 @@ func (clients *clientsContainer) forConfig() (objs []*clientObject) {
 			IgnoreStatistics:         cli.IgnoreStatistics,
 			UpstreamsCacheEnabled:    cli.UpstreamsCacheEnabled,
 			UpstreamsCacheSize:       cli.UpstreamsCacheSize,
+			UseGlobalFilters:         cli.UseGlobalFilters,
 		}
 
 		objs = append(objs, o)

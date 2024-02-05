@@ -213,7 +213,7 @@ func (d *DNSFilter) filterAdd(flt FilterYAML) (err error) {
 
 // Load filters from the disk
 // And if any filter has zero ID, assign a new one
-func (d *DNSFilter) loadFilters(array []FilterYAML) {
+func (d *DNSFilter) LoadFilters(array []FilterYAML) {
 	for i := range array {
 		filter := &array[i] // otherwise we're operating on a copy
 		if filter.ID == 0 {

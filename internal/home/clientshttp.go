@@ -41,10 +41,12 @@ type clientJSON struct {
 	Name string `json:"name"`
 
 	// BlockedServices is the names of blocked services.
-	BlockedServices []string `json:"blocked_services"`
-	IDs             []string `json:"ids"`
-	Tags            []string `json:"tags"`
-	Upstreams       []string `json:"upstreams"`
+	BlockedServices []string               `json:"blocked_services"`
+	IDs             []string               `json:"ids"`
+	Tags            []string               `json:"tags"`
+	Filters         []filtering.FilterJSON `json:"filters"`
+	WhitelistFilter []filtering.FilterJSON `json:"whitelist_filters"`
+	Upstreams       []string               `json:"upstreams"`
 
 	FilteringEnabled    bool `json:"filtering_enabled"`
 	ParentalEnabled     bool `json:"parental_enabled"`
@@ -53,6 +55,7 @@ type clientJSON struct {
 	SafeSearchEnabled        bool `json:"safesearch_enabled"`
 	UseGlobalBlockedServices bool `json:"use_global_blocked_services"`
 	UseGlobalSettings        bool `json:"use_global_settings"`
+	UseGlobalFilters         bool `json:"use_global_filters"`
 
 	IgnoreQueryLog   aghalg.NullBool `json:"ignore_querylog"`
 	IgnoreStatistics aghalg.NullBool `json:"ignore_statistics"`
@@ -288,12 +291,25 @@ func clientToJSON(c *persistentClient) (cj *clientJSON) {
 	// [clientJSON.SafeSearchEnabled] field.
 	cloneVal := c.safeSearchConf
 	safeSearchConf := &cloneVal
+	allowfiltersJson := []filtering.FilterJSON{}
+	blockedfiltersJson := []filtering.FilterJSON{}
+	Context.filters.LoadFilters(c.WhitelistFilters)
+	Context.filters.LoadFilters(c.Filters)
+	for _, filter := range c.WhitelistFilters {
+		allowfiltersJson = append(allowfiltersJson, filtering.FilterToJSON(filter))
+	}
+	for _, filter := range c.Filters {
+		blockedfiltersJson = append(blockedfiltersJson, filtering.FilterToJSON(filter))
+	}
 
 	return &clientJSON{
 		Name:                c.Name,
 		IDs:                 c.ids(),
 		Tags:                c.Tags,
+		Filters:             blockedfiltersJson,
+		WhitelistFilter:     allowfiltersJson,
 		UseGlobalSettings:   !c.UseOwnSettings,
+		UseGlobalFilters:    c.UseGlobalFilters,
 		FilteringEnabled:    c.FilteringEnabled,
 		ParentalEnabled:     c.ParentalEnabled,
 		SafeSearchEnabled:   safeSearchConf.Enabled,

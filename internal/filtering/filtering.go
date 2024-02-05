@@ -53,9 +53,11 @@ type ServiceEntry struct {
 
 // Settings are custom filtering settings for a client.
 type Settings struct {
-	ClientName string
-	ClientIP   netip.Addr
-	ClientTags []string
+	ClientName             string
+	ClientIP               netip.Addr
+	ClientTags             []string
+	ClientFilters          []FilterYAML
+	ClientWhiteListFilters []FilterYAML
 
 	ServicesRules []ServiceEntry
 
@@ -67,6 +69,8 @@ type Settings struct {
 
 	// ClientSafeSearch is a client configured safe search.
 	ClientSafeSearch SafeSearch
+	// UseGlobalFilters or clientFilters
+	UseGlobalFilters bool
 }
 
 // Resolver is the interface for net.Resolver to simplify testing.
@@ -918,6 +922,28 @@ func (d *DNSFilter) matchHost(
 		ClientName: setts.ClientName,
 		DNSType:    rrtype,
 	}
+	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
+		d.LoadFilters(setts.ClientWhiteListFilters)
+		d.LoadFilters(setts.ClientFilters)
+		allowFilters := []Filter{}
+		for _, whitelistFilter := range setts.ClientWhiteListFilters {
+			if !whitelistFilter.Enabled {
+				continue
+			}
+			whitelistFilter.Filter.FilePath = whitelistFilter.Path(d.conf.DataDir)
+			allowFilters = append(allowFilters, whitelistFilter.Filter)
+		}
+		blockeFilters := []Filter{}
+		for _, filter := range setts.ClientFilters {
+			if !filter.Enabled {
+				continue
+			}
+			filter.Filter.FilePath = filter.Path(d.conf.DataDir)
+			blockeFilters = append(blockeFilters, filter.Filter)
+		}
+
+		d.initFiltering(allowFilters, blockeFilters)
+	}
 
 	d.engineLock.RLock()
 	// Keep in mind that this lock must be held no just when calling Match() but
@@ -1048,8 +1074,8 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 
 	_ = os.MkdirAll(filepath.Join(d.conf.DataDir, filterDir), 0o755)
 
-	d.loadFilters(d.conf.Filters)
-	d.loadFilters(d.conf.WhitelistFilters)
+	d.LoadFilters(d.conf.Filters)
+	d.LoadFilters(d.conf.WhitelistFilters)
 
 	d.conf.Filters = deduplicateFilters(d.conf.Filters)
 	d.conf.WhitelistFilters = deduplicateFilters(d.conf.WhitelistFilters)

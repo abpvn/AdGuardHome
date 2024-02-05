@@ -306,7 +306,7 @@ func (d *DNSFilter) handleFilteringRefresh(w http.ResponseWriter, r *http.Reques
 	aghhttp.WriteJSONResponseOK(w, r, resp)
 }
 
-type filterJSON struct {
+type FilterJSON struct {
 	URL         string `json:"url"`
 	Name        string `json:"name"`
 	LastUpdated string `json:"last_updated,omitempty"`
@@ -316,15 +316,15 @@ type filterJSON struct {
 }
 
 type filteringConfig struct {
-	Filters          []filterJSON `json:"filters"`
-	WhitelistFilters []filterJSON `json:"whitelist_filters"`
+	Filters          []FilterJSON `json:"filters"`
+	WhitelistFilters []FilterJSON `json:"whitelist_filters"`
 	UserRules        []string     `json:"user_rules"`
 	Interval         uint32       `json:"interval"` // in hours
 	Enabled          bool         `json:"enabled"`
 }
 
-func filterToJSON(f FilterYAML) filterJSON {
-	fj := filterJSON{
+func FilterToJSON(f FilterYAML) FilterJSON {
+	fj := FilterJSON{
 		ID:         f.ID,
 		Enabled:    f.Enabled,
 		URL:        f.URL,
@@ -346,11 +346,11 @@ func (d *DNSFilter) handleFilteringStatus(w http.ResponseWriter, r *http.Request
 	resp.Enabled = d.conf.FilteringEnabled
 	resp.Interval = d.conf.FiltersUpdateIntervalHours
 	for _, f := range d.conf.Filters {
-		fj := filterToJSON(f)
+		fj := FilterToJSON(f)
 		resp.Filters = append(resp.Filters, fj)
 	}
 	for _, f := range d.conf.WhitelistFilters {
-		fj := filterToJSON(f)
+		fj := FilterToJSON(f)
 		resp.WhitelistFilters = append(resp.WhitelistFilters, fj)
 	}
 	resp.UserRules = d.conf.UserRules

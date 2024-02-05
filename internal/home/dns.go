@@ -419,6 +419,11 @@ func applyAdditionalFiltering(clientIP netip.Addr, clientID string, setts *filte
 
 	setts.ClientName = c.Name
 	setts.ClientTags = c.Tags
+	setts.UseGlobalFilters = c.UseGlobalFilters
+	if !c.UseGlobalFilters {
+		setts.ClientFilters = c.Filters
+		setts.ClientWhiteListFilters = c.WhitelistFilters
+	}
 	if !c.UseOwnSettings {
 		return
 	}

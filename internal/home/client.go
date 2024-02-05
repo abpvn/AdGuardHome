@@ -63,8 +63,10 @@ type persistentClient struct {
 
 	Name string
 
-	Tags      []string
-	Upstreams []string
+	Tags             []string
+	Filters          []filtering.FilterYAML
+	WhitelistFilters []filtering.FilterYAML
+	Upstreams        []string
 
 	IPs []netip.Addr
 	// TODO(s.chzhen):  Use netutil.Prefix.
@@ -85,6 +87,7 @@ type persistentClient struct {
 	UseOwnBlockedServices bool
 	IgnoreQueryLog        bool
 	IgnoreStatistics      bool
+	UseGlobalFilters      bool
 }
 
 // setTags sets the tags if they are known, otherwise logs an unknown tag.
@@ -100,6 +103,16 @@ func (c *persistentClient) setTags(tags []string, known *stringutil.Set) {
 	}
 
 	slices.Sort(c.Tags)
+}
+
+// setFilters sets with allow and blocked
+func (c *persistentClient) setFilters(allowFilters []filtering.FilterYAML, blockFilters []filtering.FilterYAML) {
+	for _, f := range allowFilters {
+		c.WhitelistFilters = append(c.WhitelistFilters, f)
+	}
+	for _, f := range blockFilters {
+		c.Filters = append(c.Filters, f)
+	}
 }
 
 // setIDs parses a list of strings into typed fields and returns an error if

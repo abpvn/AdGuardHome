@@ -312,8 +312,8 @@ func (clients *clientsContainer) forConfig() (objs []*clientObject) {
 
 			IDs:              cli.ids(),
 			Tags:             stringutil.CloneSlice(cli.Tags),
-			Filters:          cli.Filters,
-			WhitelistFilters: cli.WhitelistFilters,
+			Filters:          slices.Clone(cli.Filters),
+			WhitelistFilters: slices.Clone(cli.WhitelistFilters),
 			Upstreams:        stringutil.CloneSlice(cli.Upstreams),
 
 			UID: cli.UID,

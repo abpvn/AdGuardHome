@@ -10,11 +10,10 @@ import Select from 'react-select';
 
 import i18n from '../../../i18n';
 import Tabs from '../../ui/Tabs';
-import Card from '../../ui/Card';
-import Table from '../../Filters/Table';
-import Actions from '../../Filters/Actions';
 import Examples from '../Dns/Upstream/Examples';
 import { ScheduleForm } from '../../Filters/Services/ScheduleForm';
+
+import FiltersTable from './FiltersTable';
 import {
     toggleAllServices,
     trimLinesAndRemoveEmpty,
@@ -248,52 +247,9 @@ let Form = (props) => {
                         />
                     </div>
                 ))}
-                {!useGLobalFilters && <>
-                    <div className="form__label--bot form__label--bold">
-                        {t('dns_blocklists')}
-                    </div>
-                    <div className="row">
-                        <div className="col-md-12">
-                            <Card subtitle={t('filters_and_hosts_hint')}>
-                                <Table
-                                    filters={initialValues.whitelist_filters}
-                                    loading={false}
-                                    processingConfigFilter={true}
-                                    toggleFilteringModal={() => {}}
-                                    handleDelete={() => {}}
-                                    toggleFilter={() => {}}
-                                />
-                                <Actions
-                                    handleAdd={() => {}}
-                                    handleRefresh={() => {}}
-                                    processingRefreshFilters={true}
-                                />
-                            </Card>
-                        </div>
-                    </div>
-                    <div className="form__label--bot form__label--bold">
-                        {t('dns_allowlists')}
-                    </div>
-                    <div className="row">
-                        <div className="col-md-12">
-                            <Card subtitle={t('filters_and_hosts_hint')}>
-                                <Table
-                                    whitelist={true}
-                                    filters={initialValues.whitelist_filters}
-                                    loading={false}
-                                    processingConfigFilter={true}
-                                    toggleFilteringModal={() => {}}
-                                    handleDelete={() => {}}
-                                    toggleFilter={() => {}}
-                                />
-                                <Actions
-                                    handleAdd={() => {}}
-                                    handleRefresh={() => {}}
-                                    processingRefreshFilters={true}
-                                />
-                            </Card>
-                        </div>
-                    </div>
+                {!useGLobalFilters && true && <>
+                    <FiltersTable title={t('dns_blocklists')}/>
+                    <FiltersTable title={t('dns_allowlists')} whitelist/>
                 </>}
             </div>,
         },

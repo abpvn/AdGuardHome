@@ -183,6 +183,24 @@ const ClientsTable = ({
             },
         },
         {
+            Header: t('filters'),
+            accessor: 'use_global_filters',
+            minWidth: 120,
+            Cell: ({ value }) => {
+                const title = value ? (
+                    <Trans>settings_global</Trans>
+                ) : (
+                    <Trans>settings_custom</Trans>
+                );
+
+                return (
+                    <div className="logs__row o-hidden">
+                        <div className="logs__text">{title}</div>
+                    </div>
+                );
+            },
+        },
+        {
             Header: t('blocked_services'),
             accessor: 'blocked_services',
             minWidth: 180,

@@ -903,17 +903,11 @@ func hostResultForOtherQType(dnsres *urlfilter.DNSResult) (res Result) {
 	return Result{}
 }
 
-// matchHost is a low-level way to check only if host is filtered by rules,
-// skipping expensive safebrowsing and parental lookups.
-func (d *DNSFilter) matchHost(
+func (d *DNSFilter) processMatchHost(
 	host string,
 	rrtype uint16,
 	setts *Settings,
 ) (res Result, err error) {
-	if !setts.FilteringEnabled {
-		return Result{}, nil
-	}
-
 	ufReq := &urlfilter.DNSRequest{
 		Hostname:         host,
 		SortedClientTags: setts.ClientTags,
@@ -922,29 +916,6 @@ func (d *DNSFilter) matchHost(
 		ClientName: setts.ClientName,
 		DNSType:    rrtype,
 	}
-	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
-		d.LoadFilters(setts.ClientWhiteListFilters)
-		d.LoadFilters(setts.ClientFilters)
-		allowFilters := []Filter{}
-		for _, whitelistFilter := range setts.ClientWhiteListFilters {
-			if !whitelistFilter.Enabled {
-				continue
-			}
-			whitelistFilter.Filter.FilePath = whitelistFilter.Path(d.conf.DataDir)
-			allowFilters = append(allowFilters, whitelistFilter.Filter)
-		}
-		blockeFilters := []Filter{}
-		for _, filter := range setts.ClientFilters {
-			if !filter.Enabled {
-				continue
-			}
-			filter.Filter.FilePath = filter.Path(d.conf.DataDir)
-			blockeFilters = append(blockeFilters, filter.Filter)
-		}
-
-		d.initFiltering(allowFilters, blockeFilters)
-	}
-
 	d.engineLock.RLock()
 	// Keep in mind that this lock must be held no just when calling Match() but
 	// also while using the rules returned by it.
@@ -987,8 +958,45 @@ func (d *DNSFilter) matchHost(
 			r.FilterListID,
 		)
 	}
-
 	return res, nil
+}
+
+// matchHost is a low-level way to check only if host is filtered by rules,
+// skipping expensive safebrowsing and parental lookups.
+func (d *DNSFilter) matchHost(
+	host string,
+	rrtype uint16,
+	setts *Settings,
+) (res Result, err error) {
+	if !setts.FilteringEnabled {
+		return Result{}, nil
+	}
+	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
+		clientDNSFtl, _ := New(d.conf, nil)
+		clientDNSFtl.LoadFilters(setts.ClientWhiteListFilters)
+		clientDNSFtl.LoadFilters(setts.ClientFilters)
+		allowFilters := []Filter{}
+		for _, whitelistFilter := range setts.ClientWhiteListFilters {
+			if !whitelistFilter.Enabled {
+				continue
+			}
+			whitelistFilter.Filter.FilePath = whitelistFilter.Path(clientDNSFtl.conf.DataDir)
+			allowFilters = append(allowFilters, whitelistFilter.Filter)
+		}
+		blockeFilters := []Filter{}
+		for _, filter := range setts.ClientFilters {
+			if !filter.Enabled {
+				continue
+			}
+			filter.Filter.FilePath = filter.Path(clientDNSFtl.conf.DataDir)
+			blockeFilters = append(blockeFilters, filter.Filter)
+		}
+
+		clientDNSFtl.initFiltering(allowFilters, blockeFilters)
+		return clientDNSFtl.processMatchHost(host, rrtype, setts)
+	} else {
+		return d.processMatchHost(host, rrtype, setts)
+	}
 }
 
 // makeResult returns a properly constructed Result.

@@ -3,6 +3,11 @@ package configmigrate
 func migrateTo29(diskConf yobj) (err error) {
 	diskConf["schema_version"] = 29
 
+	_, ok, _ := fieldVal[yarr](diskConf, "clients_filters")
+	if !ok {
+		diskConf["clients_filters"] = yarr{}
+	}
+
 	clients, ok, err := fieldVal[yobj](diskConf, "clients")
 	if !ok {
 		return err

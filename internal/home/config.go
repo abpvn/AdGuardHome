@@ -133,6 +133,8 @@ type configuration struct {
 	Filters          []filtering.FilterYAML `yaml:"filters"`
 	WhitelistFilters []filtering.FilterYAML `yaml:"whitelist_filters"`
 	UserRules        []string               `yaml:"user_rules"`
+	// Store all clients filters list to make all filters list added by clients to AGH is unique
+	ClientsFilters []filtering.FilterYAML `yaml:"clients_filters"`
 
 	DHCP      *dhcpd.ServerConfig `yaml:"dhcp"`
 	Filtering *filtering.Config   `yaml:"filtering"`
@@ -633,6 +635,7 @@ func (c *configuration) write() (err error) {
 		config.Filters = config.Filtering.Filters
 		config.WhitelistFilters = config.Filtering.WhitelistFilters
 		config.UserRules = config.Filtering.UserRules
+		config.ClientsFilters = config.Filtering.ClientsFilters
 	}
 
 	if s := Context.dnsServer; s != nil {

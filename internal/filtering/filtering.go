@@ -147,6 +147,9 @@ type Config struct {
 	// UserRules is the global list of custom rules.
 	UserRules []string `yaml:"-"`
 
+	// All client filter lists
+	ClientsFilters []FilterYAML `yaml:"-"`
+
 	SafeBrowsingCacheSize uint `yaml:"safebrowsing_cache_size"` // (in bytes)
 	SafeSearchCacheSize   uint `yaml:"safesearch_cache_size"`   // (in bytes)
 	ParentalCacheSize     uint `yaml:"parental_cache_size"`     // (in bytes)

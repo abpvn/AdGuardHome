@@ -269,6 +269,7 @@ Row.propTypes = {
         originalResponse: propTypes.array,
         status: propTypes.string.isRequired,
         service_name: propTypes.string,
+        isClientsFiltered: propTypes.bool,
     }).isRequired,
     isSmallScreen: propTypes.bool.isRequired,
     setDetailedDataCurrent: propTypes.func.isRequired,

@@ -78,6 +78,7 @@ export const normalizeLogs = (logs) => logs.map((log) => {
         upstream,
         cached,
         ecs,
+        is_clients_filtered,
     } = log;
 
     const { name: domain, unicode_name: unicodeName, type } = question;
@@ -121,6 +122,7 @@ export const normalizeLogs = (logs) => logs.map((log) => {
         upstream,
         cached,
         ecs,
+        isClientsFiltered: is_clients_filtered,
     };
 });
 

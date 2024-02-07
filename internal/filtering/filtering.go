@@ -576,6 +576,9 @@ type Result struct {
 
 	// IsFiltered is true if the request is filtered.
 	IsFiltered bool `json:",omitempty"`
+
+	// IsFiltered by clients filters
+	IsClientFiltered bool `json:",omitempty"`
 }
 
 // Matched returns true if any match at all was found regardless of
@@ -997,7 +1000,9 @@ func (d *DNSFilter) matchHost(
 		}
 
 		clientDNSFtl.initFiltering(allowFilters, blockeFilters)
-		return clientDNSFtl.processMatchHost(host, rrtype, setts)
+		res, err = clientDNSFtl.processMatchHost(host, rrtype, setts)
+		res.IsClientFiltered = true
+		return res, err
 	} else {
 		return d.processMatchHost(host, rrtype, setts)
 	}

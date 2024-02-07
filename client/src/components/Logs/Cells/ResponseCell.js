@@ -121,6 +121,7 @@ const ResponseCell = ({
 ResponseCell.propTypes = {
     elapsedMs: propTypes.string.isRequired,
     originalResponse: propTypes.array.isRequired,
+    isClientsFiltered: propTypes.bool,
     reason: propTypes.string.isRequired,
     response: propTypes.array.isRequired,
     status: propTypes.string.isRequired,

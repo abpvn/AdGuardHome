@@ -3,18 +3,18 @@ import PropTypes from 'prop-types';
 import { withTranslation, Trans } from 'react-i18next';
 
 const Actions = ({
-    handleAdd, handleRefresh, processingRefreshFilters, whitelist,
+    handleAdd, handleRefresh, processingRefreshFilters, whitelist, normalButton
 }) => <div className="card-actions">
     <button
             className="btn btn-success btn-standard mr-2 btn-large mb-2"
-            type="submit"
+            type={normalButton ? 'button' : 'submit'}
             onClick={handleAdd}
     >
         {whitelist ? <Trans>add_allowlist</Trans> : <Trans>add_blocklist</Trans>}
     </button>
     <button
             className="btn btn-primary btn-standard mb-2"
-            type="submit"
+            type={normalButton ? 'button' : 'submit'}
             onClick={handleRefresh}
             disabled={processingRefreshFilters}
     >
@@ -23,6 +23,7 @@ const Actions = ({
 </div>;
 
 Actions.propTypes = {
+    normalButton: PropTypes.bool,
     handleAdd: PropTypes.func.isRequired,
     handleRefresh: PropTypes.func.isRequired,
     processingRefreshFilters: PropTypes.bool.isRequired,

@@ -180,6 +180,19 @@ let Form = (props) => {
             title: 'settings',
             component: <div label="settings" title={props.t('main_settings')}>
                 <div className="form__label--bot form__label--bold">
+                    {t('filters')}
+                </div>
+                {filtersCheckboxes.map((setting) => (
+                    <div className="form__group" key={setting.name}>
+                        <Field
+                            name={setting.name}
+                            type="checkbox"
+                            component={CheckboxField}
+                            placeholder={t(setting.placeholder)}
+                        />
+                    </div>
+                ))}
+                <div className="form__label--bot form__label--bold">
                     {t('protection_section_label')}
                 </div>
                 {settingsCheckboxes.map((setting) => (
@@ -232,25 +245,6 @@ let Form = (props) => {
                         />
                     </div>
                 ))}
-            </div>,
-        },
-        filters: {
-            title: 'filters',
-            component: <div label="filters" title={props.t('filters')}>
-                {filtersCheckboxes.map((setting) => (
-                    <div className="form__group" key={setting.name}>
-                        <Field
-                            name={setting.name}
-                            type="checkbox"
-                            component={CheckboxField}
-                            placeholder={t(setting.placeholder)}
-                        />
-                    </div>
-                ))}
-                {!useGLobalFilters && true && <>
-                    <FiltersTable title={t('dns_blocklists')}/>
-                    <FiltersTable title={t('dns_allowlists')} whitelist/>
-                </>}
             </div>,
         },
         block_services: {
@@ -370,6 +364,18 @@ let Form = (props) => {
                         max={UINT32_RANGE.MAX}
                     />
                 </div>
+            </div>,
+        },
+        dns_blocklists: {
+            title: 'dns_blocklists',
+            component: <div label="dns_blocklists" title={props.t('dns_blocklists')}>
+                {useGLobalFilters ? <Trans>use_global_filters</Trans> : <FiltersTable title={t('dns_blocklists')}/>}
+            </div>,
+        },
+        dns_allowlists: {
+            title: 'dns_allowlists',
+            component: <div label="dns_allowlists" title={props.t('dns_allowlists')}>
+                 {useGLobalFilters ? <Trans>use_global_filters</Trans> : <FiltersTable whitelist title={t('dns_allowlists')}/>}
             </div>,
         },
     };

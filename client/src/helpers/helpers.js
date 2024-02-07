@@ -848,6 +848,7 @@ export const getSpecialFilterName = (filterId) => {
 /**
  * @param {array} filters
  * @param {array} whitelistFilters
+ * @param {array} clientsFilters
  * @param {number} filterId
  * @param {function} t - translate
  * @returns {string}
@@ -855,8 +856,14 @@ export const getSpecialFilterName = (filterId) => {
 export const getFilterName = (
     filters,
     whitelistFilters,
+    clientsFilters,
     filterId,
-    resolveFilterName = (filter) => (filter ? filter.name : i18n.t('unknown_filter', { filterId })),
+    resolveFilterName = (filter, isClientsFilters = false) => {
+        if (!filter) {
+            return i18n.t('unknown_filter', { filterId });
+        }
+        return isClientsFilters ? i18n.t('clients_filters_name', { name: filter.name }) : filter.name;
+    },
 ) => {
     const specialFilterIds = Object.values(SPECIAL_FILTER_ID);
     if (specialFilterIds.includes(filterId)) {
@@ -865,6 +872,9 @@ export const getFilterName = (
 
     const matchIdPredicate = (filter) => filter.id === filterId;
     const filter = filters.find(matchIdPredicate) || whitelistFilters.find(matchIdPredicate);
+    if (!filter) {
+        return resolveFilterName(clientsFilters.find(matchIdPredicate), true);
+    }
     return resolveFilterName(filter);
 };
 
@@ -872,10 +882,11 @@ export const getFilterName = (
  * @param {array} rules
  * @param {array} filters
  * @param {array} whitelistFilters
+ * @param {array} clientsFilters
  * @returns {string[]}
  */
-export const getFilterNames = (rules, filters, whitelistFilters) => rules.map(
-    ({ filter_list_id }) => getFilterName(filters, whitelistFilters, filter_list_id),
+export const getFilterNames = (rules, filters, whitelistFilters, clientsFilters) => rules.map(
+    ({ filter_list_id }) => getFilterName(filters, whitelistFilters, clientsFilters, filter_list_id),
 );
 
 /**
@@ -888,11 +899,12 @@ export const getRuleNames = (rules) => rules.map(({ text }) => text);
  * @param {array} rules
  * @param {array} filters
  * @param {array} whitelistFilters
+ * @param {array} clientsFilters
  * @returns {object}
  */
-export const getFilterNameToRulesMap = (rules, filters, whitelistFilters) => rules.reduce(
+export const getFilterNameToRulesMap = (rules, filters, whitelistFilters, clientsFilters) => rules.reduce(
     (acc, { text, filter_list_id }) => {
-        const filterName = getFilterName(filters, whitelistFilters, filter_list_id);
+        const filterName = getFilterName(filters, whitelistFilters, clientsFilters, filter_list_id);
 
         acc[filterName] = (acc[filterName] || []).concat(text);
         return acc;
@@ -906,12 +918,12 @@ export const getFilterNameToRulesMap = (rules, filters, whitelistFilters) => rul
  * @param {object} classes
  * @returns {JSXElement}
  */
-export const getRulesToFilterList = (rules, filters, whitelistFilters, classes = {
+export const getRulesToFilterList = (rules, filters, whitelistFilters, clientsFilters, classes = {
     list: 'filteringRules',
     rule: 'filteringRules__rule font-monospace',
     filter: 'filteringRules__filter',
 }) => {
-    const filterNameToRulesMap = getFilterNameToRulesMap(rules, filters, whitelistFilters);
+    const filterNameToRulesMap = getFilterNameToRulesMap(rules, filters, whitelistFilters, clientsFilters);
 
     return <dl className={classes.list}>
         {Object.entries(filterNameToRulesMap).reduce(
@@ -927,10 +939,11 @@ export const getRulesToFilterList = (rules, filters, whitelistFilters, classes =
 * @param {array} rules
 * @param {array} filters
 * @param {array} whitelistFilters
+* @param {array} clientsFilters
 * @returns {string}
 */
-export const getRulesAndFilterNames = (rules, filters, whitelistFilters) => {
-    const filterNameToRulesMap = getFilterNameToRulesMap(rules, filters, whitelistFilters);
+export const getRulesAndFilterNames = (rules, filters, whitelistFilters, clientsFilters) => {
+    const filterNameToRulesMap = getFilterNameToRulesMap(rules, filters, whitelistFilters, clientsFilters);
 
     return Object.entries(filterNameToRulesMap).map(
         ([filterName, filterRules]) => filterRules.concat(filterName).join('\n'),

@@ -369,7 +369,6 @@ func (d *DNSFilter) handleFilteringStatus(w http.ResponseWriter, r *http.Request
 		resp.WhitelistFilters = append(resp.WhitelistFilters, fj)
 	}
 	for _, f := range d.conf.ClientsFilters {
-		f.Name = fmt.Sprintf("Client Filters: %s", f.Name)
 		fj := FilterToJSON(f)
 		resp.ClientsFilters = append(resp.ClientsFilters, fj)
 	}

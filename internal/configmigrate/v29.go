@@ -1,5 +1,28 @@
 package configmigrate
 
+// migrateTo29 performs the following changes:
+//
+//	# BEFORE:
+//	'clients':
+//	  'persistent':
+//	     - safe_search:
+//		     # …
+//	       'tags': []
+//		  # …
+//	# …
+//
+//	# AFTER:
+//	'clients_filters': []
+//	'clients':
+//	  'persistent':
+//	     - safe_search:
+//		    # …
+//	     'tags': []
+//	     'filters': []
+//	     'whitelist_filters': []
+//	     'use_global_filter': true
+//		  # …
+//		# …
 func migrateTo29(diskConf yobj) (err error) {
 	diskConf["schema_version"] = 29
 

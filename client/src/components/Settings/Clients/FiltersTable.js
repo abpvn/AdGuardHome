@@ -54,8 +54,9 @@ let FiltersTable = (props) => {
     const addFilter = (options) => {
         console.log(options);
     };
-    const handleSubmit = (options) => {
-        console.log(options);
+    const handleSubmit = (values) => {
+        toggleFilteringModal();
+        console.log(values);
     };
     const currentFilterData = getCurrentFilter(modalFilterUrl, filters);
     return (<>
@@ -76,7 +77,6 @@ let FiltersTable = (props) => {
                     />
                     <Actions
                         whitelist={whitelist}
-                        normalButton
                         handleAdd={openSelectTypeModal}
                         handleRefresh={() => { }}
                         processingRefreshFilters={processingConfigFilter}

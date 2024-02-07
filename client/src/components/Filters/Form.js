@@ -113,11 +113,11 @@ const Form = (props) => {
         <div className="modal-body modal-body--filters">
             {modalType === MODAL_TYPE.SELECT_MODAL_TYPE
             && <div className="d-flex justify-content-around">
-                <button onClick={openFilteringListModal} type="button"
+                <button onClick={openFilteringListModal}
                         className="btn btn-success btn-standard mr-2 btn-large">
                     {t('choose_from_list')}
                 </button>
-                <button type="button" onClick={openAddFiltersModal} className="btn btn-primary btn-standard">
+                <button onClick={openAddFiltersModal} className="btn btn-primary btn-standard">
                     {t('add_custom_list')}
                 </button>
             </div>}

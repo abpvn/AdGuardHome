@@ -150,6 +150,7 @@ let Form = (props) => {
     const {
         t,
         handleSubmit,
+        isDisableSaveClient,
         reset,
         change,
         submitting,
@@ -383,7 +384,7 @@ let Form = (props) => {
     const activeTab = tabs[activeTabLabel].component;
 
     return (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={isDisableSaveClient ? undefined : handleSubmit}>
             <div className="modal-body">
                 <div className="form__group mb-0">
                     <div className="form__group">
@@ -502,6 +503,7 @@ Form.propTypes = {
     invalid: PropTypes.bool.isRequired,
     tagsOptions: PropTypes.array.isRequired,
     initialValues: PropTypes.object,
+    isDisableSaveClient: PropTypes.bool.isRequired,
 };
 
 const selector = formValueSelector(FORM_NAME.CLIENT);
@@ -511,11 +513,13 @@ Form = connect((state) => {
     const useGLobalFilters = selector(state, 'use_global_filters');
     const useGlobalServices = selector(state, 'use_global_blocked_services');
     const blockedServicesSchedule = selector(state, 'blocked_services_schedule');
+    const { filtering: { isModalOpen: isDisableSaveClient } } = state;
     return {
         useGlobalSettings,
         useGLobalFilters,
         useGlobalServices,
         blockedServicesSchedule,
+        isDisableSaveClient,
     };
 })(Form);
 

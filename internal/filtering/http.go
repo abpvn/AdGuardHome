@@ -340,6 +340,20 @@ func FilterToJSON(f FilterYAML) FilterJSON {
 	return fj
 }
 
+func (fj *FilterJSON) ToFilterYAML() FilterYAML {
+	fy := FilterYAML{
+		Enabled:    fj.Enabled,
+		URL:        fj.URL,
+		Name:       fj.Name,
+		RulesCount: int(fj.RulesCount),
+		Filter:     Filter{ID: fj.ID},
+	}
+	if fj.LastUpdated != "" {
+		fy.LastUpdated, _ = time.Parse(time.RFC3339, fj.LastUpdated)
+	}
+	return fy
+}
+
 // Get filtering configuration
 func (d *DNSFilter) handleFilteringStatus(w http.ResponseWriter, r *http.Request) {
 	resp := filteringConfig{}

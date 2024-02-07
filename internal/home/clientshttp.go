@@ -213,6 +213,13 @@ func (clients *clientsContainer) jsonToClient(
 	c.ParentalEnabled = cj.ParentalEnabled
 	c.SafeBrowsingEnabled = cj.SafeBrowsingEnabled
 	c.UseOwnBlockedServices = !cj.UseGlobalBlockedServices
+	c.UseGlobalFilters = cj.UseGlobalFilters
+	for _, fj := range cj.Filters {
+		c.Filters = append(c.Filters, fj.ToFilterYAML())
+	}
+	for _, fj := range cj.WhitelistFilter {
+		c.WhitelistFilters = append(c.WhitelistFilters, fj.ToFilterYAML())
+	}
 
 	if c.safeSearchConf.Enabled {
 		err = c.setSafeSearch(
@@ -291,23 +298,23 @@ func clientToJSON(c *persistentClient) (cj *clientJSON) {
 	// [clientJSON.SafeSearchEnabled] field.
 	cloneVal := c.safeSearchConf
 	safeSearchConf := &cloneVal
-	allowfiltersJson := []filtering.FilterJSON{}
-	blockedfiltersJson := []filtering.FilterJSON{}
+	allowfiltersJSON := []filtering.FilterJSON{}
+	blockedfiltersJSON := []filtering.FilterJSON{}
 	Context.filters.LoadFilters(c.WhitelistFilters)
 	Context.filters.LoadFilters(c.Filters)
 	for _, filter := range c.WhitelistFilters {
-		allowfiltersJson = append(allowfiltersJson, filtering.FilterToJSON(filter))
+		allowfiltersJSON = append(allowfiltersJSON, filtering.FilterToJSON(filter))
 	}
 	for _, filter := range c.Filters {
-		blockedfiltersJson = append(blockedfiltersJson, filtering.FilterToJSON(filter))
+		blockedfiltersJSON = append(blockedfiltersJSON, filtering.FilterToJSON(filter))
 	}
 
 	return &clientJSON{
 		Name:                c.Name,
 		IDs:                 c.ids(),
 		Tags:                c.Tags,
-		Filters:             blockedfiltersJson,
-		WhitelistFilter:     allowfiltersJson,
+		Filters:             blockedfiltersJSON,
+		WhitelistFilter:     allowfiltersJSON,
 		UseGlobalSettings:   !c.UseOwnSettings,
 		UseGlobalFilters:    c.UseGlobalFilters,
 		FilteringEnabled:    c.FilteringEnabled,

@@ -397,6 +397,7 @@ func (d *DNSFilter) WriteDiskConfig(c *Config) {
 
 	c.Filters = slices.Clone(d.conf.Filters)
 	c.WhitelistFilters = slices.Clone(d.conf.WhitelistFilters)
+	c.ClientsFilters = slices.Clone(d.conf.ClientsFilters)
 	c.UserRules = slices.Clone(d.conf.UserRules)
 }
 
@@ -1090,6 +1091,7 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 
 	d.conf.Filters = deduplicateFilters(d.conf.Filters)
 	d.conf.WhitelistFilters = deduplicateFilters(d.conf.WhitelistFilters)
+	d.conf.ClientsFilters = deduplicateFilters(d.conf.ClientsFilters)
 
 	updateUniqueFilterID(d.conf.Filters)
 	updateUniqueFilterID(d.conf.WhitelistFilters)

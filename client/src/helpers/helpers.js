@@ -178,7 +178,7 @@ export const normalizeFilters = (filters) => (
 
 export const normalizeFilteringStatus = (filteringStatus) => {
     const {
-        enabled, filters, user_rules: userRules, interval, whitelist_filters,
+        enabled, filters, user_rules: userRules, interval, whitelist_filters, clients_filters,
     } = filteringStatus;
     const newUserRules = Array.isArray(userRules) ? userRules.join('\n') : '';
 
@@ -187,6 +187,7 @@ export const normalizeFilteringStatus = (filteringStatus) => {
         userRules: newUserRules,
         filters: normalizeFilters(filters),
         whitelistFilters: normalizeFilters(whitelist_filters),
+        clientsFilters: normalizeFilters(clients_filters),
         interval,
     };
 };

@@ -26,6 +26,7 @@ const ResponseCell = ({
     const { t } = useTranslation();
     const filters = useSelector((state) => state.filtering.filters, shallowEqual);
     const whitelistFilters = useSelector((state) => state.filtering.whitelistFilters, shallowEqual);
+    const clientsFilters = useSelector((state) => state.filtering.clientsFilters, shallowEqual);
     const isDetailed = useSelector((state) => state.queryLogs.isDetailed);
     const services = useSelector((store) => store?.services);
 
@@ -65,7 +66,7 @@ const ResponseCell = ({
                 && { service_name: getServiceName(services.allServices, service_name) }
         ),
         ...(rules.length > 0
-                && { rule_label: getRulesToFilterList(rules, filters, whitelistFilters) }
+                && { rule_label: getRulesToFilterList(rules, filters.concat(clientsFilters), whitelistFilters) }
         ),
         response_table_header: renderResponses(response),
         original_response: renderResponses(originalResponse),
@@ -87,7 +88,7 @@ const ResponseCell = ({
                 return getServiceName(services.allServices, service_name);
             case FILTERED_STATUS.FILTERED_BLACK_LIST:
             case FILTERED_STATUS.NOT_FILTERED_WHITE_LIST:
-                return getFilterNames(rules, filters, whitelistFilters).join(', ');
+                return getFilterNames(rules, filters.concat(clientsFilters), whitelistFilters).join(', ');
             default:
                 return formattedElapsedMs;
         }

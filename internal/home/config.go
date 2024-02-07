@@ -634,8 +634,8 @@ func (c *configuration) write() (err error) {
 		Context.filters.WriteDiskConfig(config.Filtering)
 		config.Filters = config.Filtering.Filters
 		config.WhitelistFilters = config.Filtering.WhitelistFilters
-		config.UserRules = config.Filtering.UserRules
 		config.ClientsFilters = config.Filtering.ClientsFilters
+		config.UserRules = config.Filtering.UserRules
 	}
 
 	if s := Context.dnsServer; s != nil {

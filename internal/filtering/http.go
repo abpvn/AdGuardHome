@@ -318,6 +318,7 @@ type FilterJSON struct {
 type filteringConfig struct {
 	Filters          []FilterJSON `json:"filters"`
 	WhitelistFilters []FilterJSON `json:"whitelist_filters"`
+	ClientsFilters   []FilterJSON `json:"clients_filters"`
 	UserRules        []string     `json:"user_rules"`
 	Interval         uint32       `json:"interval"` // in hours
 	Enabled          bool         `json:"enabled"`
@@ -352,6 +353,11 @@ func (d *DNSFilter) handleFilteringStatus(w http.ResponseWriter, r *http.Request
 	for _, f := range d.conf.WhitelistFilters {
 		fj := FilterToJSON(f)
 		resp.WhitelistFilters = append(resp.WhitelistFilters, fj)
+	}
+	for _, f := range d.conf.ClientsFilters {
+		f.Name = fmt.Sprintf("Client Filters: %s", f.Name)
+		fj := FilterToJSON(f)
+		resp.ClientsFilters = append(resp.ClientsFilters, fj)
 	}
 	resp.UserRules = d.conf.UserRules
 	d.conf.filtersMu.RUnlock()

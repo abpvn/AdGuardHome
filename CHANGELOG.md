@@ -23,6 +23,54 @@ See also the [v0.107.45 GitHub milestone][ms-v0.107.45].
 NOTE: Add new changes BELOW THIS COMMENT.
 -->
 
+### Security
+
+- Go version has been updated to prevent the possibility of exploiting the Go
+  vulnerabilities fixed in Go 1.21.6 and Go 1.21.7.
+
+### Added
+
+- Ability to define custom directories for storage of query log files and
+  statistics ([#5992]).
+- Context menu item in the Query Log to add a Client to the Persistent client
+  list ([#6679]).
+
+### Changed
+
+- Starting with this release our scripts are using Go's [forward compatibility
+  mechanism][go-toolchain] for updating the Go version.
+
+  **Important note for porters:**  This change means that if your `go` version
+  is 1.21+ but is different from the one required by AdGuard Home, the `go` tool
+  will automatically download the required version.
+
+  If you want to use the version installed on your builder, run:
+
+  ```sh
+  go get go@$YOUR_VERSION
+  go mod tidy
+  ```
+
+  and call `make` with `GOTOOLCHAIN=local`.
+
+### Deprecated
+
+- Go 1.21 support.  Future versions will require at least Go 1.22 to build.
+
+### Fixed
+
+- Incorrect tracking of the system hosts file's changes ([#6711]).
+
+### Removed
+
+- Go 1.20 support, as it has reached end of life.
+
+[#5992]: https://github.com/AdguardTeam/AdGuardHome/issues/5992
+[#6679]: https://github.com/AdguardTeam/AdGuardHome/issues/6679
+[#6711]: https://github.com/AdguardTeam/AdGuardHome/issues/6711
+
+[go-toolchain]: https://go.dev/blog/toolchain
+
 <!--
 NOTE: Add new changes ABOVE THIS COMMENT.
 -->

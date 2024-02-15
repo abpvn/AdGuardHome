@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -40,7 +41,6 @@ import (
 	"github.com/AdguardTeam/golibs/netutil"
 	"github.com/AdguardTeam/golibs/osutil"
 	"github.com/AdguardTeam/golibs/stringutil"
-	"golang.org/x/exp/slices"
 )
 
 // Global context
@@ -250,7 +250,7 @@ func setupHostsContainer() (err error) {
 		return errors.Join(fmt.Errorf("initializing hosts container: %w", err), closeErr)
 	}
 
-	return nil
+	return hostsWatcher.Start()
 }
 
 // setupOpts sets up command-line options.

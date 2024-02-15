@@ -145,7 +145,7 @@ func (d *DNSFilter) filterSetProperties(
 	if flt.Enabled {
 		if shouldRestart {
 			// Download the filter contents.
-			shouldRestart, err = d.update(flt)
+			shouldRestart, err = d.Update(flt)
 		}
 	} else {
 		// TODO(e.burkov):  The validation of the contents of the new URL is
@@ -324,7 +324,7 @@ func (d *DNSFilter) refreshFiltersArray(filters *[]FilterYAML, force bool) (int,
 	failNum := 0
 	for i := range updateFilters {
 		uf := &updateFilters[i]
-		updated, err := d.update(uf)
+		updated, err := d.Update(uf)
 		updateFlags = append(updateFlags, updated)
 		if err != nil {
 			failNum++
@@ -438,8 +438,8 @@ func (d *DNSFilter) refreshFiltersIntl(block, allow, force bool) (int, bool) {
 	return updNum, false
 }
 
-// update refreshes filter's content and a/mtimes of it's file.
-func (d *DNSFilter) update(filter *FilterYAML) (b bool, err error) {
+// Update refreshes filter's content and a/mtimes of it's file.
+func (d *DNSFilter) Update(filter *FilterYAML) (b bool, err error) {
 	b, err = d.updateIntl(filter)
 	filter.LastUpdated = time.Now()
 	if !b {

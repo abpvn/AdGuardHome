@@ -18,8 +18,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// validateFilterURL validates the filter list URL or file name.
-func validateFilterURL(urlStr string) (err error) {
+// ValidateFilterURL validates the filter list URL or file name.
+func ValidateFilterURL(urlStr string) (err error) {
 	defer func() { err = errors.Annotate(err, "checking filter: %w") }()
 
 	if filepath.IsAbs(urlStr) {
@@ -64,7 +64,7 @@ func (d *DNSFilter) handleFilteringAddURL(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = validateFilterURL(fj.URL)
+	err = ValidateFilterURL(fj.URL)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
 
@@ -91,7 +91,7 @@ func (d *DNSFilter) handleFilteringAddURL(w http.ResponseWriter, r *http.Request
 	}
 
 	// Download the filter contents
-	ok, err := d.update(&filt)
+	ok, err := d.Update(&filt)
 	if err != nil {
 		aghhttp.Error(
 			r,
@@ -224,7 +224,7 @@ func (d *DNSFilter) handleFilteringSetURL(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = validateFilterURL(fj.Data.URL)
+	err = ValidateFilterURL(fj.Data.URL)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "invalid url: %s", err)
 

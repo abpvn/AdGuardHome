@@ -27,7 +27,9 @@ const ResponseCell = ({
     const { t } = useTranslation();
     const filters = useSelector((state) => state.filtering.filters, shallowEqual);
     const whitelistFilters = useSelector((state) => state.filtering.whitelistFilters, shallowEqual);
-    const clientsFilters = isClientsFiltered ? useSelector((state) => state.filtering.clientsFilters, shallowEqual) : undefined;
+    const clientsFilters = isClientsFiltered
+        ? useSelector((state) => state.filtering.clientsFilters, shallowEqual)
+        : undefined;
     const isDetailed = useSelector((state) => state.queryLogs.isDetailed);
     const services = useSelector((store) => store?.services);
 

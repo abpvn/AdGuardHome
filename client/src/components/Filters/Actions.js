@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { withTranslation, Trans } from 'react-i18next';
 
 const Actions = ({
-    handleAdd, handleRefresh, processingRefreshFilters, whitelist, normalButton
+    handleAdd, handleRefresh, processingRefreshFilters, whitelist, normalButton,
 }) => <div className="card-actions">
     <button
             className="btn btn-success btn-standard mr-2 btn-large mb-2"

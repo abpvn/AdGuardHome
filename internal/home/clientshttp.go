@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
+	"os"
+	"slices"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
@@ -354,6 +356,34 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 
 		return
 	}
+	emptyFilters := []filtering.FilterYAML{}
+	var addedFiltersIndexs []int
+	c.Filters, addedFiltersIndexs = clients.checkFilters(emptyFilters, c.Filters)
+	var addedFiltersIndexsWhitelist []int
+	c.WhitelistFilters, addedFiltersIndexsWhitelist = clients.checkFilters(emptyFilters, c.WhitelistFilters)
+	if len(addedFiltersIndexs) > 0 {
+		// Download new filter
+		for index, fy := range c.Filters {
+			if slices.Contains(addedFiltersIndexs, index) {
+				ok, _ := Context.filters.Update(&fy)
+				if ok {
+					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, fy)
+				}
+			}
+		}
+	}
+
+	if len(addedFiltersIndexsWhitelist) > 0 {
+		// Download new white list filter
+		for index, fy := range c.WhitelistFilters {
+			if slices.Contains(addedFiltersIndexsWhitelist, index) {
+				ok, _ := Context.filters.Update(&fy)
+				if ok {
+					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, fy)
+				}
+			}
+		}
+	}
 
 	ok, err := clients.add(c)
 	if err != nil {
@@ -393,6 +423,8 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 		return
 	}
 
+	clients.pruneClientFilters()
+
 	onConfigModified()
 }
 
@@ -400,6 +432,77 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 type updateJSON struct {
 	Name string     `json:"name"`
 	Data clientJSON `json:"data"`
+}
+
+// Check filters exist in a list
+func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYAML) (isExists bool) {
+	isExists = false
+	for _, fj := range listFilters {
+		if filter.ID == fj.ID {
+			isExists = true
+			break
+		}
+	}
+	return isExists
+}
+
+func (clients *clientsContainer) checkFilters(
+	oldFilters []filtering.FilterYAML,
+	newFilters []filtering.FilterYAML,
+) (
+	validFilters []filtering.FilterYAML,
+	addedFiltersIndexs []int,
+) {
+	for _, fj := range newFilters {
+		if !existsFilters(fj, oldFilters) {
+			// Check filter exist in clients filters and add
+			isExistInClientFilters := false
+			for _, cfj := range config.ClientsFilters {
+				if fj.URL == cfj.URL {
+					validFilters = append(validFilters, cfj)
+					isExistInClientFilters = true
+					continue
+				}
+			}
+			if isExistInClientFilters {
+				continue
+			}
+			// Process add filter
+			err := filtering.ValidateFilterURL(fj.URL)
+			if err == nil {
+				addedFiltersIndexs = append(addedFiltersIndexs, len(validFilters))
+				validFilters = append(validFilters, fj)
+			}
+		} else {
+			validFilters = append(validFilters, fj)
+		}
+	}
+	Context.filters.LoadFilters(validFilters)
+	return
+}
+
+// Prune client filter that does not used by any client
+func (clients *clientsContainer) pruneClientFilters() (hasDeletedFilter bool) {
+	var needDeleteIdx []int
+	for idx, fy := range config.Filtering.ClientsFilters {
+		needDelete := true
+		for _, c := range clients.list {
+			if existsFilters(fy, c.Filters) || existsFilters(fy, c.WhitelistFilters) {
+				needDelete = false
+			}
+		}
+		if needDelete {
+			needDeleteIdx = append(needDeleteIdx, idx)
+		}
+	}
+	for _, deleteIdx := range needDeleteIdx {
+		deleted := config.Filtering.ClientsFilters[deleteIdx]
+		config.Filtering.ClientsFilters = slices.Delete(config.Filtering.ClientsFilters, deleteIdx, deleteIdx+1)
+		p := deleted.Path(config.Filtering.DataDir)
+		os.Remove(p)
+		hasDeletedFilter = true
+	}
+	return hasDeletedFilter
 }
 
 // handleUpdateClient is the handler for POST /control/clients/update HTTP API.
@@ -442,6 +545,33 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 		return
 	}
+	var addedFiltersIndexs []int
+	c.Filters, addedFiltersIndexs = clients.checkFilters(prev.Filters, c.Filters)
+	var addedFiltersIndexsWhitelist []int
+	c.WhitelistFilters, addedFiltersIndexsWhitelist = clients.checkFilters(prev.WhitelistFilters, c.WhitelistFilters)
+	if len(addedFiltersIndexs) > 0 {
+		// Download new filter
+		for index, fy := range c.Filters {
+			if slices.Contains(addedFiltersIndexs, index) {
+				ok, _ := Context.filters.Update(&fy)
+				if ok {
+					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, fy)
+				}
+			}
+		}
+	}
+
+	if len(addedFiltersIndexsWhitelist) > 0 {
+		// Download new white list filter
+		for index, fy := range c.WhitelistFilters {
+			if slices.Contains(addedFiltersIndexsWhitelist, index) {
+				ok, _ := Context.filters.Update(&fy)
+				if ok {
+					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, fy)
+				}
+			}
+		}
+	}
 
 	err = clients.update(prev, c)
 	if err != nil {
@@ -449,7 +579,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 		return
 	}
-
+	clients.pruneClientFilters()
 	onConfigModified()
 }
 

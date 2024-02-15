@@ -850,7 +850,7 @@ export const getSpecialFilterName = (filterId) => {
 /**
  * @param {array} filters
  * @param {array} whitelistFilters
- * @param {array} clientsFilters
+ * @param {array | undefined} clientsFilters
  * @param {number} filterId
  * @param {function} t - translate
  * @returns {string}
@@ -873,10 +873,10 @@ export const getFilterName = (
     }
 
     const matchIdPredicate = (filter) => filter.id === filterId;
-    const filter = filters.find(matchIdPredicate) || whitelistFilters.find(matchIdPredicate);
-    if (!filter) {
+    if (clientsFilters !== undefined) {
         return resolveFilterName(clientsFilters.find(matchIdPredicate), true);
     }
+    const filter = filters.find(matchIdPredicate) || whitelistFilters.find(matchIdPredicate);
     return resolveFilterName(filter);
 };
 
@@ -884,7 +884,7 @@ export const getFilterName = (
  * @param {array} rules
  * @param {array} filters
  * @param {array} whitelistFilters
- * @param {array} clientsFilters
+ * @param {array | undefined} clientsFilters
  * @returns {string[]}
  */
 export const getFilterNames = (rules, filters, whitelistFilters, clientsFilters) => rules.map(
@@ -901,7 +901,7 @@ export const getRuleNames = (rules) => rules.map(({ text }) => text);
  * @param {array} rules
  * @param {array} filters
  * @param {array} whitelistFilters
- * @param {array} clientsFilters
+ * @param {array | undefined} clientsFilters
  * @returns {object}
  */
 export const getFilterNameToRulesMap = (rules, filters, whitelistFilters, clientsFilters) => rules.reduce(
@@ -941,7 +941,7 @@ export const getRulesToFilterList = (rules, filters, whitelistFilters, clientsFi
 * @param {array} rules
 * @param {array} filters
 * @param {array} whitelistFilters
-* @param {array} clientsFilters
+* @param {array | undefined} clientsFilters
 * @returns {string}
 */
 export const getRulesAndFilterNames = (rules, filters, whitelistFilters, clientsFilters) => {

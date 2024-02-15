@@ -63,7 +63,7 @@ func updateAndAssert(
 ) {
 	t.Helper()
 
-	ok, err := dnsFilter.update(f)
+	ok, err := dnsFilter.Update(f)
 	require.NoError(t, err)
 	wantUpd(t, ok)
 

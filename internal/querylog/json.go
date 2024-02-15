@@ -62,15 +62,16 @@ func entryToJSON(entry *logEntry, anonFunc aghnet.IPMutFunc) (jsonEntry jobject)
 	anonFunc(entIP)
 
 	jsonEntry = jobject{
-		"reason":       entry.Result.Reason.String(),
-		"elapsedMs":    strconv.FormatFloat(entry.Elapsed.Seconds()*1000, 'f', -1, 64),
-		"time":         entry.Time.Format(time.RFC3339Nano),
-		"client":       entIP,
-		"client_proto": entry.ClientProto,
-		"cached":       entry.Cached,
-		"upstream":     entry.Upstream,
-		"question":     question,
-		"rules":        resultRulesToJSONRules(entry.Result.Rules),
+		"reason":              entry.Result.Reason.String(),
+		"elapsedMs":           strconv.FormatFloat(entry.Elapsed.Seconds()*1000, 'f', -1, 64),
+		"time":                entry.Time.Format(time.RFC3339Nano),
+		"client":              entIP,
+		"client_proto":        entry.ClientProto,
+		"cached":              entry.Cached,
+		"upstream":            entry.Upstream,
+		"question":            question,
+		"rules":               resultRulesToJSONRules(entry.Result.Rules),
+		"is_clients_filtered": entry.Result.IsClientFiltered,
 	}
 
 	if entIP.Equal(entry.IP) {

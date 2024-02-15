@@ -53,9 +53,11 @@ type ServiceEntry struct {
 
 // Settings are custom filtering settings for a client.
 type Settings struct {
-	ClientName string
-	ClientIP   netip.Addr
-	ClientTags []string
+	ClientName             string
+	ClientIP               netip.Addr
+	ClientTags             []string
+	ClientFilters          []FilterYAML
+	ClientWhiteListFilters []FilterYAML
 
 	ServicesRules []ServiceEntry
 
@@ -67,6 +69,8 @@ type Settings struct {
 
 	// ClientSafeSearch is a client configured safe search.
 	ClientSafeSearch SafeSearch
+	// UseGlobalFilters or clientFilters
+	UseGlobalFilters bool
 }
 
 // Resolver is the interface for net.Resolver to simplify testing.
@@ -142,6 +146,9 @@ type Config struct {
 
 	// UserRules is the global list of custom rules.
 	UserRules []string `yaml:"-"`
+
+	// All client filter lists
+	ClientsFilters []FilterYAML `yaml:"-"`
 
 	SafeBrowsingCacheSize uint `yaml:"safebrowsing_cache_size"` // (in bytes)
 	SafeSearchCacheSize   uint `yaml:"safesearch_cache_size"`   // (in bytes)
@@ -390,6 +397,7 @@ func (d *DNSFilter) WriteDiskConfig(c *Config) {
 
 	c.Filters = slices.Clone(d.conf.Filters)
 	c.WhitelistFilters = slices.Clone(d.conf.WhitelistFilters)
+	c.ClientsFilters = slices.Clone(d.conf.ClientsFilters)
 	c.UserRules = slices.Clone(d.conf.UserRules)
 }
 
@@ -568,6 +576,9 @@ type Result struct {
 
 	// IsFiltered is true if the request is filtered.
 	IsFiltered bool `json:",omitempty"`
+
+	// IsFiltered by clients filters
+	IsClientFiltered bool `json:",omitempty"`
 }
 
 // Matched returns true if any match at all was found regardless of
@@ -899,17 +910,11 @@ func hostResultForOtherQType(dnsres *urlfilter.DNSResult) (res Result) {
 	return Result{}
 }
 
-// matchHost is a low-level way to check only if host is filtered by rules,
-// skipping expensive safebrowsing and parental lookups.
-func (d *DNSFilter) matchHost(
+func (d *DNSFilter) processMatchHost(
 	host string,
 	rrtype uint16,
 	setts *Settings,
 ) (res Result, err error) {
-	if !setts.FilteringEnabled {
-		return Result{}, nil
-	}
-
 	ufReq := &urlfilter.DNSRequest{
 		Hostname:         host,
 		SortedClientTags: setts.ClientTags,
@@ -918,7 +923,6 @@ func (d *DNSFilter) matchHost(
 		ClientName: setts.ClientName,
 		DNSType:    rrtype,
 	}
-
 	d.engineLock.RLock()
 	// Keep in mind that this lock must be held no just when calling Match() but
 	// also while using the rules returned by it.
@@ -961,8 +965,47 @@ func (d *DNSFilter) matchHost(
 			r.FilterListID,
 		)
 	}
-
 	return res, nil
+}
+
+// matchHost is a low-level way to check only if host is filtered by rules,
+// skipping expensive safebrowsing and parental lookups.
+func (d *DNSFilter) matchHost(
+	host string,
+	rrtype uint16,
+	setts *Settings,
+) (res Result, err error) {
+	if !setts.FilteringEnabled {
+		return Result{}, nil
+	}
+	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
+		clientDNSFtl, _ := New(d.conf, nil)
+		clientDNSFtl.LoadFilters(setts.ClientWhiteListFilters)
+		clientDNSFtl.LoadFilters(setts.ClientFilters)
+		allowFilters := []Filter{}
+		for _, whitelistFilter := range setts.ClientWhiteListFilters {
+			if !whitelistFilter.Enabled {
+				continue
+			}
+			whitelistFilter.Filter.FilePath = whitelistFilter.Path(clientDNSFtl.conf.DataDir)
+			allowFilters = append(allowFilters, whitelistFilter.Filter)
+		}
+		blockeFilters := []Filter{}
+		for _, filter := range setts.ClientFilters {
+			if !filter.Enabled {
+				continue
+			}
+			filter.Filter.FilePath = filter.Path(clientDNSFtl.conf.DataDir)
+			blockeFilters = append(blockeFilters, filter.Filter)
+		}
+
+		clientDNSFtl.initFiltering(allowFilters, blockeFilters)
+		res, err = clientDNSFtl.processMatchHost(host, rrtype, setts)
+		res.IsClientFiltered = true
+		return res, err
+	} else {
+		return d.processMatchHost(host, rrtype, setts)
+	}
 }
 
 // makeResult returns a properly constructed Result.
@@ -1048,11 +1091,12 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 
 	_ = os.MkdirAll(filepath.Join(d.conf.DataDir, filterDir), 0o755)
 
-	d.loadFilters(d.conf.Filters)
-	d.loadFilters(d.conf.WhitelistFilters)
+	d.LoadFilters(d.conf.Filters)
+	d.LoadFilters(d.conf.WhitelistFilters)
 
 	d.conf.Filters = deduplicateFilters(d.conf.Filters)
 	d.conf.WhitelistFilters = deduplicateFilters(d.conf.WhitelistFilters)
+	d.conf.ClientsFilters = deduplicateFilters(d.conf.ClientsFilters)
 
 	updateUniqueFilterID(d.conf.Filters)
 	updateUniqueFilterID(d.conf.WhitelistFilters)

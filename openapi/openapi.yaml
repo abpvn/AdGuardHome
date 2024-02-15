@@ -2649,6 +2649,8 @@
             'type': 'string'
         'use_global_settings':
           'type': 'boolean'
+        'use_global_filters':
+          'type': 'boolean'
         'filtering_enabled':
           'type': 'boolean'
         'parental_enabled':
@@ -2676,6 +2678,14 @@
           'items':
             'type': 'string'
           'type': 'array'
+        'filters':
+          'type': 'array'
+          'items':
+            '$ref': '#/components/schemas/Filter'
+        'whitelist_filters':
+          'type': 'array'
+          'items':
+            '$ref': '#/components/schemas/Filter'
         'ignore_querylog':
           'description': |
             NOTE: If `ignore_querylog` is not set in HTTP API `GET /clients/add`

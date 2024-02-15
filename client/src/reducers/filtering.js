@@ -106,6 +106,7 @@ const filtering = handleActions(
         isFilterAdded: false,
         filters: [],
         whitelistFilters: [],
+        clientsFilters: [],
         userRules: '',
         interval: 24,
         enabled: true,

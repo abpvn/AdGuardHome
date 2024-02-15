@@ -18,8 +18,8 @@ import (
 	"github.com/miekg/dns"
 )
 
-// validateFilterURL validates the filter list URL or file name.
-func validateFilterURL(urlStr string) (err error) {
+// ValidateFilterURL validates the filter list URL or file name.
+func ValidateFilterURL(urlStr string) (err error) {
 	defer func() { err = errors.Annotate(err, "checking filter: %w") }()
 
 	if filepath.IsAbs(urlStr) {
@@ -64,7 +64,7 @@ func (d *DNSFilter) handleFilteringAddURL(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = validateFilterURL(fj.URL)
+	err = ValidateFilterURL(fj.URL)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
 
@@ -91,7 +91,7 @@ func (d *DNSFilter) handleFilteringAddURL(w http.ResponseWriter, r *http.Request
 	}
 
 	// Download the filter contents
-	ok, err := d.update(&filt)
+	ok, err := d.Update(&filt)
 	if err != nil {
 		aghhttp.Error(
 			r,
@@ -224,7 +224,7 @@ func (d *DNSFilter) handleFilteringSetURL(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = validateFilterURL(fj.Data.URL)
+	err = ValidateFilterURL(fj.Data.URL)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "invalid url: %s", err)
 
@@ -306,7 +306,7 @@ func (d *DNSFilter) handleFilteringRefresh(w http.ResponseWriter, r *http.Reques
 	aghhttp.WriteJSONResponseOK(w, r, resp)
 }
 
-type filterJSON struct {
+type FilterJSON struct {
 	URL         string `json:"url"`
 	Name        string `json:"name"`
 	LastUpdated string `json:"last_updated,omitempty"`
@@ -316,15 +316,16 @@ type filterJSON struct {
 }
 
 type filteringConfig struct {
-	Filters          []filterJSON `json:"filters"`
-	WhitelistFilters []filterJSON `json:"whitelist_filters"`
+	Filters          []FilterJSON `json:"filters"`
+	WhitelistFilters []FilterJSON `json:"whitelist_filters"`
+	ClientsFilters   []FilterJSON `json:"clients_filters"`
 	UserRules        []string     `json:"user_rules"`
 	Interval         uint32       `json:"interval"` // in hours
 	Enabled          bool         `json:"enabled"`
 }
 
-func filterToJSON(f FilterYAML) filterJSON {
-	fj := filterJSON{
+func FilterToJSON(f FilterYAML) FilterJSON {
+	fj := FilterJSON{
 		ID:         f.ID,
 		Enabled:    f.Enabled,
 		URL:        f.URL,
@@ -339,6 +340,20 @@ func filterToJSON(f FilterYAML) filterJSON {
 	return fj
 }
 
+func (fj *FilterJSON) ToFilterYAML() FilterYAML {
+	fy := FilterYAML{
+		Enabled:    fj.Enabled,
+		URL:        fj.URL,
+		Name:       fj.Name,
+		RulesCount: int(fj.RulesCount),
+		Filter:     Filter{ID: fj.ID},
+	}
+	if fj.LastUpdated != "" {
+		fy.LastUpdated, _ = time.Parse(time.RFC3339, fj.LastUpdated)
+	}
+	return fy
+}
+
 // Get filtering configuration
 func (d *DNSFilter) handleFilteringStatus(w http.ResponseWriter, r *http.Request) {
 	resp := filteringConfig{}
@@ -346,12 +361,16 @@ func (d *DNSFilter) handleFilteringStatus(w http.ResponseWriter, r *http.Request
 	resp.Enabled = d.conf.FilteringEnabled
 	resp.Interval = d.conf.FiltersUpdateIntervalHours
 	for _, f := range d.conf.Filters {
-		fj := filterToJSON(f)
+		fj := FilterToJSON(f)
 		resp.Filters = append(resp.Filters, fj)
 	}
 	for _, f := range d.conf.WhitelistFilters {
-		fj := filterToJSON(f)
+		fj := FilterToJSON(f)
 		resp.WhitelistFilters = append(resp.WhitelistFilters, fj)
+	}
+	for _, f := range d.conf.ClientsFilters {
+		fj := FilterToJSON(f)
+		resp.ClientsFilters = append(resp.ClientsFilters, fj)
 	}
 	resp.UserRules = d.conf.UserRules
 	d.conf.filtersMu.RUnlock()

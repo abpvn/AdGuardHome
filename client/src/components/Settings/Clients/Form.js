@@ -12,6 +12,8 @@ import i18n from '../../../i18n';
 import Tabs from '../../ui/Tabs';
 import Examples from '../Dns/Upstream/Examples';
 import { ScheduleForm } from '../../Filters/Services/ScheduleForm';
+
+import FiltersTable from './FiltersTable';
 import {
     toggleAllServices,
     trimLinesAndRemoveEmpty,
@@ -45,6 +47,13 @@ const settingsCheckboxes = [
     {
         name: 'parental_enabled',
         placeholder: 'use_adguard_parental',
+    },
+];
+
+const filtersCheckboxes = [
+    {
+        name: 'use_global_filters',
+        placeholder: 'use_global_filters',
     },
 ];
 
@@ -141,10 +150,12 @@ let Form = (props) => {
     const {
         t,
         handleSubmit,
+        isDisableSaveClient,
         reset,
         change,
         submitting,
         useGlobalSettings,
+        useGLobalFilters,
         useGlobalServices,
         blockedServicesSchedule,
         handleClose,
@@ -169,6 +180,19 @@ let Form = (props) => {
         settings: {
             title: 'settings',
             component: <div label="settings" title={props.t('main_settings')}>
+                <div className="form__label--bot form__label--bold">
+                    {t('filters')}
+                </div>
+                {filtersCheckboxes.map((setting) => (
+                    <div className="form__group" key={setting.name}>
+                        <Field
+                            name={setting.name}
+                            type="checkbox"
+                            component={CheckboxField}
+                            placeholder={t(setting.placeholder)}
+                        />
+                    </div>
+                ))}
                 <div className="form__label--bot form__label--bold">
                     {t('protection_section_label')}
                 </div>
@@ -343,12 +367,24 @@ let Form = (props) => {
                 </div>
             </div>,
         },
+        dns_blocklists: {
+            title: 'dns_blocklists',
+            component: <div label="dns_blocklists" title={props.t('dns_blocklists')}>
+                {useGLobalFilters ? <Trans>use_global_filters</Trans> : <FiltersTable title={t('dns_blocklists')}/>}
+            </div>,
+        },
+        dns_allowlists: {
+            title: 'dns_allowlists',
+            component: <div label="dns_allowlists" title={props.t('dns_allowlists')}>
+                 {useGLobalFilters ? <Trans>use_global_filters</Trans> : <FiltersTable whitelist title={t('dns_allowlists')}/>}
+            </div>,
+        },
     };
 
     const activeTab = tabs[activeTabLabel].component;
 
     return (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={isDisableSaveClient ? undefined : handleSubmit}>
             <div className="modal-body">
                 <div className="form__group mb-0">
                     <div className="form__group">
@@ -458,6 +494,7 @@ Form.propTypes = {
     submitting: PropTypes.bool.isRequired,
     handleClose: PropTypes.func.isRequired,
     useGlobalSettings: PropTypes.bool,
+    useGLobalFilters: PropTypes.bool,
     useGlobalServices: PropTypes.bool,
     blockedServicesSchedule: PropTypes.object,
     t: PropTypes.func.isRequired,
@@ -466,18 +503,23 @@ Form.propTypes = {
     invalid: PropTypes.bool.isRequired,
     tagsOptions: PropTypes.array.isRequired,
     initialValues: PropTypes.object,
+    isDisableSaveClient: PropTypes.bool.isRequired,
 };
 
 const selector = formValueSelector(FORM_NAME.CLIENT);
 
 Form = connect((state) => {
     const useGlobalSettings = selector(state, 'use_global_settings');
+    const useGLobalFilters = selector(state, 'use_global_filters');
     const useGlobalServices = selector(state, 'use_global_blocked_services');
     const blockedServicesSchedule = selector(state, 'blocked_services_schedule');
+    const { filtering: { isModalOpen: isDisableSaveClient } } = state;
     return {
         useGlobalSettings,
+        useGLobalFilters,
         useGlobalServices,
         blockedServicesSchedule,
+        isDisableSaveClient,
     };
 })(Form);
 

@@ -194,8 +194,8 @@
     "filters_and_hosts_hint": "AdGuard home hiểu các quy tắc chặn quảng cáo đơn giản và cú pháp file hosts",
     "no_blocklist_added": "Chưa có danh sách chặn được thêm vào",
     "no_whitelist_added": "Chưa có danh sách cho phép được thêm vào",
-    "add_blocklist": "Thêm danh sách",
-    "add_allowlist": "Thêm danh sách",
+    "add_blocklist": "Thêm danh sách chặn",
+    "add_allowlist": "Thêm danh sách cho phép",
     "cancel_btn": "Huỷ",
     "enter_name_hint": "Nhập tên",
     "enter_url_or_path_hint": "Nhập địa chỉ hoặc đường dẫn tới danh sách",
@@ -740,5 +740,7 @@
     "saturday_short": "Thứ 7",
     "upstream_dns_cache_configuration": "Cấu hình bộ nhớ đệm upstream của các máy chủ DNS",
     "enable_upstream_dns_cache": "Bật bộ nhớ cache cho cấu hình ngược dòng của máy chủ upstream của khách hàng này",
-    "dns_cache_size": "Kích thước bộ nhớ cache DNS, tính bằng byte"
+    "dns_cache_size": "Kích thước bộ nhớ cache DNS, tính bằng byte",
+    "use_global_filters": "Dùng bộ lọc toàn cầu",
+    "clients_filters_name": "Bộ lọc thiết bị: {{name}}"
 }

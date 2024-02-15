@@ -132,10 +132,13 @@ const ClientsTable = ({
             ids: [''],
             tags: [],
             use_global_settings: true,
+            use_global_filters: true,
             use_global_blocked_services: true,
             blocked_services_schedule: {
                 time_zone: LOCAL_TIMEZONE_VALUE,
             },
+            filters: [],
+            whitelist_filters: [],
             safe_search: { ...(safesearch || {}) },
         };
     };
@@ -187,6 +190,24 @@ const ClientsTable = ({
         {
             Header: t('settings'),
             accessor: 'use_global_settings',
+            minWidth: 120,
+            Cell: ({ value }) => {
+                const title = value ? (
+                    <Trans>settings_global</Trans>
+                ) : (
+                    <Trans>settings_custom</Trans>
+                );
+
+                return (
+                    <div className="logs__row o-hidden">
+                        <div className="logs__text">{title}</div>
+                    </div>
+                );
+            },
+        },
+        {
+            Header: t('filters'),
+            accessor: 'use_global_filters',
             minWidth: 120,
             Cell: ({ value }) => {
                 const title = value ? (

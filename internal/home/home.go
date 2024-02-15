@@ -371,6 +371,7 @@ func setupDNSFilteringConf(conf *filtering.Config) (err error) {
 	conf.Filters = slices.Clone(config.Filters)
 	conf.WhitelistFilters = slices.Clone(config.WhitelistFilters)
 	conf.UserRules = slices.Clone(config.UserRules)
+	conf.ClientsFilters = slices.Clone(config.ClientsFilters)
 	conf.HTTPClient = httpClient()
 
 	cacheTime := time.Duration(conf.CacheTime) * time.Minute

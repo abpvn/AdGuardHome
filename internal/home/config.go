@@ -234,6 +234,10 @@ type dnsConfig struct {
 
 	// ServePlainDNS defines if plain DNS is allowed for incoming requests.
 	ServePlainDNS bool `yaml:"serve_plain_dns"`
+
+	// HostsFileEnabled defines whether to use information from the system hosts
+	// file to resolve queries.
+	HostsFileEnabled bool `yaml:"hostsfile_enabled"`
 }
 
 type tlsConfigSettings struct {
@@ -351,9 +355,10 @@ var config = &configuration{
 			// was later increased to 300 due to https://github.com/AdguardTeam/AdGuardHome/issues/2257
 			MaxGoroutines: 300,
 		},
-		UpstreamTimeout: timeutil.Duration{Duration: dnsforward.DefaultTimeout},
-		UsePrivateRDNS:  true,
-		ServePlainDNS:   true,
+		UpstreamTimeout:  timeutil.Duration{Duration: dnsforward.DefaultTimeout},
+		UsePrivateRDNS:   true,
+		ServePlainDNS:    true,
+		HostsFileEnabled: true,
 	},
 	TLS: tlsConfigSettings{
 		PortHTTPS:       defaultPortHTTPS,
@@ -453,20 +458,25 @@ var config = &configuration{
 	Theme:         ThemeAuto,
 }
 
-// getConfigFilename returns path to the current config file
-func (c *configuration) getConfigFilename() string {
-	configFile, err := filepath.EvalSymlinks(Context.configFilename)
+// configFilePath returns the absolute path to the symlink-evaluated path to the
+// current config file.
+func configFilePath() (confPath string) {
+	confPath, err := filepath.EvalSymlinks(Context.confFilePath)
 	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			log.Error("unexpected error while config file path evaluation: %s", err)
+		confPath = Context.confFilePath
+		logFunc := log.Error
+		if errors.Is(err, os.ErrNotExist) {
+			logFunc = log.Debug
 		}
-		configFile = Context.configFilename
-	}
-	if !filepath.IsAbs(configFile) {
-		configFile = filepath.Join(Context.workDir, configFile)
+
+		logFunc("evaluating config path: %s; using %q", err, confPath)
 	}
 
-	return configFile
+	if !filepath.IsAbs(confPath) {
+		confPath = filepath.Join(Context.workDir, confPath)
+	}
+
+	return confPath
 }
 
 // validateBindHosts returns error if any of binding hosts from configuration is
@@ -507,7 +517,10 @@ func parseConfig() (err error) {
 		// Don't wrap the error, because it's informative enough as is.
 		return err
 	} else if upgraded {
-		err = maybe.WriteFile(config.getConfigFilename(), config.fileData, 0o644)
+		confPath := configFilePath()
+		log.Debug("writing config file %q after config upgrade", confPath)
+
+		err = maybe.WriteFile(confPath, config.fileData, 0o644)
 		if err != nil {
 			return fmt.Errorf("writing new config: %w", err)
 		}
@@ -528,12 +541,8 @@ func parseConfig() (err error) {
 		config.DNS.UpstreamTimeout = timeutil.Duration{Duration: dnsforward.DefaultTimeout}
 	}
 
-	err = setContextTLSCipherIDs()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	// Do not wrap the error because it's informative enough as is.
+	return setContextTLSCipherIDs()
 }
 
 // validateConfig returns error if the configuration is invalid.
@@ -597,11 +606,11 @@ func readConfigFile() (fileData []byte, err error) {
 		return config.fileData, nil
 	}
 
-	name := config.getConfigFilename()
-	log.Debug("reading config file: %s", name)
+	confPath := configFilePath()
+	log.Debug("reading config file %q", confPath)
 
 	// Do not wrap the error because it's informative enough as is.
-	return os.ReadFile(name)
+	return os.ReadFile(confPath)
 }
 
 // Saves configuration to the YAML file and also saves the user filter contents to a file
@@ -666,8 +675,8 @@ func (c *configuration) write() (err error) {
 
 	config.Clients.Persistent = Context.clients.forConfig()
 
-	configFile := config.getConfigFilename()
-	log.Debug("writing config file %q", configFile)
+	confPath := configFilePath()
+	log.Debug("writing config file %q", confPath)
 
 	buf := &bytes.Buffer{}
 	enc := yaml.NewEncoder(buf)
@@ -678,7 +687,7 @@ func (c *configuration) write() (err error) {
 		return fmt.Errorf("generating config file: %w", err)
 	}
 
-	err = maybe.WriteFile(configFile, buf.Bytes(), 0o644)
+	err = maybe.WriteFile(confPath, buf.Bytes(), 0o644)
 	if err != nil {
 		return fmt.Errorf("writing config file: %w", err)
 	}

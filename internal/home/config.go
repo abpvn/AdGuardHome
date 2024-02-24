@@ -134,7 +134,7 @@ type configuration struct {
 	WhitelistFilters []filtering.FilterYAML `yaml:"whitelist_filters"`
 	UserRules        []string               `yaml:"user_rules"`
 	// Store all clients filters list to make all filters list added by clients to AGH is unique
-	ClientsFilters []filtering.FilterYAML `yaml:"clients_filters"`
+	ClientsFilters []filtering.ClientFilterYAML `yaml:"clients_filters"`
 
 	DHCP      *dhcpd.ServerConfig `yaml:"dhcp"`
 	Filtering *filtering.Config   `yaml:"filtering"`

@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import apiClient from '../api/Api';
 import { getClients } from './index';
 import { addErrorToast, addSuccessToast } from './toasts';
+import { getFilteringStatus } from './filtering';
 
 export const toggleClientModal = createAction('TOGGLE_CLIENT_MODAL');
 
@@ -18,6 +19,9 @@ export const addClient = (config) => async (dispatch) => {
         dispatch(toggleClientModal());
         dispatch(addSuccessToast(i18next.t('client_added', { key: config.name })));
         dispatch(getClients());
+        if (!config.use_global_filters && (config.filters.length || config.whitelist_filters.length)) {
+            dispatch(getFilteringStatus());
+        }
     } catch (error) {
         dispatch(addErrorToast({ error }));
         dispatch(addClientFailure());
@@ -55,6 +59,9 @@ export const updateClient = (config, name) => async (dispatch) => {
         dispatch(toggleClientModal());
         dispatch(addSuccessToast(i18next.t('client_updated', { key: name })));
         dispatch(getClients());
+        if (!config.use_global_filters && (config.filters.length || config.whitelist_filters.length)) {
+            dispatch(getFilteringStatus());
+        }
     } catch (error) {
         dispatch(addErrorToast({ error }));
         dispatch(updateClientFailure());

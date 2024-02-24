@@ -56,7 +56,7 @@ type Settings struct {
 	ClientName             string
 	ClientIP               netip.Addr
 	ClientTags             []string
-	ClientFilters          []FilterYAML
+	ClientFilters          []ClientFilterYAML
 	ClientWhiteListFilters []FilterYAML
 
 	ServicesRules []ServiceEntry
@@ -148,7 +148,7 @@ type Config struct {
 	UserRules []string `yaml:"-"`
 
 	// All client filter lists
-	ClientsFilters []FilterYAML `yaml:"-"`
+	ClientsFilters []ClientFilterYAML `yaml:"-"`
 
 	SafeBrowsingCacheSize uint `yaml:"safebrowsing_cache_size"` // (in bytes)
 	SafeSearchCacheSize   uint `yaml:"safesearch_cache_size"`   // (in bytes)
@@ -981,7 +981,7 @@ func (d *DNSFilter) matchHost(
 	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
 		clientDNSFtl, _ := New(d.conf, nil)
 		clientDNSFtl.LoadFilters(setts.ClientWhiteListFilters)
-		clientDNSFtl.LoadFilters(setts.ClientFilters)
+		clientDNSFtl.LoadFilters(ToFilterYAML(setts.ClientFilters))
 		allowFilters := []Filter{}
 		for _, whitelistFilter := range setts.ClientWhiteListFilters {
 			if !whitelistFilter.Enabled {
@@ -1096,7 +1096,7 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 
 	d.conf.Filters = deduplicateFilters(d.conf.Filters)
 	d.conf.WhitelistFilters = deduplicateFilters(d.conf.WhitelistFilters)
-	d.conf.ClientsFilters = deduplicateFilters(d.conf.ClientsFilters)
+	d.conf.ClientsFilters = deduplicateClientFilters(d.conf.ClientsFilters)
 
 	updateUniqueFilterID(d.conf.Filters)
 	updateUniqueFilterID(d.conf.WhitelistFilters)

@@ -40,6 +40,25 @@ export const formatTime = (time, options = DEFAULT_TIME_FORMAT) => {
 };
 
 /**
+ *
+ * @param {string} clientName
+ * @param {Array} clientsFilters
+ * @returns
+ */
+export const clientsFiltersByClient = (clientName, clientsFilters) => {
+    if (!clientName) {
+        return clientsFilters;
+    }
+    return clientsFilters.map((clientsFilter) => {
+        const clientFilterClone = { ...clientsFilter };
+        if (clientFilterClone.names && clientFilterClone.names[clientName]) {
+            clientFilterClone.name = clientFilterClone.names[clientName];
+        }
+        return clientFilterClone;
+    });
+};
+
+/**
  * @param dateTime {string} The date to format
  * @param [options] {object} Date.prototype.toLocaleString([locales[, options]]) options argument
  * @returns {string} Returns the date and time in the specified format
@@ -165,6 +184,7 @@ export const normalizeFilters = (filters) => (
             last_updated,
             name = 'Default name',
             rules_count = 0,
+            names,
         } = filter;
 
         return {
@@ -174,6 +194,7 @@ export const normalizeFilters = (filters) => (
             lastUpdated: last_updated,
             name,
             rulesCount: rules_count,
+            names,
         };
     }) : []
 );

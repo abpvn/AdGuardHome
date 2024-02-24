@@ -8,6 +8,7 @@ import {
     formatElapsedMs,
     getFilterNames,
     getServiceName,
+    clientsFiltersByClient,
 } from '../../../helpers/helpers';
 import { FILTERED_STATUS, FILTERED_STATUS_TO_META_MAP } from '../../../helpers/constants';
 import IconTooltip from './IconTooltip';
@@ -23,12 +24,13 @@ const ResponseCell = ({
     service_name,
     cached,
     isClientsFiltered,
+    client_info: { name: clientName },
 }) => {
     const { t } = useTranslation();
     const filters = useSelector((state) => state.filtering.filters, shallowEqual);
     const whitelistFilters = useSelector((state) => state.filtering.whitelistFilters, shallowEqual);
     const clientsFilters = isClientsFiltered
-        ? useSelector((state) => state.filtering.clientsFilters, shallowEqual)
+        ? useSelector((state) => clientsFiltersByClient(clientName, state.filtering.clientsFilters), shallowEqual)
         : undefined;
     const isDetailed = useSelector((state) => state.queryLogs.isDetailed);
     const services = useSelector((store) => store?.services);
@@ -135,6 +137,9 @@ ResponseCell.propTypes = {
         filter_list_id: propTypes.number.isRequired,
     })),
     service_name: propTypes.string,
+    client_info: {
+        name: propTypes.string,
+    },
 };
 
 export default ResponseCell;

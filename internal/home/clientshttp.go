@@ -340,6 +340,23 @@ func clientToJSON(c *persistentClient) (cj *clientJSON) {
 	}
 }
 
+func appendClientFilter(addedFiltersIndexs []int, filtersYAML []filtering.FilterYAML, clientName string) {
+	if len(addedFiltersIndexs) > 0 {
+		// Download new filter
+		for index, fy := range filtersYAML {
+			if slices.Contains(addedFiltersIndexs, index) {
+				ok, _ := Context.filters.Update(&fy)
+				if ok {
+					names := map[string]string{}
+					names[clientName] = fy.Name
+					cfy := filtering.ClientFilterYAML{FilterYAML: fy, Names: names}
+					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, cfy)
+				}
+			}
+		}
+	}
+}
+
 // handleAddClient is the handler for POST /control/clients/add HTTP API.
 func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.Request) {
 	cj := clientJSON{}
@@ -358,32 +375,11 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 	}
 	emptyFilters := []filtering.FilterYAML{}
 	var addedFiltersIndexs []int
-	c.Filters, addedFiltersIndexs = clients.checkFilters(emptyFilters, c.Filters)
+	c.Filters, addedFiltersIndexs = clients.checkAndFilters(emptyFilters, c.Filters, c)
 	var addedFiltersIndexsWhitelist []int
-	c.WhitelistFilters, addedFiltersIndexsWhitelist = clients.checkFilters(emptyFilters, c.WhitelistFilters)
-	if len(addedFiltersIndexs) > 0 {
-		// Download new filter
-		for index, fy := range c.Filters {
-			if slices.Contains(addedFiltersIndexs, index) {
-				ok, _ := Context.filters.Update(&fy)
-				if ok {
-					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, fy)
-				}
-			}
-		}
-	}
-
-	if len(addedFiltersIndexsWhitelist) > 0 {
-		// Download new white list filter
-		for index, fy := range c.WhitelistFilters {
-			if slices.Contains(addedFiltersIndexsWhitelist, index) {
-				ok, _ := Context.filters.Update(&fy)
-				if ok {
-					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, fy)
-				}
-			}
-		}
-	}
+	c.WhitelistFilters, addedFiltersIndexsWhitelist = clients.checkAndFilters(emptyFilters, c.WhitelistFilters, c)
+	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
+	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
 	ok, err := clients.add(c)
 	if err != nil {
@@ -423,7 +419,7 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 		return
 	}
 
-	clients.pruneClientFilters()
+	clients.pruneClientFilters(&cj.Name)
 
 	onConfigModified()
 }
@@ -435,31 +431,35 @@ type updateJSON struct {
 }
 
 // Check filters exist in a list
-func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYAML) (isExists bool) {
+func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYAML) (isExists bool, filterName string) {
 	isExists = false
 	for _, fj := range listFilters {
 		if filter.ID == fj.ID {
 			isExists = true
+			filterName = fj.Name
 			break
 		}
 	}
-	return isExists
+	return isExists, filterName
 }
 
-func (clients *clientsContainer) checkFilters(
+func (clients *clientsContainer) checkAndFilters(
 	oldFilters []filtering.FilterYAML,
 	newFilters []filtering.FilterYAML,
+	client *persistentClient,
 ) (
 	validFilters []filtering.FilterYAML,
 	addedFiltersIndexs []int,
 ) {
 	for _, fj := range newFilters {
-		if !existsFilters(fj, oldFilters) {
+		isExists, _ := existsFilters(fj, oldFilters)
+		if !isExists {
 			// Check filter exist in clients filters and add
 			isExistInClientFilters := false
 			for _, cfj := range config.ClientsFilters {
 				if fj.URL == cfj.URL {
-					validFilters = append(validFilters, cfj)
+					validFilters = append(validFilters, cfj.FilterYAML)
+					cfj.Names[client.Name] = fj.Name
 					isExistInClientFilters = true
 					continue
 				}
@@ -482,13 +482,27 @@ func (clients *clientsContainer) checkFilters(
 }
 
 // Prune client filter that does not used by any client
-func (clients *clientsContainer) pruneClientFilters() (hasDeletedFilter bool) {
+func (clients *clientsContainer) pruneClientFilters(delClientName *string) (hasDeletedFilter bool) {
 	var needDeleteIdx []int
 	for idx, fy := range config.Filtering.ClientsFilters {
 		needDelete := true
+		if delClientName != nil {
+			delete(fy.Names, *delClientName)
+		}
 		for _, c := range clients.list {
-			if existsFilters(fy, c.Filters) || existsFilters(fy, c.WhitelistFilters) {
+			isExistFilters, filterName := existsFilters(fy.FilterYAML, c.Filters)
+			isExistWhitelistFilter, wFilterName := existsFilters(fy.FilterYAML, c.WhitelistFilters)
+			if !isExistFilters && !isExistWhitelistFilter {
+				delete(fy.Names, c.Name)
+			} else {
 				needDelete = false
+				if isExistFilters {
+					fy.Names[c.Name] = filterName
+				}
+				if isExistWhitelistFilter {
+					fy.Names[c.Name] = wFilterName
+				}
+				continue
 			}
 		}
 		if needDelete {
@@ -546,32 +560,11 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 	var addedFiltersIndexs []int
-	c.Filters, addedFiltersIndexs = clients.checkFilters(prev.Filters, c.Filters)
+	c.Filters, addedFiltersIndexs = clients.checkAndFilters(prev.Filters, c.Filters, c)
 	var addedFiltersIndexsWhitelist []int
-	c.WhitelistFilters, addedFiltersIndexsWhitelist = clients.checkFilters(prev.WhitelistFilters, c.WhitelistFilters)
-	if len(addedFiltersIndexs) > 0 {
-		// Download new filter
-		for index, fy := range c.Filters {
-			if slices.Contains(addedFiltersIndexs, index) {
-				ok, _ := Context.filters.Update(&fy)
-				if ok {
-					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, fy)
-				}
-			}
-		}
-	}
-
-	if len(addedFiltersIndexsWhitelist) > 0 {
-		// Download new white list filter
-		for index, fy := range c.WhitelistFilters {
-			if slices.Contains(addedFiltersIndexsWhitelist, index) {
-				ok, _ := Context.filters.Update(&fy)
-				if ok {
-					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, fy)
-				}
-			}
-		}
-	}
+	c.WhitelistFilters, addedFiltersIndexsWhitelist = clients.checkAndFilters(prev.WhitelistFilters, c.WhitelistFilters, c)
+	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
+	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
 	err = clients.update(prev, c)
 	if err != nil {
@@ -579,7 +572,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 		return
 	}
-	clients.pruneClientFilters()
+	clients.pruneClientFilters(nil)
 	onConfigModified()
 }
 

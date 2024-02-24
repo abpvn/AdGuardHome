@@ -41,6 +41,28 @@ type FilterYAML struct {
 
 	Filter `yaml:",inline"`
 }
+type ClientFilterYAML struct {
+	Names map[string]string `yaml:"names"`
+	FilterYAML `yaml:",inline"`
+}
+
+func ToFilterYAML(clientFilters []ClientFilterYAML) []FilterYAML {
+	filtersYAML := []FilterYAML{}
+	for _, cf := range clientFilters {
+		filtersYAML = append(filtersYAML, cf.FilterYAML)
+	}
+	return filtersYAML
+}
+func FromFilterYAML(filtersYAML []FilterYAML) []ClientFilterYAML {
+	clientFiltersYAML := []ClientFilterYAML{}
+	for _, f := range filtersYAML {
+		cf := ClientFilterYAML{
+			FilterYAML: f,
+		}
+		clientFiltersYAML = append(clientFiltersYAML, cf)
+	}
+	return clientFiltersYAML
+}
 
 // Clear filter rules
 func (filter *FilterYAML) unload() {
@@ -246,6 +268,22 @@ func deduplicateFilters(filters []FilterYAML) (deduplicated []FilterYAML) {
 
 	return filters[:lastIdx]
 }
+
+func deduplicateClientFilters(filters []ClientFilterYAML) (deduplicated []ClientFilterYAML) {
+	urls := stringutil.NewSet()
+	lastIdx := 0
+
+	for _, filter := range filters {
+		if !urls.Has(filter.URL) {
+			urls.Add(filter.URL)
+			filters[lastIdx] = filter
+			lastIdx++
+		}
+	}
+
+	return filters[:lastIdx]
+}
+
 
 // Set the next filter ID to max(filter.ID) + 1
 func updateUniqueFilterID(filters []FilterYAML) {

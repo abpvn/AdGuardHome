@@ -315,10 +315,16 @@ type FilterJSON struct {
 	Enabled     bool   `json:"enabled"`
 }
 
+type ClientFilterJSON struct {
+	Names map[string]string `json:"names"`
+
+	FilterJSON `json:",inline"`
+}
+
 type filteringConfig struct {
 	Filters          []FilterJSON `json:"filters"`
 	WhitelistFilters []FilterJSON `json:"whitelist_filters"`
-	ClientsFilters   []FilterJSON `json:"clients_filters"`
+	ClientsFilters   []ClientFilterJSON `json:"clients_filters"`
 	UserRules        []string     `json:"user_rules"`
 	Interval         uint32       `json:"interval"` // in hours
 	Enabled          bool         `json:"enabled"`
@@ -338,6 +344,18 @@ func FilterToJSON(f FilterYAML) FilterJSON {
 	}
 
 	return fj
+}
+
+func ClientFilterToJSON(f ClientFilterYAML) ClientFilterJSON {
+	cfj := ClientFilterJSON{
+		FilterJSON: FilterToJSON(f.FilterYAML),
+		Names: f.Names,
+	}
+	if !f.LastUpdated.IsZero() {
+		cfj.LastUpdated = f.LastUpdated.Format(time.RFC3339)
+	}
+
+	return cfj
 }
 
 func (fj *FilterJSON) ToFilterYAML() FilterYAML {
@@ -369,7 +387,7 @@ func (d *DNSFilter) handleFilteringStatus(w http.ResponseWriter, r *http.Request
 		resp.WhitelistFilters = append(resp.WhitelistFilters, fj)
 	}
 	for _, f := range d.conf.ClientsFilters {
-		fj := FilterToJSON(f)
+		fj := ClientFilterToJSON(f)
 		resp.ClientsFilters = append(resp.ClientsFilters, fj)
 	}
 	resp.UserRules = d.conf.UserRules

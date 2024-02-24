@@ -134,6 +134,28 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http
 	aghhttp.WriteJSONResponseOK(w, r, data)
 }
 
+// handleGetClients is the handler for GET /control/clients HTTP API.
+func (clients *clientsContainer) handleGetClient(w http.ResponseWriter, r *http.Request) {
+	data := clientJSON{}
+	clientName := r.URL.Query().Get("name")
+
+	if clientName == "" {
+		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("Missing required parameter name"))
+		return
+	}
+
+	clients.lock.Lock()
+	defer clients.lock.Unlock()
+
+	if client, ok:= clients.list[clientName]; ok {
+		data = *clientToJSON(client)
+	} else {
+		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("Client %s not found", clientName))
+	}
+
+	aghhttp.WriteJSONResponseOK(w, r, data)
+}
+
 // initPrev initializes the persistent client with the default or previous
 // client properties.
 func initPrev(cj clientJSON, prev *persistentClient) (c *persistentClient, err error) {
@@ -643,6 +665,7 @@ func (clients *clientsContainer) findRuntime(ip netip.Addr, idStr string) (cj *c
 // RegisterClientsHandlers registers HTTP handlers
 func (clients *clientsContainer) registerWebHandlers() {
 	httpRegister(http.MethodGet, "/control/clients", clients.handleGetClients)
+	httpRegister(http.MethodGet, "/control/client/detail", clients.handleGetClient)
 	httpRegister(http.MethodPost, "/control/clients/add", clients.handleAddClient)
 	httpRegister(http.MethodPost, "/control/clients/delete", clients.handleDelClient)
 	httpRegister(http.MethodPost, "/control/clients/update", clients.handleUpdateClient)

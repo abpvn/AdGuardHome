@@ -370,13 +370,13 @@ let Form = (props) => {
         dns_blocklists: {
             title: 'dns_blocklists',
             component: <div label="dns_blocklists" title={props.t('dns_blocklists')}>
-                {useGLobalFilters ? <Trans>use_global_filters</Trans> : <FiltersTable title={t('dns_blocklists')}/>}
+                {useGLobalFilters ? <Trans>use_global_filters</Trans> : <FiltersTable client={initialValues.name} title={t('dns_blocklists')} />}
             </div>,
         },
         dns_allowlists: {
             title: 'dns_allowlists',
             component: <div label="dns_allowlists" title={props.t('dns_allowlists')}>
-                 {useGLobalFilters ? <Trans>use_global_filters</Trans> : <FiltersTable whitelist title={t('dns_allowlists')}/>}
+                {useGLobalFilters ? <Trans>use_global_filters</Trans> : <FiltersTable client={initialValues.name} whitelist title={t('dns_allowlists')} />}
             </div>,
         },
     };

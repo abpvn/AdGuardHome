@@ -27,6 +27,9 @@ const filterDir = "filters"
 // TODO(e.burkov):  Use more deterministic approach.
 var nextFilterID = time.Now().Unix()
 
+// AllClientName Pass this as client name if want to update all client filter
+const AllClientName = "__ALL__"
+
 // FilterYAML represents a filter list in the configuration file.
 //
 // TODO(e.burkov):  Investigate if the field ordering is important.
@@ -46,9 +49,15 @@ type ClientFilterYAML struct {
 	FilterYAML `yaml:",inline"`
 }
 
-func ToFilterYAML(clientFilters []ClientFilterYAML) []FilterYAML {
+func ToFilterYAML(clientFilters []ClientFilterYAML, clientName string) []FilterYAML {
 	filtersYAML := []FilterYAML{}
 	for _, cf := range clientFilters {
+		if clientName != AllClientName {
+			if _, ok := cf.Names[clientName]; ok {
+				// Skip filter does not own by clientName when it present
+				continue
+			}
+		}
 		filtersYAML = append(filtersYAML, cf.FilterYAML)
 	}
 	return filtersYAML
@@ -306,13 +315,13 @@ func assignUniqueFilterID() int64 {
 //
 // TODO(e.burkov):  Get rid of the concurrency pattern which requires the
 // [sync.Mutex.TryLock].
-func (d *DNSFilter) tryRefreshFilters(block, allow, force bool) (updated int, isNetworkErr, ok bool) {
+func (d *DNSFilter) tryRefreshFilters(block, allow bool, clientName *string, force bool) (updated int, isNetworkErr, ok bool) {
 	if ok = d.refreshLock.TryLock(); !ok {
 		return 0, false, false
 	}
 	defer d.refreshLock.Unlock()
 
-	updated, isNetworkErr = d.refreshFiltersIntl(block, allow, force)
+	updated, isNetworkErr = d.refreshFiltersIntl(block, allow, clientName, force)
 
 	return updated, isNetworkErr, ok
 }
@@ -415,6 +424,7 @@ func (d *DNSFilter) refreshFiltersArray(filters *[]FilterYAML, force bool) (int,
 
 // refreshFiltersIntl checks filters and updates them if necessary.  If force is
 // true, it ignores the filter.LastUpdated field value.
+// client nil mean skip client filter update __ALL__ mean update all other is sepecifi
 //
 // Algorithm:
 //
@@ -428,10 +438,10 @@ func (d *DNSFilter) refreshFiltersArray(filters *[]FilterYAML, force bool) (int,
 //     files to filtering, pass the whole data.
 //
 // refreshFiltersIntl returns the number of updated filters.  It also returns
-// true if there was a network error and nothing could be updated.
+// true if there was a network error and nothing could be updated.\
 //
 // TODO(a.garipov, e.burkov): What the hell?
-func (d *DNSFilter) refreshFiltersIntl(block, allow, force bool) (int, bool) {
+func (d *DNSFilter) refreshFiltersIntl(block, allow bool, client *string, force bool) (int, bool) {
 	updNum := 0
 	log.Debug("filtering: starting updating")
 	defer func() { log.Debug("filtering: finished updating, %d updated", updNum) }()
@@ -450,6 +460,17 @@ func (d *DNSFilter) refreshFiltersIntl(block, allow, force bool) (int, bool) {
 		lists = append(lists, listsAl...)
 		toUpd = append(toUpd, toUpdAl...)
 		isNetErr = isNetErr || isNetErrAl
+	}
+	if client != nil {
+		clientFilters := ToFilterYAML(d.conf.ClientsFilters, *client)
+		if len(clientFilters) > 0 {
+			updNumC, listsC, toUpdC, isNetErrC := d.refreshFiltersArray(&clientFilters, force)
+
+			updNum += updNumC
+			lists = append(lists, listsC...)
+			toUpd = append(toUpd, toUpdC...)
+			isNetErr = isNetErr || isNetErrC
+		}
 	}
 	if isNetErr {
 		return 0, true

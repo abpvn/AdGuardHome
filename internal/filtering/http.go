@@ -276,6 +276,7 @@ func (d *DNSFilter) handleFilteringSetRules(w http.ResponseWriter, r *http.Reque
 func (d *DNSFilter) handleFilteringRefresh(w http.ResponseWriter, r *http.Request) {
 	type Req struct {
 		White bool `json:"whitelist"`
+		Client *string `json:"client"`
 	}
 	var err error
 
@@ -291,7 +292,7 @@ func (d *DNSFilter) handleFilteringRefresh(w http.ResponseWriter, r *http.Reques
 	resp := struct {
 		Updated int `json:"updated"`
 	}{}
-	resp.Updated, _, ok = d.tryRefreshFilters(!req.White, req.White, true)
+	resp.Updated, _, ok = d.tryRefreshFilters(req.Client == nil && !req.White, req.Client == nil && req.White, req.Client, true)
 	if !ok {
 		aghhttp.Error(
 			r,

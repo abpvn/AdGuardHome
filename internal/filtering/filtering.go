@@ -981,7 +981,7 @@ func (d *DNSFilter) matchHost(
 	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
 		clientDNSFtl, _ := New(d.conf, nil)
 		clientDNSFtl.LoadFilters(setts.ClientWhiteListFilters)
-		clientDNSFtl.LoadFilters(ToFilterYAML(setts.ClientFilters))
+		clientDNSFtl.LoadFilters(ToFilterYAML(setts.ClientFilters, AllClientName))
 		allowFilters := []Filter{}
 		for _, whitelistFilter := range setts.ClientWhiteListFilters {
 			if !whitelistFilter.Enabled {
@@ -1151,7 +1151,8 @@ func (d *DNSFilter) periodicallyRefreshFilters(ivl time.Duration) (nextIvl time.
 	}
 
 	isNetErr, ok := false, false
-	_, isNetErr, ok = d.tryRefreshFilters(true, true, false)
+	allClient := AllClientName
+	_, isNetErr, ok = d.tryRefreshFilters(true, true, &allClient, false)
 
 	if ok && !isNetErr {
 		ivl = maxInterval

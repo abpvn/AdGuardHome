@@ -5,7 +5,7 @@ import {
 } from 'redux-form';
 import PropTypes from 'prop-types';
 import { withTranslation } from 'react-i18next';
-import { toggleFilteringModal } from '../../../actions/filtering';
+import { toggleFilteringModal, refreshFilters } from '../../../actions/filtering';
 import {
     normalizeFilters,
     getCurrentFilter,
@@ -24,6 +24,7 @@ let FiltersTable = (props) => {
         t,
         title,
         toggleFilteringModal,
+        client,
         filtering: {
             isModalOpen,
             isFilterAdded,
@@ -108,6 +109,9 @@ let FiltersTable = (props) => {
                 break;
         }
     };
+    const handleRefreshFilter = () => {
+        props.refreshFilters({ whitelist: false, client });
+    };
     const currentFilterData = getCurrentFilter(modalFilterUrl, filters);
     return (<>
         <div className="form__label--bot form__label--bold">
@@ -127,9 +131,10 @@ let FiltersTable = (props) => {
                     />
                     <Actions
                         normalButton
+                        hideRefresh={!client}
                         whitelist={whitelist}
                         handleAdd={openSelectTypeModal}
-                        handleRefresh={() => { }}
+                        handleRefresh={handleRefreshFilter}
                         processingRefreshFilters={processingConfigFilter}
                     />
                 </Card>
@@ -162,6 +167,8 @@ FiltersTable.propTypes = {
     toggleFilteringModal: PropTypes.func.isRequired,
     filtering: PropTypes.object.isRequired,
     change: PropTypes.func.isRequired,
+    refreshFilters: PropTypes.func.isRequired,
+    client: PropTypes.string,
 };
 
 const selector = formValueSelector(FORM_NAME.CLIENT);
@@ -178,6 +185,7 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = {
     toggleFilteringModal,
     change,
+    refreshFilters,
 };
 
 FiltersTable = connect(

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { connect } from 'react-redux';
 import {
     formValueSelector, change,
@@ -43,8 +43,10 @@ let FiltersTable = (props) => {
             || processingAddFilter
             || processingRemoveFilter
             || processingRefreshFilters;
+    const [hideRefreshButton, setHideRefreshButton] = useState(!client);
     const onFiltersChange = () => {
         props.change(FORM_NAME.CLIENT, whitelist ? 'whitelist_filters' : 'filters', filters);
+        setHideRefreshButton(true);
     };
     const deleteFilter = (url) => {
         const filterIndex = filters.findIndex((item) => item.url === url);
@@ -131,7 +133,7 @@ let FiltersTable = (props) => {
                     />
                     <Actions
                         normalButton
-                        hideRefresh={!client}
+                        hideRefresh={hideRefreshButton}
                         whitelist={whitelist}
                         handleAdd={openSelectTypeModal}
                         handleRefresh={handleRefreshFilter}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { connect } from 'react-redux';
 import {
     formValueSelector, change,
@@ -36,8 +36,17 @@ let FiltersTable = (props) => {
             modalType,
             modalFilterUrl,
         },
+        clientDetail,
     } = props;
-    const filters = whitelist ? props.whitelistFilters : props.filters;
+    const filters = useMemo(() => {
+        if (clientDetail && clientDetail.name === client) {
+            return whitelist ? clientDetail.whitelistFilters : clientDetail.filters;
+        }
+        return whitelist ? props.whitelistFilters : props.filters;
+    }, [whitelist, clientDetail]);
+    useEffect(() => {
+
+    }, [processingRefreshFilters]);
     const loading = processingConfigFilter
             || processingFilters
             || processingAddFilter
@@ -171,17 +180,19 @@ FiltersTable.propTypes = {
     change: PropTypes.func.isRequired,
     refreshFilters: PropTypes.func.isRequired,
     client: PropTypes.string,
+    clientDetail: PropTypes.object,
 };
 
 const selector = formValueSelector(FORM_NAME.CLIENT);
 const mapStateToProps = (state) => {
     const filters = normalizeFilters(selector(state, 'filters'));
     const whitelistFilters = normalizeFilters(selector(state, 'whitelist_filters'));
-    const { filtering } = state;
+    const { filtering, client: { clientDetail } } = state;
     return {
         filters,
         whitelistFilters,
         filtering,
+        clientDetail,
     };
 };
 const mapDispatchToProps = {

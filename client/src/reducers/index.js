@@ -4,6 +4,7 @@ import { reducer as formReducer } from 'redux-form';
 import toasts from './toasts';
 import encryption from './encryption';
 import clients from './clients';
+import client from './client';
 import access from './access';
 import rewrites from './rewrites';
 import services from './services';
@@ -24,6 +25,7 @@ export default combineReducers({
     dhcp,
     encryption,
     clients,
+    client,
     access,
     rewrites,
     services,

@@ -5,6 +5,7 @@ import i18next from 'i18next';
 import { normalizeFilteringStatus, normalizeRulesTextarea } from '../helpers/helpers';
 import apiClient from '../api/Api';
 import { addErrorToast, addSuccessToast } from './toasts';
+import { getClientDetail } from './client';
 
 export const toggleFilteringModal = createAction('FILTERING_MODAL_TOGGLE');
 export const handleRulesChange = createAction('HANDLE_RULES_CHANGE');
@@ -133,6 +134,9 @@ export const refreshFilters = (config) => async (dispatch) => {
 
         if (updated > 0) {
             dispatch(addSuccessToast(i18next.t('list_updated', { count: updated })));
+            if (config.client) {
+                dispatch(getClientDetail(config.client));
+            }
         } else {
             dispatch(addSuccessToast('all_lists_up_to_date_toast'));
         }

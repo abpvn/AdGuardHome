@@ -887,6 +887,24 @@
             'application/json':
               'schema':
                 '$ref': '#/components/schemas/Clients'
+  '/client/detail':
+    'get':
+      'tags':
+      - 'clients'
+      'parameters': 
+      - 'name': 'name'
+        'in': 'query'
+        'schema': 
+          'type': 'string'
+      'operationId': 'clientDetail'
+      'summary': 'Get information about single client'
+      'responses':
+        '200':
+          'description': 'OK.'
+          'content':
+            'application/json':
+              'schema':
+                '$ref': '#/components/schemas/Client'
   '/clients/add':
     'post':
       'tags':
@@ -1626,6 +1644,41 @@
           'type': 'string'
           'example': >
             https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
+    'ClientFilter':
+      'type': 'object'
+      'description': 'Client Filter subscription info'
+      'required':
+      - 'enabled'
+      - 'id'
+      - 'name'
+      - 'rules_count'
+      - 'url'
+      'properties':
+        'enabled':
+          'type': 'boolean'
+        'id':
+          'example': 1234
+          'format': 'int64'
+          'type': 'integer'
+        'last_updated':
+          'example': '2018-10-30T12:18:57+03:00'
+          'format': 'date-time'
+          'type': 'string'
+        'name':
+          'example': 'AdGuard Simplified Domain Names filter'
+          'type': 'string'
+        'names':
+          'type': 'object'
+          'example':
+            'client_name': 'Filter name by client'
+        'rules_count':
+          'example': 5912
+          'format': 'uint32'
+          'type': 'integer'
+        'url':
+          'type': 'string'
+          'example': >
+            https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
     'FilterStatus':
       'type': 'object'
       'description': 'Filtering settings'
@@ -1642,6 +1695,10 @@
           'type': 'array'
           'items':
             '$ref': '#/components/schemas/Filter'
+        'clients_filters':
+          'type': 'array'
+          'items':
+            '$ref': '#/components/schemas/ClientFilter'
         'user_rules':
           'type': 'array'
           'items':
@@ -1687,6 +1744,9 @@
       'properties':
         'whitelist':
           'type': 'boolean'
+        'client':
+          'type': 'string'
+          'description': 'Client name to refresh filter'
     'FilterCheckHostResponse':
       'type': 'object'
       'description': 'Check Host Result'
@@ -2202,6 +2262,8 @@
             the filter list that the rule belongs to.
 
             Deprecated: use `rules[*].filter_list_id` instead.
+        'is_clients_filtered': 
+          'type': 'boolean'
         'rule':
           'deprecated': true
           'type': 'string'

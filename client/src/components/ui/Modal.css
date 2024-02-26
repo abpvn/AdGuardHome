@@ -44,6 +44,7 @@
     .modal-dialog--clients {
         max-width: 860px;
     }
+
     .modal-dialog--static-leases,
     .modal-dialog--schedule {
         max-width: 650px;

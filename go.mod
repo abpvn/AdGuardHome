@@ -2,8 +2,6 @@ module github.com/AdguardTeam/AdGuardHome
 
 go 1.21.7
 
-toolchain go1.21.6
-
 require (
 	github.com/AdguardTeam/dnsproxy v0.65.0
 	github.com/AdguardTeam/golibs v0.20.1

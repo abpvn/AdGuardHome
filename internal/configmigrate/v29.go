@@ -20,7 +20,7 @@ package configmigrate
 //	     'tags': []
 //	     'filters': []
 //	     'whitelist_filters': []
-//	     'use_global_filter': true
+//	     'use_global_filters': true
 //		  # …
 //		# …
 func migrateTo29(diskConf yobj) (err error) {
@@ -55,9 +55,9 @@ func migrateTo29(diskConf yobj) (err error) {
 		if !ok {
 			c["whitelist_filters"] = yarr{}
 		}
-		_, ok, _ = fieldVal[bool](c, "use_global_filter")
+		_, ok, _ = fieldVal[bool](c, "use_global_filters")
 		if !ok {
-			c["use_global_filter"] = true
+			c["use_global_filters"] = true
 		}
 	}
 

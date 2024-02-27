@@ -140,7 +140,7 @@ func (clients *clientsContainer) handleGetClient(w http.ResponseWriter, r *http.
 	clientName := r.URL.Query().Get("name")
 
 	if clientName == "" {
-		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("Missing required parameter name"))
+		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("missing required parameter name"))
 		return
 	}
 
@@ -150,7 +150,7 @@ func (clients *clientsContainer) handleGetClient(w http.ResponseWriter, r *http.
 	if client, ok := clients.list[clientName]; ok {
 		data = *clientToJSON(client)
 	} else {
-		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("Client %s not found", clientName))
+		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("client %s not found", clientName))
 	}
 
 	aghhttp.WriteJSONResponseOK(w, r, data)

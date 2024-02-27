@@ -54,7 +54,7 @@ let FiltersTable = (props) => {
             || processingRemoveFilter
             || processingRefreshFilters;
 
-    const [hideRefreshButton, setHideRefreshButton] = useState(!client && !filters.length);
+    const [hideRefreshButton, setHideRefreshButton] = useState(!client || !filters.length);
 
     const onFiltersChange = () => {
         props.change(FORM_NAME.CLIENT, whitelist ? 'whitelist_filters' : 'filters', deNormalizeFilters(filters));

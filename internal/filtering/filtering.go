@@ -56,7 +56,7 @@ type Settings struct {
 	ClientName             string
 	ClientIP               netip.Addr
 	ClientTags             []string
-	ClientFilters          []ClientFilterYAML
+	ClientFilters          []FilterYAML
 	ClientWhiteListFilters []FilterYAML
 
 	ServicesRules []ServiceEntry
@@ -981,7 +981,7 @@ func (d *DNSFilter) matchHost(
 	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
 		clientDNSFtl, _ := New(d.conf, nil)
 		clientDNSFtl.LoadFilters(setts.ClientWhiteListFilters)
-		clientDNSFtl.LoadFilters(ToFilterYAML(setts.ClientFilters, AllClientName))
+		clientDNSFtl.LoadFilters(setts.ClientFilters)
 		allowFilters := []Filter{}
 		for _, whitelistFilter := range setts.ClientWhiteListFilters {
 			if !whitelistFilter.Enabled {
@@ -990,16 +990,16 @@ func (d *DNSFilter) matchHost(
 			whitelistFilter.Filter.FilePath = whitelistFilter.Path(clientDNSFtl.conf.DataDir)
 			allowFilters = append(allowFilters, whitelistFilter.Filter)
 		}
-		blockeFilters := []Filter{}
+		blockFilters := []Filter{}
 		for _, filter := range setts.ClientFilters {
 			if !filter.Enabled {
 				continue
 			}
 			filter.Filter.FilePath = filter.Path(clientDNSFtl.conf.DataDir)
-			blockeFilters = append(blockeFilters, filter.Filter)
+			blockFilters = append(blockFilters, filter.Filter)
 		}
 
-		clientDNSFtl.initFiltering(allowFilters, blockeFilters)
+		clientDNSFtl.initFiltering(allowFilters, blockFilters)
 		res, err = clientDNSFtl.processMatchHost(host, rrtype, setts)
 		res.IsClientFiltered = true
 		return res, err

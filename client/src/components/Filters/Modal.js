@@ -119,7 +119,7 @@ class Modal extends Component {
 Modal.propTypes = {
     toggleFilteringModal: PropTypes.func.isRequired,
     isOpen: PropTypes.bool.isRequired,
-    addFilter: PropTypes.func.isRequired,
+    addFilter: PropTypes.func,
     isFilterAdded: PropTypes.bool.isRequired,
     processingAddFilter: PropTypes.bool.isRequired,
     processingConfigFilter: PropTypes.bool.isRequired,

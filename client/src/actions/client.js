@@ -1,5 +1,4 @@
 import { createAction } from 'redux-actions';
-import { normalizeFilters } from '../helpers/helpers';
 import { addErrorToast } from './toasts';
 import apiClient from '../api/Api';
 
@@ -14,8 +13,8 @@ export const getClientDetail = (name) => async (dispatch) => {
         dispatch(getClientDetailSuccess({
             clientDetail: {
                 name: data.name,
-                whitelistFilters: [...normalizeFilters(data.whitelist_filters)],
-                filters: [...normalizeFilters(data.filters)],
+                whitelist_filters: data.whitelist_filters,
+                filters: data.filters,
             },
         }));
     } catch (error) {

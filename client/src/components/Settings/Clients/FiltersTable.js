@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import {
     formValueSelector, change,
@@ -9,6 +9,7 @@ import { toggleFilteringModal, refreshFilters } from '../../../actions/filtering
 import {
     normalizeFilters,
     getCurrentFilter,
+    deNormalizeFilters,
 } from '../../../helpers/helpers';
 import Card from '../../ui/Card';
 import Table from '../../Filters/Table';
@@ -38,23 +39,25 @@ let FiltersTable = (props) => {
         },
         clientDetail,
     } = props;
-    const filters = useMemo(() => {
-        if (clientDetail && clientDetail.name === client) {
-            return whitelist ? clientDetail.whitelistFilters : clientDetail.filters;
-        }
-        return whitelist ? props.whitelistFilters : props.filters;
-    }, [whitelist, clientDetail]);
-    useEffect(() => {
 
-    }, [processingRefreshFilters]);
+    const filters = normalizeFilters(whitelist ? props.whitelistFilters : props.filters);
+
+    useEffect(() => {
+        if (clientDetail && clientDetail.name) {
+            props.change(FORM_NAME.CLIENT, whitelist ? clientDetail.whitelist_filters : clientDetail.filters);
+        }
+    }, [clientDetail]);
+
     const loading = processingConfigFilter
             || processingFilters
             || processingAddFilter
             || processingRemoveFilter
             || processingRefreshFilters;
-    const [hideRefreshButton, setHideRefreshButton] = useState(!client);
+
+    const [hideRefreshButton, setHideRefreshButton] = useState(!client && !filters.length);
+
     const onFiltersChange = () => {
-        props.change(FORM_NAME.CLIENT, whitelist ? 'whitelist_filters' : 'filters', filters);
+        props.change(FORM_NAME.CLIENT, whitelist ? 'whitelist_filters' : 'filters', deNormalizeFilters(filters));
         setHideRefreshButton(true);
     };
     const deleteFilter = (url) => {
@@ -156,7 +159,6 @@ let FiltersTable = (props) => {
             filtersCatalog={filtersCatalog}
             isOpen={isModalOpen}
             toggleFilteringModal={toggleFilteringModal}
-            addFilter={() => {}}
             isFilterAdded={isFilterAdded}
             processingAddFilter={processingAddFilter}
             processingConfigFilter={processingConfigFilter}
@@ -185,8 +187,8 @@ FiltersTable.propTypes = {
 
 const selector = formValueSelector(FORM_NAME.CLIENT);
 const mapStateToProps = (state) => {
-    const filters = normalizeFilters(selector(state, 'filters'));
-    const whitelistFilters = normalizeFilters(selector(state, 'whitelist_filters'));
+    const filters = selector(state, 'filters');
+    const whitelistFilters = selector(state, 'whitelist_filters');
     const { filtering, client: { clientDetail } } = state;
     return {
         filters,

@@ -199,6 +199,30 @@ export const normalizeFilters = (filters) => (
     }) : []
 );
 
+export const deNormalizeFilters = (filters) => (
+    filters ? filters.map((filter) => {
+        const {
+            id,
+            url,
+            enabled,
+            lastUpdated,
+            name = 'Default name',
+            rulesCount = 0,
+            names,
+        } = filter;
+
+        return {
+            id,
+            url,
+            enabled,
+            last_updated: lastUpdated,
+            name,
+            rules_count: rulesCount,
+            names,
+        };
+    }) : []
+);
+
 export const normalizeFilteringStatus = (filteringStatus) => {
     const {
         enabled, filters, user_rules: userRules, interval, whitelist_filters, clients_filters,

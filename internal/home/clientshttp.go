@@ -441,7 +441,7 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 		return
 	}
 
-	clients.pruneClientFilters(&cj.Name)
+	clients.bulkUpdateClientFilters(&cj.Name)
 
 	onConfigModified()
 }
@@ -453,16 +453,17 @@ type updateJSON struct {
 }
 
 // Check filters exist in a list
-func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYAML) (isExists bool, filterName string) {
+func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYAML) (isExists bool, filterName string, isEnabled bool) {
 	isExists = false
 	for _, fj := range listFilters {
 		if filter.ID == fj.ID {
 			isExists = true
 			filterName = fj.Name
+			isEnabled = filter.Enabled
 			break
 		}
 	}
-	return isExists, filterName
+	return isExists, filterName, isEnabled
 }
 
 func (clients *clientsContainer) checkAndFilters(
@@ -474,7 +475,7 @@ func (clients *clientsContainer) checkAndFilters(
 	addedFiltersIndexs []int,
 ) {
 	for _, fj := range newFilters {
-		isExists, _ := existsFilters(fj, oldFilters)
+		isExists, _, _ := existsFilters(fj, oldFilters)
 		if !isExists {
 			// Check filter exist in clients filters and add
 			isExistInClientFilters := false
@@ -503,17 +504,18 @@ func (clients *clientsContainer) checkAndFilters(
 	return validFilters, addedFiltersIndexs
 }
 
-// Prune client filter that does not used by any client
-func (clients *clientsContainer) pruneClientFilters(delClientName *string) (hasDeletedFilter bool) {
+// bulkUpdateClientFilters delete or disable filter that does not used or enabled by any client
+func (clients *clientsContainer) bulkUpdateClientFilters(delClientName *string) (hasDeletedFilter bool) {
 	var needDeleteIdx []int
 	for idx, fy := range config.Filtering.ClientsFilters {
 		needDelete := true
+		shoudEnable := false
 		if delClientName != nil {
 			delete(fy.Names, *delClientName)
 		}
 		for _, c := range clients.list {
-			isExistFilters, filterName := existsFilters(fy.FilterYAML, c.Filters)
-			isExistWhitelistFilter, wFilterName := existsFilters(fy.FilterYAML, c.WhitelistFilters)
+			isExistFilters, filterName, isEnabled := existsFilters(fy.FilterYAML, c.Filters)
+			isExistWhitelistFilter, wFilterName, isEnabledWhiteList := existsFilters(fy.FilterYAML, c.WhitelistFilters)
 			if !isExistFilters && !isExistWhitelistFilter {
 				delete(fy.Names, c.Name)
 			} else {
@@ -524,8 +526,12 @@ func (clients *clientsContainer) pruneClientFilters(delClientName *string) (hasD
 				if isExistWhitelistFilter {
 					fy.Names[c.Name] = wFilterName
 				}
+				shoudEnable = isEnabled || isEnabledWhiteList
 				continue
 			}
+		}
+		if fy.Enabled != shoudEnable {
+			fy.Enabled = shoudEnable
 		}
 		if needDelete {
 			needDeleteIdx = append(needDeleteIdx, idx)
@@ -594,7 +600,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 		return
 	}
-	clients.pruneClientFilters(nil)
+	clients.bulkUpdateClientFilters(nil)
 	onConfigModified()
 }
 

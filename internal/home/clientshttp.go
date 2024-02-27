@@ -158,9 +158,9 @@ func (clients *clientsContainer) handleGetClient(w http.ResponseWriter, r *http.
 
 // initPrev initializes the persistent client with the default or previous
 // client properties.
-func initPrev(cj clientJSON, prev *persistentClient) (c *persistentClient, err error) {
+func initPrev(cj clientJSON, prev *client.Persistent) (c *client.Persistent, err error) {
 	var (
-		uid              UID
+		uid              client.UID
 		ignoreQueryLog   bool
 		ignoreStatistics bool
 		upsCacheEnabled  bool
@@ -193,14 +193,14 @@ func initPrev(cj clientJSON, prev *persistentClient) (c *persistentClient, err e
 		return nil, fmt.Errorf("invalid blocked services: %w", err)
 	}
 
-	if (uid == UID{}) {
-		uid, err = NewUID()
+	if (uid == client.UID{}) {
+		uid, err = client.NewUID()
 		if err != nil {
 			return nil, fmt.Errorf("generating uid: %w", err)
 		}
 	}
 
-	return &persistentClient{
+	return &client.Persistent{
 		BlockedServices:       svcs,
 		UID:                   uid,
 		IgnoreQueryLog:        ignoreQueryLog,
@@ -214,21 +214,21 @@ func initPrev(cj clientJSON, prev *persistentClient) (c *persistentClient, err e
 // errors.
 func (clients *clientsContainer) jsonToClient(
 	cj clientJSON,
-	prev *persistentClient,
-) (c *persistentClient, err error) {
+	prev *client.Persistent,
+) (c *client.Persistent, err error) {
 	c, err = initPrev(cj, prev)
 	if err != nil {
 		// Don't wrap the error since it's informative enough as is.
 		return nil, err
 	}
 
-	err = c.setIDs(cj.IDs)
+	err = c.SetIDs(cj.IDs)
 	if err != nil {
 		// Don't wrap the error since it's informative enough as is.
 		return nil, err
 	}
 
-	c.safeSearchConf = copySafeSearch(cj.SafeSearchConf, cj.SafeSearchEnabled)
+	c.SafeSearchConf = copySafeSearch(cj.SafeSearchConf, cj.SafeSearchEnabled)
 	c.Name = cj.Name
 	c.Tags = cj.Tags
 	c.Upstreams = cj.Upstreams
@@ -245,9 +245,9 @@ func (clients *clientsContainer) jsonToClient(
 		c.WhitelistFilters = append(c.WhitelistFilters, fj.ToFilterYAML())
 	}
 
-	if c.safeSearchConf.Enabled {
-		err = c.setSafeSearch(
-			c.safeSearchConf,
+	if c.SafeSearchConf.Enabled {
+		err = c.SetSafeSearch(
+			c.SafeSearchConf,
 			clients.safeSearchCacheSize,
 			clients.safeSearchCacheTTL,
 		)
@@ -292,7 +292,7 @@ func copySafeSearch(
 func copyBlockedServices(
 	sch *schedule.Weekly,
 	svcStrs []string,
-	prev *persistentClient,
+	prev *client.Persistent,
 ) (svcs *filtering.BlockedServices, err error) {
 	var weekly *schedule.Weekly
 	if sch != nil {
@@ -317,10 +317,10 @@ func copyBlockedServices(
 }
 
 // clientToJSON converts persistent client object to JSON object.
-func clientToJSON(c *persistentClient) (cj *clientJSON) {
+func clientToJSON(c *client.Persistent) (cj *clientJSON) {
 	// TODO(d.kolyshev): Remove after cleaning the deprecated
 	// [clientJSON.SafeSearchEnabled] field.
-	cloneVal := c.safeSearchConf
+	cloneVal := c.SafeSearchConf
 	safeSearchConf := &cloneVal
 	allowfiltersJSON := []filtering.FilterJSON{}
 	blockedfiltersJSON := []filtering.FilterJSON{}
@@ -335,7 +335,7 @@ func clientToJSON(c *persistentClient) (cj *clientJSON) {
 
 	return &clientJSON{
 		Name:                c.Name,
-		IDs:                 c.ids(),
+		IDs:                 c.IDs(),
 		Tags:                c.Tags,
 		Filters:             blockedfiltersJSON,
 		WhitelistFilter:     allowfiltersJSON,
@@ -469,7 +469,7 @@ func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYA
 func (clients *clientsContainer) checkAndFilters(
 	oldFilters []filtering.FilterYAML,
 	newFilters []filtering.FilterYAML,
-	client *persistentClient,
+	client *client.Persistent,
 ) (
 	validFilters []filtering.FilterYAML,
 	addedFiltersIndexs []int,
@@ -565,7 +565,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 
-	var prev *persistentClient
+	var prev *client.Persistent
 	var ok bool
 
 	func() {

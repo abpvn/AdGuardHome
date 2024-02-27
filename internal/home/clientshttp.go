@@ -147,7 +147,7 @@ func (clients *clientsContainer) handleGetClient(w http.ResponseWriter, r *http.
 	clients.lock.Lock()
 	defer clients.lock.Unlock()
 
-	if client, ok:= clients.list[clientName]; ok {
+	if client, ok := clients.list[clientName]; ok {
 		data = *clientToJSON(client)
 	} else {
 		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("Client %s not found", clientName))
@@ -500,7 +500,7 @@ func (clients *clientsContainer) checkAndFilters(
 		}
 	}
 	Context.filters.LoadFilters(validFilters)
-	return
+	return validFilters, addedFiltersIndexs
 }
 
 // Prune client filter that does not used by any client

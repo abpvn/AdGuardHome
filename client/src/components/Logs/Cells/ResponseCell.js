@@ -137,9 +137,9 @@ ResponseCell.propTypes = {
         filter_list_id: propTypes.number.isRequired,
     })),
     service_name: propTypes.string,
-    client_info: {
+    client_info: propTypes.shape({
         name: propTypes.string,
-    },
+    }),
 };
 
 export default ResponseCell;

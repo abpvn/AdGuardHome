@@ -560,6 +560,16 @@ var resultHandlers = map[string]logEntryHandler{
 
 		return nil
 	},
+	"IsClientFiltered": func(t json.Token, ent *logEntry) error {
+		v, ok := t.(bool)
+		if !ok {
+			return nil
+		}
+
+		ent.Result.IsClientFiltered = v
+
+		return nil
+	},
 	"Rule": func(t json.Token, ent *logEntry) error {
 		s, ok := t.(string)
 		if !ok {

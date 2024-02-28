@@ -276,7 +276,7 @@ type DNSFilter struct {
 	hostCheckers []hostChecker
 }
 
-var ClientDNSFilters map[string]DNSFilter = make(map[string]DNSFilter)
+var ClientDNSFilters map[string]*DNSFilter = make(map[string]*DNSFilter)
 
 // Filter represents a filter list
 type Filter struct {
@@ -985,7 +985,7 @@ func (d *DNSFilter) matchHost(
 		if !ok {
 			clientDNSFtl, _ := New(d.conf, nil)
 			clientDNSFtl.InitForClient(setts.ClientWhiteListFilters, setts.ClientFilters)
-			ClientDNSFilters[setts.ClientName] = *clientDNSFtl
+			ClientDNSFilters[setts.ClientName] = clientDNSFtl
 		}
 		res, err = clientDNSFtl.processMatchHost(host, rrtype, setts)
 		res.IsClientFiltered = true

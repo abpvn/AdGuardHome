@@ -611,11 +611,12 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 	clients.bulkUpdateClientFilters(nil)
 	clientDNSFtl, ok := filtering.ClientDNSFilters[prev.Name]
 	if ok {
-		if c.Name != prev.Name {
+		if !prev.UseGlobalFilters && c.UseGlobalFilters {
+			delete(filtering.ClientDNSFilters, prev.Name)
+		} else if c.Name != prev.Name {
 			filtering.ClientDNSFilters[c.Name] = clientDNSFtl
 			delete(filtering.ClientDNSFilters, prev.Name)
-		}
-		if hasFilterChange || hasWhiteListFilterChange {
+		} else if hasFilterChange || hasWhiteListFilterChange {
 			clientDNSFtl.InitForClient(c.WhitelistFilters, c.Filters)
 		}
 	}

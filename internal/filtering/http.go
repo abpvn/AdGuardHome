@@ -275,7 +275,7 @@ func (d *DNSFilter) handleFilteringSetRules(w http.ResponseWriter, r *http.Reque
 
 func (d *DNSFilter) handleFilteringRefresh(w http.ResponseWriter, r *http.Request) {
 	type Req struct {
-		White bool `json:"whitelist"`
+		White  bool    `json:"whitelist"`
 		Client *string `json:"client"`
 	}
 	var err error
@@ -323,12 +323,12 @@ type ClientFilterJSON struct {
 }
 
 type filteringConfig struct {
-	Filters          []FilterJSON `json:"filters"`
-	WhitelistFilters []FilterJSON `json:"whitelist_filters"`
+	Filters          []FilterJSON       `json:"filters"`
+	WhitelistFilters []FilterJSON       `json:"whitelist_filters"`
 	ClientsFilters   []ClientFilterJSON `json:"clients_filters"`
-	UserRules        []string     `json:"user_rules"`
-	Interval         uint32       `json:"interval"` // in hours
-	Enabled          bool         `json:"enabled"`
+	UserRules        []string           `json:"user_rules"`
+	Interval         uint32             `json:"interval"` // in hours
+	Enabled          bool               `json:"enabled"`
 }
 
 func FilterToJSON(f FilterYAML) FilterJSON {
@@ -349,8 +349,8 @@ func FilterToJSON(f FilterYAML) FilterJSON {
 
 func ClientFilterToJSON(f ClientFilterYAML) ClientFilterJSON {
 	cfj := ClientFilterJSON{
-		FilterJSON: FilterToJSON(f.FilterYAML),
-		Names: f.Names,
+		FilterJSON: FilterToJSON(*f.FilterYAML),
+		Names:      f.Names,
 	}
 	if !f.LastUpdated.IsZero() {
 		cfj.LastUpdated = f.LastUpdated.Format(time.RFC3339)

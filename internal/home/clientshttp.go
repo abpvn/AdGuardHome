@@ -371,7 +371,7 @@ func appendClientFilter(addedFiltersIndexs []int, filtersYAML []filtering.Filter
 				if ok {
 					names := map[string]string{}
 					names[clientName] = fy.Name
-					cfy := filtering.ClientFilterYAML{FilterYAML: fy, Names: names}
+					cfy := filtering.ClientFilterYAML{FilterYAML: &fy, Names: names}
 					config.Filtering.ClientsFilters = append(config.Filtering.ClientsFilters, cfy)
 				}
 			}
@@ -459,7 +459,7 @@ func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYA
 		if filter.ID == fj.ID {
 			isExists = true
 			filterName = fj.Name
-			isEnabled = filter.Enabled
+			isEnabled = fj.Enabled
 			break
 		}
 	}
@@ -481,7 +481,7 @@ func (clients *clientsContainer) checkAndFilters(
 			isExistInClientFilters := false
 			for _, cfj := range config.ClientsFilters {
 				if fj.URL == cfj.URL {
-					validFilters = append(validFilters, cfj.FilterYAML)
+					validFilters = append(validFilters, *cfj.FilterYAML)
 					cfj.Names[client.Name] = fj.Name
 					isExistInClientFilters = true
 					continue
@@ -514,8 +514,8 @@ func (clients *clientsContainer) bulkUpdateClientFilters(delClientName *string) 
 			delete(fy.Names, *delClientName)
 		}
 		for _, c := range clients.list {
-			isExistFilters, filterName, isEnabled := existsFilters(fy.FilterYAML, c.Filters)
-			isExistWhitelistFilter, wFilterName, isEnabledWhiteList := existsFilters(fy.FilterYAML, c.WhitelistFilters)
+			isExistFilters, filterName, isEnabled := existsFilters(*fy.FilterYAML, c.Filters)
+			isExistWhitelistFilter, wFilterName, isEnabledWhiteList := existsFilters(*fy.FilterYAML, c.WhitelistFilters)
 			if !isExistFilters && !isExistWhitelistFilter {
 				delete(fy.Names, c.Name)
 			} else {
@@ -526,7 +526,7 @@ func (clients *clientsContainer) bulkUpdateClientFilters(delClientName *string) 
 				if isExistWhitelistFilter {
 					fy.Names[c.Name] = wFilterName
 				}
-				shoudEnable = isEnabled || isEnabledWhiteList
+				shoudEnable = !c.UseGlobalFilters && (isEnabled || isEnabledWhiteList)
 				continue
 			}
 		}

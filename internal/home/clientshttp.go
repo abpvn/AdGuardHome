@@ -397,9 +397,9 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 	}
 	emptyFilters := []filtering.FilterYAML{}
 	var addedFiltersIndexs []int
-	c.Filters, addedFiltersIndexs = clients.checkAndFilters(emptyFilters, c.Filters, c)
+	c.Filters, addedFiltersIndexs, _ = clients.checkAndFilters(emptyFilters, c.Filters, c)
 	var addedFiltersIndexsWhitelist []int
-	c.WhitelistFilters, addedFiltersIndexsWhitelist = clients.checkAndFilters(emptyFilters, c.WhitelistFilters, c)
+	c.WhitelistFilters, addedFiltersIndexsWhitelist, _ = clients.checkAndFilters(emptyFilters, c.WhitelistFilters, c)
 	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
 	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
@@ -442,6 +442,7 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 	}
 
 	clients.bulkUpdateClientFilters(&cj.Name)
+	delete(filtering.ClientDNSFilters, cj.Name)
 
 	onConfigModified()
 }
@@ -473,9 +474,10 @@ func (clients *clientsContainer) checkAndFilters(
 ) (
 	validFilters []filtering.FilterYAML,
 	addedFiltersIndexs []int,
+	hasFilterChange bool,
 ) {
 	for _, fj := range newFilters {
-		isExists, _, _ := existsFilters(fj, oldFilters)
+		isExists, _, isEnabled := existsFilters(fj, oldFilters)
 		if !isExists {
 			// Check filter exist in clients filters and add
 			isExistInClientFilters := false
@@ -493,15 +495,19 @@ func (clients *clientsContainer) checkAndFilters(
 			// Process add filter
 			err := filtering.ValidateFilterURL(fj.URL)
 			if err == nil {
+				hasFilterChange = true
 				addedFiltersIndexs = append(addedFiltersIndexs, len(validFilters))
 				validFilters = append(validFilters, fj)
 			}
 		} else {
+			if fj.Enabled != isEnabled {
+				hasFilterChange = true
+			}
 			validFilters = append(validFilters, fj)
 		}
 	}
 	Context.filters.LoadFilters(validFilters)
-	return validFilters, addedFiltersIndexs
+	return validFilters, addedFiltersIndexs, hasFilterChange
 }
 
 // bulkUpdateClientFilters delete or disable filter that does not used or enabled by any client
@@ -588,9 +594,11 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 	var addedFiltersIndexs []int
-	c.Filters, addedFiltersIndexs = clients.checkAndFilters(prev.Filters, c.Filters, c)
+	var hasFilterChange bool
+	c.Filters, addedFiltersIndexs, hasFilterChange = clients.checkAndFilters(prev.Filters, c.Filters, c)
 	var addedFiltersIndexsWhitelist []int
-	c.WhitelistFilters, addedFiltersIndexsWhitelist = clients.checkAndFilters(prev.WhitelistFilters, c.WhitelistFilters, c)
+	var hasWhiteListFilterChange bool
+	c.WhitelistFilters, addedFiltersIndexsWhitelist, hasWhiteListFilterChange = clients.checkAndFilters(prev.WhitelistFilters, c.WhitelistFilters, c)
 	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
 	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
@@ -601,6 +609,16 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 	clients.bulkUpdateClientFilters(nil)
+	clientDNSFtl, ok := filtering.ClientDNSFilters[prev.Name]
+	if ok {
+		if c.Name != prev.Name {
+			filtering.ClientDNSFilters[c.Name] = clientDNSFtl
+			delete(filtering.ClientDNSFilters, prev.Name)
+		}
+		if hasFilterChange || hasWhiteListFilterChange {
+			clientDNSFtl.InitForClient(c.WhitelistFilters, c.Filters)
+		}
+	}
 	onConfigModified()
 }
 

@@ -263,6 +263,29 @@ func (d *DNSFilter) LoadFilters(array []FilterYAML) {
 	}
 }
 
+func (d *DNSFilter) InitForClient(whiteListFilters []FilterYAML, filters []FilterYAML) {
+	d.LoadFilters(whiteListFilters)
+	d.LoadFilters(filters)
+	allowFilters := []Filter{}
+	for _, whitelistFilter := range whiteListFilters {
+		if !whitelistFilter.Enabled {
+			continue
+		}
+		whitelistFilter.Filter.FilePath = whitelistFilter.Path(d.conf.DataDir)
+		allowFilters = append(allowFilters, whitelistFilter.Filter)
+	}
+	blockFilters := []Filter{}
+	for _, filter := range filters {
+		if !filter.Enabled {
+			continue
+		}
+		filter.Filter.FilePath = filter.Path(d.conf.DataDir)
+		blockFilters = append(blockFilters, filter.Filter)
+	}
+
+	d.initFiltering(allowFilters, blockFilters)
+}
+
 func deduplicateFilters(filters []FilterYAML) (deduplicated []FilterYAML) {
 	urls := stringutil.NewSet()
 	lastIdx := 0

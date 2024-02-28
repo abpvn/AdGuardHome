@@ -276,6 +276,8 @@ type DNSFilter struct {
 	hostCheckers []hostChecker
 }
 
+var ClientDNSFilters map[string]DNSFilter = make(map[string]DNSFilter)
+
 // Filter represents a filter list
 type Filter struct {
 	// FilePath is the path to a filtering rules list file.
@@ -979,27 +981,12 @@ func (d *DNSFilter) matchHost(
 		return Result{}, nil
 	}
 	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
-		clientDNSFtl, _ := New(d.conf, nil)
-		clientDNSFtl.LoadFilters(setts.ClientWhiteListFilters)
-		clientDNSFtl.LoadFilters(setts.ClientFilters)
-		allowFilters := []Filter{}
-		for _, whitelistFilter := range setts.ClientWhiteListFilters {
-			if !whitelistFilter.Enabled {
-				continue
-			}
-			whitelistFilter.Filter.FilePath = whitelistFilter.Path(clientDNSFtl.conf.DataDir)
-			allowFilters = append(allowFilters, whitelistFilter.Filter)
+		clientDNSFtl, ok := ClientDNSFilters[setts.ClientName]
+		if !ok {
+			clientDNSFtl, _ := New(d.conf, nil)
+			clientDNSFtl.InitForClient(setts.ClientWhiteListFilters, setts.ClientFilters)
+			ClientDNSFilters[setts.ClientName] = *clientDNSFtl
 		}
-		blockFilters := []Filter{}
-		for _, filter := range setts.ClientFilters {
-			if !filter.Enabled {
-				continue
-			}
-			filter.Filter.FilePath = filter.Path(clientDNSFtl.conf.DataDir)
-			blockFilters = append(blockFilters, filter.Filter)
-		}
-
-		clientDNSFtl.initFiltering(allowFilters, blockFilters)
 		res, err = clientDNSFtl.processMatchHost(host, rrtype, setts)
 		res.IsClientFiltered = true
 		return res, err

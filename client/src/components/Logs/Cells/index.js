@@ -13,6 +13,7 @@ import {
     getBlockingClientName,
     getServiceName,
     processContent,
+    clientsFiltersByClient,
 } from '../../../helpers/helpers';
 import {
     BLOCK_ACTIONS,
@@ -38,7 +39,7 @@ import '../Logs.css';
 const Row = memo(({
     style,
     rowProps,
-    rowProps: { reason },
+    rowProps: { reason, client_info: { name: clientName } },
     isSmallScreen,
     setDetailedDataCurrent,
     setButtonType,
@@ -49,6 +50,10 @@ const Row = memo(({
     const dnssec_enabled = useSelector((state) => state.dnsConfig.dnssec_enabled);
     const filters = useSelector((state) => state.filtering.filters, shallowEqual);
     const whitelistFilters = useSelector((state) => state.filtering.whitelistFilters, shallowEqual);
+    const clientsFilters = useSelector(
+        (state) => clientsFiltersByClient(clientName, state.filtering.clientsFilters),
+        shallowEqual,
+    );
     const autoClients = useSelector((state) => state.dashboard.autoClients, shallowEqual);
     const processingSet = useSelector((state) => state.access.processingSet);
     const allowedСlients = useSelector((state) => state.access.allowed_clients, shallowEqual);
@@ -78,6 +83,7 @@ const Row = memo(({
             status,
             service_name,
             cached,
+            isClientsFiltered,
         } = rowProps;
 
         const hasTracker = !!tracker;
@@ -195,7 +201,14 @@ const Row = memo(({
             install_settings_dns: upstreamString,
             elapsed: formattedElapsedMs,
             ...(rules.length > 0
-                    && { rule_label: getRulesToFilterList(rules, filters, whitelistFilters) }
+                && {
+                    rule_label: getRulesToFilterList(
+                        rules,
+                        filters,
+                        whitelistFilters,
+                        isClientsFiltered ? clientsFilters : undefined,
+                    ),
+                }
             ),
             response_table_header: response?.join('\n'),
             response_code: status,

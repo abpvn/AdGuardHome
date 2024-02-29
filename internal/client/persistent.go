@@ -117,12 +117,8 @@ func (c *Persistent) SetTags(tags []string, known *stringutil.Set) {
 
 // SetFilters sets with allow and blocked
 func (c *Persistent) SetFilters(allowFilters []filtering.FilterYAML, blockFilters []filtering.FilterYAML) {
-	for _, f := range allowFilters {
-		c.WhitelistFilters = append(c.WhitelistFilters, f)
-	}
-	for _, f := range blockFilters {
-		c.Filters = append(c.Filters, f)
-	}
+	c.WhitelistFilters = append(c.WhitelistFilters, allowFilters...)
+	c.Filters = append(c.Filters, blockFilters...)
 }
 
 // SetIDs parses a list of strings into typed fields and returns an error if

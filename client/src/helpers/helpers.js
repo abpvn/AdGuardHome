@@ -962,6 +962,7 @@ export const getFilterNameToRulesMap = (rules, filters, whitelistFilters, client
  * @param {array} rules
  * @param {array} filters
  * @param {array} whitelistFilters
+ * @param {array} clientsFilters
  * @param {object} classes
  * @returns {JSXElement}
  */

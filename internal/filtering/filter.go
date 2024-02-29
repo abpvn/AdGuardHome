@@ -62,6 +62,7 @@ func ToFilterYAML(clientFilters []ClientFilterYAML, clientName string) []FilterY
 	}
 	return filtersYAML
 }
+
 func FromFilterYAML(filtersYAML []FilterYAML) []ClientFilterYAML {
 	clientFiltersYAML := []ClientFilterYAML{}
 	for _, f := range filtersYAML {

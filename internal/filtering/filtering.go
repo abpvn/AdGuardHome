@@ -983,11 +983,13 @@ func (d *DNSFilter) matchHost(
 	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
 		clientDNSFtl, ok := ClientDNSFilters[setts.ClientName]
 		if !ok {
-			clientDNSFtl, _ := New(d.conf, nil)
-			clientDNSFtl.InitForClient(setts.ClientWhiteListFilters, setts.ClientFilters)
-			ClientDNSFilters[setts.ClientName] = clientDNSFtl
+			newClientDNSFtl, _ := New(d.conf, nil)
+			newClientDNSFtl.InitForClient(setts.ClientWhiteListFilters, setts.ClientFilters)
+			ClientDNSFilters[setts.ClientName] = newClientDNSFtl
+			res, err = newClientDNSFtl.processMatchHost(host, rrtype, setts)
+		} else {
+			res, err = clientDNSFtl.processMatchHost(host, rrtype, setts)
 		}
-		res, err = clientDNSFtl.processMatchHost(host, rrtype, setts)
 		res.IsClientFiltered = true
 		return res, err
 	} else {

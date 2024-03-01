@@ -116,7 +116,7 @@ func (c *Persistent) SetTags(tags []string, known *stringutil.Set) {
 }
 
 // SetFilters sets with allow and blocked
-func (c *Persistent) SetFilters(allowFilters []filtering.FilterYAML, blockFilters []filtering.FilterYAML) {
+func (c *Persistent) SetFilters(allowFilters, blockFilters []filtering.FilterYAML) {
 	c.WhitelistFilters = append(c.WhitelistFilters, allowFilters...)
 	c.Filters = append(c.Filters, blockFilters...)
 }

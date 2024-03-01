@@ -66,10 +66,11 @@ func ToFilterYAML(clientFilters []ClientFilterYAML, clientName string) []FilterY
 func FromFilterYAML(filtersYAML []FilterYAML) []ClientFilterYAML {
 	clientFiltersYAML := []ClientFilterYAML{}
 	for _, f := range filtersYAML {
-		cf := ClientFilterYAML{
+		f := f
+		cf := &ClientFilterYAML{
 			FilterYAML: &f,
 		}
-		clientFiltersYAML = append(clientFiltersYAML, cf)
+		clientFiltersYAML = append(clientFiltersYAML, *cf)
 	}
 	return clientFiltersYAML
 }
@@ -264,7 +265,7 @@ func (d *DNSFilter) LoadFilters(array []FilterYAML) {
 	}
 }
 
-func (d *DNSFilter) InitForClient(whiteListFilters []FilterYAML, filters []FilterYAML) {
+func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML) {
 	d.LoadFilters(whiteListFilters)
 	d.LoadFilters(filters)
 	allowFilters := []Filter{}
@@ -284,7 +285,10 @@ func (d *DNSFilter) InitForClient(whiteListFilters []FilterYAML, filters []Filte
 		blockFilters = append(blockFilters, filter.Filter)
 	}
 
-	d.initFiltering(allowFilters, blockFilters)
+	err := d.initFiltering(allowFilters, blockFilters)
+	if err != nil {
+		log.Error("Init filter for client error %s", err)
+	}
 }
 
 func deduplicateFilters(filters []FilterYAML) (deduplicated []FilterYAML) {
@@ -338,13 +342,13 @@ func assignUniqueFilterID() int64 {
 //
 // TODO(e.burkov):  Get rid of the concurrency pattern which requires the
 // [sync.Mutex.TryLock].
-func (d *DNSFilter) tryRefreshFilters(block, allow bool, clientName *string, force bool) (updated int, isNetworkErr, ok bool) {
+func (d *DNSFilter) tryRefreshFilters(block, allow, force bool, clientName *string) (updated int, isNetworkErr, ok bool) {
 	if ok = d.refreshLock.TryLock(); !ok {
 		return 0, false, false
 	}
 	defer d.refreshLock.Unlock()
 
-	updated, isNetworkErr = d.refreshFiltersIntl(block, allow, clientName, force)
+	updated, isNetworkErr = d.refreshFiltersIntl(block, allow, force, clientName)
 
 	return updated, isNetworkErr, ok
 }
@@ -445,6 +449,20 @@ func (d *DNSFilter) refreshFiltersArray(filters *[]FilterYAML, force bool) (int,
 	return updateCount, updateFilters, updateFlags, false
 }
 
+// refreshClientFilterIntl refresh client filter if necesssary
+func (d *DNSFilter) refreshClientFilterIntl(client *string, force bool, updNum *int, lists *[]FilterYAML, toUpd *[]bool, isNetErr *bool) {
+	if client != nil {
+		clientFilters := ToFilterYAML(d.conf.ClientsFilters, *client)
+		if len(clientFilters) > 0 {
+			updNumC, listsC, toUpdC, isNetErrC := d.refreshFiltersArray(&clientFilters, force)
+			*updNum += updNumC
+			*lists = append(*lists, listsC...)
+			*toUpd = append(*toUpd, toUpdC...)
+			*isNetErr = *isNetErr || isNetErrC
+		}
+	}
+}
+
 // refreshFiltersIntl checks filters and updates them if necessary.  If force is
 // true, it ignores the filter.LastUpdated field value.
 // client nil mean skip client filter update __ALL__ mean update all other is sepecifi
@@ -464,7 +482,7 @@ func (d *DNSFilter) refreshFiltersArray(filters *[]FilterYAML, force bool) (int,
 // true if there was a network error and nothing could be updated.\
 //
 // TODO(a.garipov, e.burkov): What the hell?
-func (d *DNSFilter) refreshFiltersIntl(block, allow bool, client *string, force bool) (int, bool) {
+func (d *DNSFilter) refreshFiltersIntl(block, allow, force bool, client *string) (int, bool) {
 	updNum := 0
 	log.Debug("filtering: starting updating")
 	defer func() { log.Debug("filtering: finished updating, %d updated", updNum) }()
@@ -484,17 +502,8 @@ func (d *DNSFilter) refreshFiltersIntl(block, allow bool, client *string, force 
 		toUpd = append(toUpd, toUpdAl...)
 		isNetErr = isNetErr || isNetErrAl
 	}
-	if client != nil {
-		clientFilters := ToFilterYAML(d.conf.ClientsFilters, *client)
-		if len(clientFilters) > 0 {
-			updNumC, listsC, toUpdC, isNetErrC := d.refreshFiltersArray(&clientFilters, force)
+	d.refreshClientFilterIntl(client, force, &updNum, &lists, &toUpd, &isNetErr)
 
-			updNum += updNumC
-			lists = append(lists, listsC...)
-			toUpd = append(toUpd, toUpdC...)
-			isNetErr = isNetErr || isNetErrC
-		}
-	}
 	if isNetErr {
 		return 0, true
 	}

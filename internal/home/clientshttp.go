@@ -14,6 +14,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
 	"github.com/AdguardTeam/AdGuardHome/internal/whois"
+	"github.com/AdguardTeam/golibs/log"
 )
 
 // clientJSON is a common structure used by several handlers to deal with
@@ -367,6 +368,7 @@ func appendClientFilter(addedFiltersIndexs []int, filtersYAML []filtering.Filter
 		// Download new filter
 		for index, fy := range filtersYAML {
 			if slices.Contains(addedFiltersIndexs, index) {
+				fy := fy
 				ok, _ := Context.filters.Update(&fy)
 				if ok {
 					names := map[string]string{}
@@ -510,47 +512,59 @@ func (clients *clientsContainer) checkAndFilters(
 	return validFilters, addedFiltersIndexs, hasFilterChange
 }
 
+// bulkDeleteClientFilter bulk delete useless client filter
+func (clients *clientsContainer) bulkDeleteClientFilter(needDeleteIdx []int) (hasDeletedFilter bool) {
+	for _, deleteIdx := range needDeleteIdx {
+		deleted := config.Filtering.ClientsFilters[deleteIdx]
+		config.Filtering.ClientsFilters = slices.Delete(config.Filtering.ClientsFilters, deleteIdx, deleteIdx+1)
+		p := deleted.Path(config.Filtering.DataDir)
+		err := os.Remove(p)
+		if err != nil {
+			log.Error("Can not remove filter file %s", p)
+		}
+		hasDeletedFilter = true
+	}
+	return hasDeletedFilter
+}
+
+// updateClientsFiltersByClient update clients filter by client list
+func (clients *clientsContainer) updateClientsFiltersByClient(fy *filtering.ClientFilterYAML, needDelete, shoudEnable *bool) {
+	for _, c := range clients.list {
+		isExistFilters, filterName, isEnabled := existsFilters(*fy.FilterYAML, c.Filters)
+		isExistWhitelistFilter, wFilterName, isEnabledWhiteList := existsFilters(*fy.FilterYAML, c.WhitelistFilters)
+		if !isExistFilters && !isExistWhitelistFilter {
+			delete(fy.Names, c.Name)
+		} else {
+			*needDelete = false
+			if isExistFilters {
+				fy.Names[c.Name] = filterName
+			}
+			if isExistWhitelistFilter {
+				fy.Names[c.Name] = wFilterName
+			}
+			*shoudEnable = !c.UseGlobalFilters && (isEnabled || isEnabledWhiteList)
+			continue
+		}
+	}
+}
+
 // bulkUpdateClientFilters delete or disable filter that does not used or enabled by any client
-func (clients *clientsContainer) bulkUpdateClientFilters(delClientName *string) (hasDeletedFilter bool) {
+func (clients *clientsContainer) bulkUpdateClientFilters(delClientName *string) {
 	var needDeleteIdx []int
 	for idx, fy := range config.Filtering.ClientsFilters {
+		fy := fy
 		needDelete := true
 		shoudEnable := false
 		if delClientName != nil {
 			delete(fy.Names, *delClientName)
 		}
-		for _, c := range clients.list {
-			isExistFilters, filterName, isEnabled := existsFilters(*fy.FilterYAML, c.Filters)
-			isExistWhitelistFilter, wFilterName, isEnabledWhiteList := existsFilters(*fy.FilterYAML, c.WhitelistFilters)
-			if !isExistFilters && !isExistWhitelistFilter {
-				delete(fy.Names, c.Name)
-			} else {
-				needDelete = false
-				if isExistFilters {
-					fy.Names[c.Name] = filterName
-				}
-				if isExistWhitelistFilter {
-					fy.Names[c.Name] = wFilterName
-				}
-				shoudEnable = !c.UseGlobalFilters && (isEnabled || isEnabledWhiteList)
-				continue
-			}
-		}
-		if fy.Enabled != shoudEnable {
-			fy.Enabled = shoudEnable
-		}
+		clients.updateClientsFiltersByClient(&fy, &needDelete, &shoudEnable)
+		fy.Enabled = shoudEnable
 		if needDelete {
 			needDeleteIdx = append(needDeleteIdx, idx)
 		}
 	}
-	for _, deleteIdx := range needDeleteIdx {
-		deleted := config.Filtering.ClientsFilters[deleteIdx]
-		config.Filtering.ClientsFilters = slices.Delete(config.Filtering.ClientsFilters, deleteIdx, deleteIdx+1)
-		p := deleted.Path(config.Filtering.DataDir)
-		os.Remove(p)
-		hasDeletedFilter = true
-	}
-	return hasDeletedFilter
+	clients.bulkDeleteClientFilter(needDeleteIdx)
 }
 
 // handleUpdateClient is the handler for POST /control/clients/update HTTP API.
@@ -609,6 +623,12 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 	clients.bulkUpdateClientFilters(nil)
+	clients.updateClientDNSFtl(*prev, *c, hasFilterChange, hasWhiteListFilterChange)
+	onConfigModified()
+}
+
+// updateClientDNSFtl Update DNSFilter for client
+func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, hasFilterChange, hasWhiteListFilterChange bool) {
 	clientDNSFtl, ok := filtering.ClientDNSFilters[prev.Name]
 	if ok {
 		if !prev.UseGlobalFilters && c.UseGlobalFilters {
@@ -620,7 +640,6 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 			clientDNSFtl.InitForClient(c.WhitelistFilters, c.Filters)
 		}
 	}
-	onConfigModified()
 }
 
 // handleFindClient is the handler for GET /control/clients/find HTTP API.

@@ -1141,7 +1141,7 @@ func (d *DNSFilter) periodicallyRefreshFilters(ivl time.Duration) (nextIvl time.
 
 	isNetErr, ok := false, false
 	allClient := AllClientName
-	_, isNetErr, ok = d.tryRefreshFilters(true, true, &allClient, false)
+	_, isNetErr, ok = d.tryRefreshFilters(true, true, false, &allClient)
 
 	if ok && !isNetErr {
 		ivl = maxInterval

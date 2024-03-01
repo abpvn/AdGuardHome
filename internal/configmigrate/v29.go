@@ -47,18 +47,9 @@ func migrateTo29(diskConf yobj) (err error) {
 		if !ok {
 			continue
 		}
-		_, ok, _ := fieldVal[yarr](c, "filters")
-		if !ok {
-			c["filters"] = yarr{}
-		}
-		_, ok, _ = fieldVal[yarr](c, "whitelist_filters")
-		if !ok {
-			c["whitelist_filters"] = yarr{}
-		}
-		_, ok, _ = fieldVal[bool](c, "use_global_filters")
-		if !ok {
-			c["use_global_filters"] = true
-		}
+		c["filters"] = yarr{}
+		c["whitelist_filters"] = yarr{}
+		c["use_global_filters"] = true
 	}
 
 	return nil

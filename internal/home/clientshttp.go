@@ -632,8 +632,10 @@ func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, h
 	clientDNSFtl, ok := filtering.ClientDNSFilters[prev.Name]
 	if ok {
 		if !prev.UseGlobalFilters && c.UseGlobalFilters {
+			// Client change to use global filter
 			delete(filtering.ClientDNSFilters, prev.Name)
 		} else if c.Name != prev.Name {
+			// Client change name
 			filtering.ClientDNSFilters[c.Name] = clientDNSFtl
 			delete(filtering.ClientDNSFilters, prev.Name)
 		} else if hasFilterChange || hasWhiteListFilterChange {

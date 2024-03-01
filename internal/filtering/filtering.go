@@ -980,7 +980,7 @@ func (d *DNSFilter) matchHost(
 	if !setts.FilteringEnabled {
 		return Result{}, nil
 	}
-	if !setts.UseGlobalFilters && len(setts.ClientFilters) > 0 {
+	if !setts.UseGlobalFilters {
 		clientDNSFtl, ok := ClientDNSFilters[setts.ClientName]
 		if !ok {
 			newClientDNSFtl, _ := New(d.conf, nil)

@@ -399,7 +399,7 @@ class Api {
     // Per-client settings
     GET_CLIENTS = { path: 'clients', method: 'GET' };
 
-    GET_CLIENT_DETAIL = { path: 'client/detail', method: 'GET' }
+    GET_CLIENT_DETAIL = { path: 'clients/detail', method: 'GET' }
 
     FIND_CLIENTS = { path: 'clients/find', method: 'GET' };
 

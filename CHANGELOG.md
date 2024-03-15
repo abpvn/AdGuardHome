@@ -14,14 +14,53 @@ and this project adheres to
 <!--
 ## [v0.108.0] - TBA
 
-## [v0.107.45] - 2024-03-05 (APPROX.)
+## [v0.107.46] - 2024-03-13 (APPROX.)
 
-See also the [v0.107.45 GitHub milestone][ms-v0.107.45].
+See also the [v0.107.46 GitHub milestone][ms-v0.107.46].
 
-[ms-v0.107.45]: https://github.com/AdguardTeam/AdGuardHome/milestone/80?closed=1
+[ms-v0.107.46]: https://github.com/AdguardTeam/AdGuardHome/milestone/81?closed=1
 
 NOTE: Add new changes BELOW THIS COMMENT.
 -->
+
+### Added
+
+- Ability to disable the use of system hosts file information for query
+  resolution ([#6610]).
+- Ability to define custom directories for storage of query log files and
+  statistics ([#5992]).
+
+### Changed
+
+- Private RDNS resolution (`dns.use_private_ptr_resolvers` in YAML
+  configuration) now requires a valid "Private reverse DNS servers", when
+  enabled ([#6820]).
+
+  **NOTE:** Disabling private RDNS resolution behaves effectively the same as if
+  no private reverse DNS servers provided by user and by the OS.
+
+### Fixed
+
+- Statistics for 7 days displayed by day on the dashboard graph ([#6712]).
+- Missing "served from cache" label on long DNS server strings ([#6740]).
+- Incorrect tracking of the system hosts file's changes ([#6711]).
+
+[#5992]: https://github.com/AdguardTeam/AdGuardHome/issues/5992
+[#6610]: https://github.com/AdguardTeam/AdGuardHome/issues/6610
+[#6711]: https://github.com/AdguardTeam/AdGuardHome/issues/6711
+[#6712]: https://github.com/AdguardTeam/AdGuardHome/issues/6712
+[#6740]: https://github.com/AdguardTeam/AdGuardHome/issues/6740
+[#6820]: https://github.com/AdguardTeam/AdGuardHome/issues/6820
+
+<!--
+NOTE: Add new changes ABOVE THIS COMMENT.
+-->
+
+
+
+## [v0.107.45] - 2024-03-06
+
+See also the [v0.107.45 GitHub milestone][ms-v0.107.45].
 
 ### Security
 
@@ -30,10 +69,6 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Added
 
-- Ability to disable the use of system hosts file information for query
-  resolution ([#6610]).
-- Ability to define custom directories for storage of query log files and
-  statistics ([#5992]).
 - Context menu item in the Query Log to add a Client to the Persistent client
   list ([#6679]).
 
@@ -63,24 +98,20 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 - Missing IP addresses in logs when querying for domain names from the ignore
   lists.
+- Blank page after resetting access clients ([#6634]).
 - Wrong algorithm for caching bootstrapped upstream addresses ([#6723]).
-- Incorrect tracking of the system hosts file's changes ([#6711]).
 
 ### Removed
 
 - Go 1.20 support, as it has reached end of life.
 
-[#5992]: https://github.com/AdguardTeam/AdGuardHome/issues/5992
-[#6610]: https://github.com/AdguardTeam/AdGuardHome/issues/6610
+[#6634]: https://github.com/AdguardTeam/AdGuardHome/issues/6634
 [#6679]: https://github.com/AdguardTeam/AdGuardHome/issues/6679
-[#6711]: https://github.com/AdguardTeam/AdGuardHome/issues/6711
+[#6723]: https://github.com/AdguardTeam/AdGuardHome/issues/6723
 
-[go-toolchain]: https://go.dev/blog/toolchain
 [go-1.21.8]:    https://groups.google.com/g/golang-announce/c/5pwGVUPoMbg
-
-<!--
-NOTE: Add new changes ABOVE THIS COMMENT.
--->
+[go-toolchain]: https://go.dev/blog/toolchain
+[ms-v0.107.45]: https://github.com/AdguardTeam/AdGuardHome/milestone/80?closed=1
 
 
 
@@ -2814,11 +2845,12 @@ See also the [v0.104.2 GitHub milestone][ms-v0.104.2].
 
 
 <!--
-[Unreleased]: https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.45...HEAD
-[v0.107.45]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.44...v0.107.45
+[Unreleased]: https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.46...HEAD
+[v0.107.46]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.45...v0.107.46
 -->
 
-[Unreleased]: https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.44...HEAD
+[Unreleased]: https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.45...HEAD
+[v0.107.45]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.44...v0.107.45
 [v0.107.44]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.43...v0.107.44
 [v0.107.43]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.42...v0.107.43
 [v0.107.42]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.41...v0.107.42

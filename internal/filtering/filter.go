@@ -277,6 +277,10 @@ func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML) {
 		allowFilters = append(allowFilters, whitelistFilter.Filter)
 	}
 	blockFilters := []Filter{}
+	blockFilters = append(blockFilters, Filter{
+		ID:   CustomListID,
+		Data: []byte(strings.Join(d.conf.UserRules, "\n")),
+	})
 	for _, filter := range filters {
 		if !filter.Enabled {
 			continue

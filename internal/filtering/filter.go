@@ -284,7 +284,7 @@ func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML, userRu
 
 	blockFilters := []Filter{}
 	blockFilters = append(blockFilters, Filter{
-		ID:   CustomListID,
+		ID:   rulelist.URLFilterIDCustom,
 		Data: []byte(strings.Join(customRules, "\n")),
 	})
 	for _, filter := range filters {

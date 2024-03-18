@@ -333,6 +333,7 @@
     "theme_light": "Light",
     "theme_dark": "Dark",
     "upstream_dns_client_desc": "If you keep this field empty, AdGuard Home will use the servers configured in the <0>DNS settings</0>.",
+    "custom_rules_client_desc": "If you keep this field empty, AdGuard Home will use custom rules configured in the <0>Custom rules</0>.",
     "tracker_source": "Tracker source",
     "source_label": "Source",
     "found_in_known_domain_db": "Found in the known domains database.",

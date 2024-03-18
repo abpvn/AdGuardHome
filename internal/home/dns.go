@@ -438,6 +438,7 @@ func applyAdditionalFiltering(clientIP netip.Addr, clientID string, setts *filte
 	if !c.UseGlobalFilters {
 		setts.ClientFilters = c.Filters
 		setts.ClientWhiteListFilters = c.WhitelistFilters
+		setts.UserRules = c.UserRules
 	}
 	if !c.UseOwnSettings {
 		return

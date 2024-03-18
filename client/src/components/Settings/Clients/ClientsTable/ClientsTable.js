@@ -139,6 +139,7 @@ const ClientsTable = ({
             },
             filters: [],
             whitelist_filters: [],
+            user_rules: [],
             safe_search: { ...(safesearch || {}) },
         };
     };

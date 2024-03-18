@@ -887,7 +887,7 @@
             'application/json':
               'schema':
                 '$ref': '#/components/schemas/Clients'
-  '/client/detail':
+  '/clients/detail':
     'get':
       'tags':
       - 'clients'
@@ -2748,6 +2748,10 @@
           'type': 'array'
           'items':
             '$ref': '#/components/schemas/Filter'
+        'user_rules':
+          'type': 'array'
+          'items':
+            'type': 'string'
         'ignore_querylog':
           'description': |
             NOTE: If `ignore_querylog` is not set in HTTP API `GET /clients/add`

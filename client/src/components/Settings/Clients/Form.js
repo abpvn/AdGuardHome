@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { connect, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import {
-    Field, FieldArray, reduxForm, formValueSelector,
+    Field, FieldArray, reduxForm, formValueSelector, change,
 } from 'redux-form';
 import { Trans, withTranslation } from 'react-i18next';
 import flow from 'lodash/flow';
@@ -11,7 +11,9 @@ import Select from 'react-select';
 import i18n from '../../../i18n';
 import Tabs from '../../ui/Tabs';
 import Examples from '../Dns/Upstream/Examples';
+import UserRuleExample from '../../Filters/Examples';
 import { ScheduleForm } from '../../Filters/Services/ScheduleForm';
+import { getTextareaCommentsHighlight, syncScroll } from '../../../helpers/highlightTextareaComments';
 
 import FiltersTable from './FiltersTable';
 import {
@@ -28,7 +30,9 @@ import {
     renderTextareaField,
 } from '../../../helpers/form';
 import { validateClientId, validateRequiredValue } from '../../../helpers/validators';
-import { CLIENT_ID_LINK, FORM_NAME, UINT32_RANGE } from '../../../helpers/constants';
+import {
+    CLIENT_ID_LINK, FORM_NAME, UINT32_RANGE, COMMENT_LINE_DEFAULT_TOKEN,
+} from '../../../helpers/constants';
 import './Service.css';
 
 const settingsCheckboxes = [
@@ -164,6 +168,7 @@ let Form = (props) => {
         invalid,
         tagsOptions,
         initialValues,
+        userRules,
     } = props;
     const services = useSelector((store) => store?.services);
     const { safe_search } = initialValues;
@@ -175,6 +180,15 @@ let Form = (props) => {
     const handleScheduleSubmit = (values) => {
         change('blocked_services_schedule', { ...values });
     };
+
+    const ref = React.createRef();
+
+    const onScroll = (e) => syncScroll(e, this.ref);
+
+    const handleUserRuleChange = useCallback((e) => {
+        const { value } = e.currentTarget;
+        props.change(FORM_NAME.CLIENT, 'user_rules', value ? value.split('\n') : []);
+    }, [userRules]);
 
     const tabs = {
         settings: {
@@ -379,6 +393,35 @@ let Form = (props) => {
                 {useGLobalFilters ? <Trans>use_global_filters</Trans> : <FiltersTable client={initialValues.name} whitelist title={t('dns_allowlists')} />}
             </div>,
         },
+        custom_filtering_rules: {
+            title: 'custom_filtering_rules',
+            component: <div label="custom_filtering_rules" title={props.t('custom_filtering_rules')}>
+                {useGLobalFilters ? <Trans>use_global_filters</Trans> : <>
+                    <div className="form__desc mb-3">
+                        <Trans components={[<a href="#custom_rules" key="0">link</a>]}>
+                            custom_rules_client_desc
+                        </Trans>
+                    </div>
+                    <div className='card-subtitle'><Trans>custom_filter_rules_hint</Trans></div>
+                    <div className="text-edit-container mt-4 mb-4">
+                        <textarea
+                            className="form-control font-monospace text-input"
+                            value={userRules}
+                            onScroll={onScroll}
+                            onChange={handleUserRuleChange}
+                        />
+                        {getTextareaCommentsHighlight(
+                            ref,
+                            userRules,
+                            undefined,
+                            [COMMENT_LINE_DEFAULT_TOKEN, '!'],
+                        )}
+                    </div>
+                    <hr />
+                    <UserRuleExample />
+                </>}
+            </div>,
+        },
     };
 
     const activeTab = tabs[activeTabLabel].component;
@@ -504,12 +547,15 @@ Form.propTypes = {
     tagsOptions: PropTypes.array.isRequired,
     initialValues: PropTypes.object,
     isDisableSaveClient: PropTypes.bool.isRequired,
+    userRules: PropTypes.string.isRequired,
 };
 
 const selector = formValueSelector(FORM_NAME.CLIENT);
 
-Form = connect((state) => {
+const mapStateToProps = (state) => {
     const useGlobalSettings = selector(state, 'use_global_settings');
+    const userRules = selector(state, 'user_rules');
+    const newUserRules = Array.isArray(userRules) ? userRules.join('\n') : '';
     const useGLobalFilters = selector(state, 'use_global_filters');
     const useGlobalServices = selector(state, 'use_global_blocked_services');
     const blockedServicesSchedule = selector(state, 'blocked_services_schedule');
@@ -520,8 +566,15 @@ Form = connect((state) => {
         useGlobalServices,
         blockedServicesSchedule,
         isDisableSaveClient,
+        userRules: newUserRules,
     };
-})(Form);
+};
+
+const mapDispatchToProps = {
+    change,
+};
+
+Form = connect(mapStateToProps, mapDispatchToProps)(Form);
 
 export default flow([
     withTranslation(),

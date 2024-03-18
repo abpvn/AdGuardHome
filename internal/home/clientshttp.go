@@ -49,6 +49,7 @@ type clientJSON struct {
 	Tags            []string               `json:"tags"`
 	Filters         []filtering.FilterJSON `json:"filters"`
 	WhitelistFilter []filtering.FilterJSON `json:"whitelist_filters"`
+	UserRules       []string               `json:"user_rules"`
 	Upstreams       []string               `json:"upstreams"`
 
 	FilteringEnabled    bool `json:"filtering_enabled"`
@@ -239,6 +240,7 @@ func (clients *clientsContainer) jsonToClient(
 	c.SafeBrowsingEnabled = cj.SafeBrowsingEnabled
 	c.UseOwnBlockedServices = !cj.UseGlobalBlockedServices
 	c.UseGlobalFilters = cj.UseGlobalFilters
+	c.UserRules = cj.UserRules
 	for _, fj := range cj.Filters {
 		c.Filters = append(c.Filters, fj.ToFilterYAML())
 	}
@@ -340,6 +342,7 @@ func clientToJSON(c *client.Persistent) (cj *clientJSON) {
 		Tags:                c.Tags,
 		Filters:             blockedfiltersJSON,
 		WhitelistFilter:     allowfiltersJSON,
+		UserRules:           c.UserRules,
 		UseGlobalSettings:   !c.UseOwnSettings,
 		UseGlobalFilters:    c.UseGlobalFilters,
 		FilteringEnabled:    c.FilteringEnabled,
@@ -623,12 +626,12 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 	clients.bulkUpdateClientFilters(nil)
-	clients.updateClientDNSFtl(*prev, *c, hasFilterChange, hasWhiteListFilterChange)
+	clients.updateClientDNSFtl(*prev, *c, hasFilterChange, hasWhiteListFilterChange, !slices.Equal(prev.UserRules, c.UserRules))
 	onConfigModified()
 }
 
 // updateClientDNSFtl Update DNSFilter for client
-func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, hasFilterChange, hasWhiteListFilterChange bool) {
+func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, hasFilterChange, hasWhiteListFilterChange, hasUserRulesChange bool) {
 	clientDNSFtl, ok := filtering.ClientDNSFilters[prev.Name]
 	if ok {
 		if !prev.UseGlobalFilters && c.UseGlobalFilters {
@@ -638,8 +641,8 @@ func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, h
 			// Client change name
 			filtering.ClientDNSFilters[c.Name] = clientDNSFtl
 			delete(filtering.ClientDNSFilters, prev.Name)
-		} else if hasFilterChange || hasWhiteListFilterChange {
-			clientDNSFtl.InitForClient(c.WhitelistFilters, c.Filters)
+		} else if hasFilterChange || hasWhiteListFilterChange || hasUserRulesChange {
+			clientDNSFtl.InitForClient(c.WhitelistFilters, c.Filters, c.UserRules)
 		}
 	}
 }

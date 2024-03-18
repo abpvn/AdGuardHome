@@ -76,6 +76,7 @@ type Persistent struct {
 	Tags             []string
 	Filters          []filtering.FilterYAML
 	WhitelistFilters []filtering.FilterYAML
+	UserRules        []string
 	Upstreams        []string
 
 	IPs []netip.Addr

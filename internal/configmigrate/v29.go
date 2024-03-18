@@ -50,6 +50,7 @@ func migrateTo29(diskConf yobj) (err error) {
 		c["filters"] = yarr{}
 		c["whitelist_filters"] = yarr{}
 		c["use_global_filters"] = true
+		c["user_rules"] = yarr{}
 	}
 
 	return nil

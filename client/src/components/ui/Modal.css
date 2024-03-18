@@ -42,7 +42,7 @@
 
 @media (min-width: 576px) {
     .modal-dialog--clients {
-        max-width: 860px;
+        max-width: 900px;
     }
 
     .modal-dialog--static-leases,

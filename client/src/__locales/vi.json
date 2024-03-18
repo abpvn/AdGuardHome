@@ -333,6 +333,7 @@
     "theme_light": "Light theme",
     "theme_dark": "Dark theme",
     "upstream_dns_client_desc": "Nếu để trống trường này, AdGuardHome sẽ sử dụng nhũng máy chủ được cấu hình ở <0>Cấu hình DNS</0>.",
+    "custom_rules_client_desc": "Nếu để trống trường này, AdGuardHome sẽ sử dụng bộ lọc tuỳ chỉnh được cấu hình ở <0>Bộ lọc tuỳ chỉnh</0>.",
     "tracker_source": "Nguồn theo dõi",
     "source_label": "Nguồn",
     "found_in_known_domain_db": "Tìm thấy trong cơ sở dữ liệu tên miền",

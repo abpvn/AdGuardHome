@@ -189,6 +189,7 @@ type clientObject struct {
 	Tags             []string               `yaml:"tags"`
 	Filters          []filtering.FilterYAML `yaml:"filters"`
 	WhitelistFilters []filtering.FilterYAML `yaml:"whitelist_filters"`
+	UserRules        []string               `yaml:"user_rules"`
 	Upstreams        []string               `yaml:"upstreams"`
 
 	// UID is the unique identifier of the persistent client.
@@ -236,6 +237,7 @@ func (o *clientObject) toPersistent(
 		UpstreamsCacheEnabled: o.UpstreamsCacheEnabled,
 		UpstreamsCacheSize:    o.UpstreamsCacheSize,
 		UseGlobalFilters:      o.UseGlobalFilters,
+		UserRules:             o.UserRules,
 	}
 
 	err = cli.SetIDs(o.IDs)

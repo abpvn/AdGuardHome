@@ -58,6 +58,7 @@ type Settings struct {
 	ClientTags             []string
 	ClientFilters          []FilterYAML
 	ClientWhiteListFilters []FilterYAML
+	UserRules              []string
 
 	ServicesRules []ServiceEntry
 
@@ -984,7 +985,7 @@ func (d *DNSFilter) matchHost(
 		clientDNSFtl, ok := ClientDNSFilters[setts.ClientName]
 		if !ok {
 			newClientDNSFtl, _ := New(d.conf, nil)
-			newClientDNSFtl.InitForClient(setts.ClientWhiteListFilters, setts.ClientFilters)
+			newClientDNSFtl.InitForClient(setts.ClientWhiteListFilters, setts.ClientFilters, setts.UserRules)
 			ClientDNSFilters[setts.ClientName] = newClientDNSFtl
 			res, err = newClientDNSFtl.processMatchHost(host, rrtype, setts)
 		} else {

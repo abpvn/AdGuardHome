@@ -44,7 +44,7 @@ let FiltersTable = (props) => {
 
     useEffect(() => {
         if (clientDetail && clientDetail.name) {
-            props.change(FORM_NAME.CLIENT, whitelist ? clientDetail.whitelist_filters : clientDetail.filters);
+            props.change(FORM_NAME.CLIENT, whitelist ? 'whitelist_filters' : 'filters', whitelist ? clientDetail.whitelist_filters : clientDetail.filters);
         }
     }, [clientDetail]);
 

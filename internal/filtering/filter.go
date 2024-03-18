@@ -265,7 +265,7 @@ func (d *DNSFilter) LoadFilters(array []FilterYAML) {
 	}
 }
 
-func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML) {
+func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML, userRules []string) {
 	d.LoadFilters(whiteListFilters)
 	d.LoadFilters(filters)
 	allowFilters := []Filter{}
@@ -276,10 +276,16 @@ func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML) {
 		whitelistFilter.Filter.FilePath = whitelistFilter.Path(d.conf.DataDir)
 		allowFilters = append(allowFilters, whitelistFilter.Filter)
 	}
+
+	var customRules []string
+	if customRules = userRules; len(userRules) == 0 {
+		customRules = d.conf.UserRules
+	}
+
 	blockFilters := []Filter{}
 	blockFilters = append(blockFilters, Filter{
 		ID:   CustomListID,
-		Data: []byte(strings.Join(d.conf.UserRules, "\n")),
+		Data: []byte(strings.Join(customRules, "\n")),
 	})
 	for _, filter := range filters {
 		if !filter.Enabled {

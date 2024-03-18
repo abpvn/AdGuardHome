@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { connect } from 'react-redux';
 import {
     formValueSelector, change,
@@ -40,11 +40,17 @@ let FiltersTable = (props) => {
         clientDetail,
     } = props;
 
+    const filtersKey = useMemo(() => (whitelist ? 'whitelist_filters' : 'filters'), [whitelist]);
+
     const filters = normalizeFilters(whitelist ? props.whitelistFilters : props.filters);
 
     useEffect(() => {
         if (clientDetail && clientDetail.name) {
-            props.change(FORM_NAME.CLIENT, whitelist ? 'whitelist_filters' : 'filters', whitelist ? clientDetail.whitelist_filters : clientDetail.filters);
+            props.change(
+                FORM_NAME.CLIENT,
+                filtersKey,
+                whitelist ? clientDetail.whitelist_filters : clientDetail.filters,
+            );
         }
     }, [clientDetail]);
 
@@ -54,11 +60,20 @@ let FiltersTable = (props) => {
             || processingRemoveFilter
             || processingRefreshFilters;
 
-    const [hideRefreshButton, setHideRefreshButton] = useState(!client || !filters.length);
+    const [filtersChanged, setFiltersChanged] = useState({
+        whitelist_filters: false,
+        filters: false,
+    });
+
+    const hideRefreshButton = useMemo(() => {
+        return !client || !filters.length || filtersChanged[filtersKey];
+    }, [client, filters, filtersChanged, filtersKey]);
 
     const onFiltersChange = () => {
-        props.change(FORM_NAME.CLIENT, whitelist ? 'whitelist_filters' : 'filters', deNormalizeFilters(filters));
-        setHideRefreshButton(true);
+        props.change(FORM_NAME.CLIENT, filtersKey, deNormalizeFilters(filters));
+        const newFiltersChanged = { ...filtersChanged };
+        newFiltersChanged[filtersKey] = true;
+        setFiltersChanged(newFiltersChanged);
     };
     const deleteFilter = (url) => {
         const filterIndex = filters.findIndex((item) => item.url === url);

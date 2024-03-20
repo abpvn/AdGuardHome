@@ -1,0 +1,65 @@
+name: 'Build and release'
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  GO_VERSION: '1.21.8'
+  NODE_VERSION: '16'
+  DIST_FOLDER: 'dist'
+
+
+jobs:
+  build_and_release:
+    runs-on: 'ubuntu-latest'
+    env:
+      GO111MODULE': 'on'
+      GOPROXY: 'https://goproxy.cn'
+      VERSION: ${GITHUB_REF#refs/tags/}
+      NPM_CACHE_DIR: ''
+      PREV_VERSION: 'master'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: 'Set up Go modules cache'
+        uses: 'actions/cache@v2'
+        with:
+          path: '~/go/pkg/mod'
+          key: "${{ runner.os }}-go-${{ hashFiles('go.sum') }}"
+          restore-keys: '${{ runner.os }}-go-'
+      - name: 'Get npm cache directory'
+        id: 'npm-cache'
+        run: echo "NPM_CACHE_DIR=$(npm config get cache)" >> $GITHUB_ENV
+      - name: 'Set up npm cache'
+        if: ${{env.NPM_CACHE_DIR != ''}}
+        uses: 'actions/cache@v2'
+        with:
+          path: '${{ env.NPM_CACHE_DIR }}'
+          key: "${{ runner.os }}-node-${{ hashFiles('client/package-lock.json') }}"
+          restore-keys: '${{ runner.os }}-node-'
+      - name: Run release build
+        run: |
+          make SIGN=0 VERBOSE=1 VERSION="${{env.VERSION}}" build-release
+          rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
+      - name: Get last previous tag
+        run: echo "PREV_VERSION=$(git describe --tags --abbrev=0 ${{env.VERSION}}^)" >> $GITHUB_ENV
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "${{ env.DIST_FOLDER }}/*.tar.gz,${{ env.DIST_FOLDER }}/*.zip,${{ env.DIST_FOLDER }}/checksums.txt"
+          body: |
+            ## Development release for per client filter configuration
+
+            ### Build information:
+            * GO version: **${{ env.GO_VERSION }}**
+            * Node version: **${{ env.NODE_VERSION }}**
+            * Build version: **${{ env.VERSION }}**
+
+            ### Lastest change:
+              * ${{ github.event.head_commit.message }}
+
+            **Full Changelog**: https://github.com/abpvn/AdGuardHome/compare/${{env.VERSION}}...${{env.PREV_VERSION}}
+            **Notice**: This is just a development version without a few test. It's may contain a lot of bug and performance issue. Use at your own risk

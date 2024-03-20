@@ -11,6 +11,10 @@ env:
   DIST_FOLDER: 'dist'
 
 
+concurrency: 
+  group: ${{ github.ref_name }}
+  cancel-in-progress: true  
+
 jobs:
   build_and_release:
     runs-on: 'ubuntu-latest'
@@ -20,10 +24,11 @@ jobs:
       VERSION: ${{ github.ref_name }}
       NPM_CACHE_DIR: ''
       PREV_VERSION: 'master'
+      CHANGE_LOGS: '* ${{ github.event.head_commit.message }}'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
         with:
-          fetch-tags: true
+          fetch-depth: 0
       - name: Set up Go
         uses: actions/setup-go@v5.0.0
         with:
@@ -42,10 +47,6 @@ jobs:
           path: '${{ env.NPM_CACHE_DIR }}'
           key: "${{ runner.os }}-node-${{ hashFiles('client/package-lock.json') }}"
           restore-keys: '${{ runner.os }}-node-'
-      - name: Run release build
-        run: |
-          make SIGN=0 VERBOSE=1 VERSION="${{env.VERSION}}" build-release
-          rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
       - name: Set previous version env
         run: |
           PREV_VERSION=$(git describe --tags --abbrev=0 ${{env.VERSION}}^)
@@ -55,6 +56,23 @@ jobs:
           else
             echo "Can not find prev version. Use ${{env.PREV_VERSION}} as prev version"
           fi
+      - name: Set change logs env
+        run: |
+          CHANGE_LOGS=$(git log --pretty='format:* %h: %s' ${{env.VERSION}}...${{env.PREV_VERSION}})
+          if [ "$CHANGE_LOGS" != "" ]
+          then
+            {
+              echo 'CHANGE_LOGS<<EOF'
+              echo "$CHANGE_LOGS"
+              echo EOF
+            } >> $GITHUB_ENV
+          else
+            echo "Get change log error. Use lastest commit message as change log"
+          fi
+      - name: Run release build
+        run: |
+          make SIGN=0 VERBOSE=1 VERSION="${{env.VERSION}}" build-release
+          rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
@@ -67,8 +85,8 @@ jobs:
             * Node version: **${{ env.NODE_VERSION }}**
             * Build version: **${{ env.VERSION }}**
 
-            ### Lastest change:
-              * ${{ github.event.head_commit.message }}
+            ### What's changed:
+              ${{ env.CHANGE_LOGS }}
 
             **Full Changelog**: https://github.com/abpvn/AdGuardHome/compare/${{env.VERSION}}...${{env.PREV_VERSION}}
             **Notice**: This is just a development version without a few test. It's may contain a lot of bug and performance issue. Use at your own risk

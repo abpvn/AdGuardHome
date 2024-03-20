@@ -42,11 +42,21 @@
 
 @media (min-width: 576px) {
     .modal-dialog--clients {
-        max-width: 900px;
+        max-width: 950px;
     }
 
     .modal-dialog--static-leases,
     .modal-dialog--schedule {
         max-width: 650px;
+    }
+}
+@media (max-width: 960px) {
+    .modal-dialog--clients .tabs__controls {
+        overflow: auto;
+        padding: 10px 0;
+    }
+
+    .modal-dialog--clients .tabs__controls .tab__control {
+        white-space: nowrap;
     }
 }

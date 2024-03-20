@@ -22,6 +22,8 @@ jobs:
       PREV_VERSION: 'master'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
       - name: Set up Go
         uses: actions/setup-go@v5.0.0
         with:
@@ -44,8 +46,15 @@ jobs:
         run: |
           make SIGN=0 VERBOSE=1 VERSION="${{env.VERSION}}" build-release
           rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
-      - name: Get previous tag
-        run: echo "PREV_VERSION=$(git describe --tags --abbrev=0 ${{env.VERSION}}^)" >> $GITHUB_ENV
+      - name: Set previous version env
+        run: |
+          PREV_VERSION=$(git describe --tags --abbrev=0 ${{env.VERSION}}^)
+          if [[ "$PREV_VERSION" == "v"* ]]
+          then
+            echo "PREV_VERSION=${PREV_VERSION}" >> $GITHUB_ENV
+          else
+            echo "Can not find prev version. Use ${{env.PREV_VERSION}} as prev version"
+          fi
       - name: Create release
         uses: ncipollo/release-action@v1
         with:

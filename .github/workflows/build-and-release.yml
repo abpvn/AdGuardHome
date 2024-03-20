@@ -17,13 +17,13 @@ jobs:
     env:
       GO111MODULE': 'on'
       GOPROXY: 'https://goproxy.cn'
-      VERSION: ${GITHUB_REF#refs/tags/}
+      VERSION: ${{ github.ref_name }}
       NPM_CACHE_DIR: ''
       PREV_VERSION: 'master'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5.0.0
         with:
           'go-version': '${{ env.GO_VERSION }}'
       - name: Set up Node

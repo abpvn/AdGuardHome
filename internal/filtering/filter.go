@@ -280,6 +280,7 @@ func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML, userRu
 	var customRules []string
 	if customRules = userRules; len(userRules) == 0 {
 		customRules = d.conf.UserRules
+		d.useGlobalCustomRule = true
 	}
 
 	blockFilters := []Filter{}

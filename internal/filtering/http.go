@@ -271,6 +271,11 @@ func (d *DNSFilter) handleFilteringSetRules(w http.ResponseWriter, r *http.Reque
 	d.conf.UserRules = req.Rules
 	d.conf.ConfigModified()
 	d.EnableFilters(true)
+	for clientName, clientDNSFtl := range ClientDNSFilters {
+		if clientDNSFtl.useGlobalCustomRule {
+			delete(ClientDNSFilters, clientName)
+		}
+	}
 }
 
 func (d *DNSFilter) handleFilteringRefresh(w http.ResponseWriter, r *http.Request) {

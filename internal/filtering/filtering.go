@@ -262,6 +262,8 @@ type DNSFilter struct {
 	refreshLock *sync.Mutex
 
 	hostCheckers []hostChecker
+
+	useGlobalCustomRule bool
 }
 
 var ClientDNSFilters map[string]*DNSFilter = make(map[string]*DNSFilter)

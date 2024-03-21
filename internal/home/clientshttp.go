@@ -482,7 +482,7 @@ func (clients *clientsContainer) checkAndFilters(
 	hasFilterChange bool,
 ) {
 	for _, fj := range newFilters {
-		isExists, _, isEnabled := existsFilters(fj, oldFilters)
+		isExists, _, _ := existsFilters(fj, oldFilters)
 		if !isExists {
 			// Check filter exist in clients filters and add
 			isExistInClientFilters := false
@@ -505,9 +505,6 @@ func (clients *clientsContainer) checkAndFilters(
 				validFilters = append(validFilters, fj)
 			}
 		} else {
-			if fj.Enabled != isEnabled {
-				hasFilterChange = true
-			}
 			validFilters = append(validFilters, fj)
 		}
 	}

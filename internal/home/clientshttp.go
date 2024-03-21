@@ -511,6 +511,11 @@ func (clients *clientsContainer) checkAndFilters(
 			validFilters = append(validFilters, fj)
 		}
 	}
+	if !hasFilterChange {
+		hasFilterChange = !slices.EqualFunc(oldFilters, newFilters, func(fy1, fy2 filtering.FilterYAML) bool {
+			return fy1.ID == fy2.ID && fy1.Enabled == fy2.Enabled
+		})
+	}
 	Context.filters.LoadFilters(validFilters)
 	return validFilters, addedFiltersIndexs, hasFilterChange
 }

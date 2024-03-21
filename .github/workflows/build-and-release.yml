@@ -88,5 +88,5 @@ jobs:
             ### What's changed:
             ${{ env.CHANGE_LOGS }}
 
-            **Full Changelog**: https://github.com/abpvn/AdGuardHome/compare/${{env.VERSION}}...${{env.PREV_VERSION}}
+            **Full Changelog**: https://github.com/abpvn/AdGuardHome/compare/${{env.PREV_VERSION}}...${{env.VERSION}}
             **Notice**: This is just a development version with a few test. It's may contain a lot of bug and performance issue. Use at your own risk

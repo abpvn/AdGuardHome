@@ -227,6 +227,9 @@ type Checker interface {
 
 // DNSFilter matches hostnames and DNS requests against filtering rules.
 type DNSFilter struct {
+	// idGen is used to generate IDs for package urlfilter.
+	idGen *idGenerator
+
 	// bufPool is a pool of buffers used for filtering-rule list parsing.
 	bufPool *syncutil.Pool[[]byte]
 
@@ -277,7 +280,7 @@ type Filter struct {
 	Data []byte `yaml:"-"`
 
 	// ID is automatically assigned when filter is added using nextFilterID.
-	ID int64 `yaml:"id"`
+	ID rulelist.URLFilterID `yaml:"id"`
 }
 
 // Reason holds an enum detailing why it was filtered or not filtered
@@ -530,11 +533,13 @@ func (d *DNSFilter) ParentalBlockHost() (host string) {
 type ResultRule struct {
 	// Text is the text of the rule.
 	Text string `json:",omitempty"`
+
 	// IP is the host IP.  It is nil unless the rule uses the
 	// /etc/hosts syntax or the reason is FilteredSafeSearch.
 	IP netip.Addr `json:",omitempty"`
+
 	// FilterListID is the ID of the rule's filter list.
-	FilterListID int64 `json:",omitempty"`
+	FilterListID rulelist.URLFilterID `json:",omitempty"`
 }
 
 // Result contains the result of a request check.
@@ -708,7 +713,7 @@ func matchBlockedServicesRules(
 
 				ruleText := rule.Text()
 				res.Rules = []*ResultRule{{
-					FilterListID: int64(rule.GetFilterListID()),
+					FilterListID: rule.GetFilterListID(),
 					Text:         ruleText,
 				}}
 
@@ -992,7 +997,7 @@ func makeResult(matchedRules []rules.Rule, reason Reason) (res Result) {
 	resRules := make([]*ResultRule, len(matchedRules))
 	for i, mr := range matchedRules {
 		resRules[i] = &ResultRule{
-			FilterListID: int64(mr.GetFilterListID()),
+			FilterListID: mr.GetFilterListID(),
 			Text:         mr.Text(),
 		}
 	}
@@ -1013,6 +1018,7 @@ func InitModule() {
 // be non-nil.
 func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 	d = &DNSFilter{
+		idGen:                  newIDGenerator(int32(time.Now().Unix())),
 		bufPool:                syncutil.NewSlicePool[byte](rulelist.DefaultRuleBufSize),
 		refreshLock:            &sync.Mutex{},
 		safeBrowsingChecker:    c.SafeBrowsingChecker,
@@ -1077,8 +1083,8 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 	d.conf.WhitelistFilters = deduplicateFilters(d.conf.WhitelistFilters)
 	d.conf.ClientsFilters = deduplicateClientFilters(d.conf.ClientsFilters)
 
-	updateUniqueFilterID(d.conf.Filters)
-	updateUniqueFilterID(d.conf.WhitelistFilters)
+	d.idGen.fix(d.conf.Filters)
+	d.idGen.fix(d.conf.WhitelistFilters)
 
 	return d, nil
 }

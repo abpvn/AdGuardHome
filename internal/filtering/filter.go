@@ -22,11 +22,6 @@ import (
 // filters.
 const filterDir = "filters"
 
-// nextFilterID is a way to seed a unique ID generation.
-//
-// TODO(e.burkov):  Use more deterministic approach.
-var nextFilterID = time.Now().Unix()
-
 // AllClientName Pass this as client name if want to update all client filter
 const AllClientName = "__ALL__"
 
@@ -83,7 +78,10 @@ func (filter *FilterYAML) unload() {
 
 // Path to the filter contents
 func (filter *FilterYAML) Path(dataDir string) string {
-	return filepath.Join(dataDir, filterDir, strconv.FormatInt(filter.ID, 10)+".txt")
+	return filepath.Join(
+		dataDir,
+		filterDir,
+		strconv.FormatInt(int64(filter.ID), 10)+".txt")
 }
 
 // ensureName sets provided title or default name for the filter if it doesn't
@@ -250,7 +248,10 @@ func (d *DNSFilter) LoadFilters(array []FilterYAML) {
 	for i := range array {
 		filter := &array[i] // otherwise we're operating on a copy
 		if filter.ID == 0 {
-			filter.ID = assignUniqueFilterID()
+			newID := d.idGen.next()
+			log.Info("filtering: warning: filter at index %d has no id; assigning to %d", i, newID)
+
+			filter.ID = newID
 		}
 
 		if !filter.Enabled {
@@ -330,22 +331,6 @@ func deduplicateClientFilters(filters []ClientFilterYAML) (deduplicated []Client
 	}
 
 	return filters[:lastIdx]
-}
-
-// Set the next filter ID to max(filter.ID) + 1
-func updateUniqueFilterID(filters []FilterYAML) {
-	for _, filter := range filters {
-		if nextFilterID < filter.ID {
-			nextFilterID = filter.ID + 1
-		}
-	}
-}
-
-// TODO(e.burkov):  Improve this inexhaustible source of races.
-func assignUniqueFilterID() int64 {
-	value := nextFilterID
-	nextFilterID++
-	return value
 }
 
 // tryRefreshFilters is like [refreshFilters], but backs down if the update is

@@ -291,7 +291,7 @@ func newDNSTLSConfig(conf *tlsConfigSettings, addrs []netip.Addr) (dnsConf dnsfo
 	}
 
 	dnsConf = conf.TLSConfig
-	dnsConf.ServerName = conf.ServerName
+	dnsConf.ServerNames = conf.ServerNames
 
 	if conf.PortHTTPS != 0 {
 		dnsConf.HTTPSListenAddrs = ipsToTCPAddrs(addrs, conf.PortHTTPS)
@@ -359,11 +359,11 @@ func getDNSEncryption() (de dnsEncryption) {
 
 	Context.tls.WriteDiskConfig(&tlsConf)
 
-	if !tlsConf.Enabled || len(tlsConf.ServerName) == 0 {
+	if !tlsConf.Enabled || len(tlsConf.ServerNames) == 0 {
 		return dnsEncryption{}
 	}
 
-	hostname := tlsConf.ServerName
+	hostname := tlsConf.ServerNames[0]
 	if tlsConf.PortHTTPS != 0 {
 		addr := hostname
 		if p := tlsConf.PortHTTPS; p != defaultPortHTTPS {

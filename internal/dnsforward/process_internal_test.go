@@ -327,7 +327,7 @@ func TestServer_ProcessDDRQuery(t *testing.T) {
 					EDNSClientSubnet: &EDNSClientSubnet{Enabled: false},
 				},
 				TLSConfig: TLSConfig{
-					ServerName:           ddrTestDomainName,
+					ServerNames:          ddrTestDomainName,
 					CertificateChainData: certPem,
 					PrivateKeyData:       keyPem,
 					TLSListenAddrs:       tc.addrsDoT,

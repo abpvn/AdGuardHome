@@ -279,7 +279,7 @@ func (s *Server) makeDDRResponse(req *dns.Msg) (resp *dns.Msg) {
 
 	// TODO(e.burkov):  Think about storing the FQDN version of the server's
 	// name somewhere.
-	domainName := dns.Fqdn(s.conf.ServerName)
+	domainName := dns.Fqdn(s.conf.ServerNames[0])
 
 	for _, addr := range s.conf.HTTPSListenAddrs {
 		values := []dns.SVCBKeyValue{

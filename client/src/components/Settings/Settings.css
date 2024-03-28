@@ -11,6 +11,11 @@
     margin-bottom: 20px;
 }
 
+.form__group--settings .d-flex + .d-flex,
+.form__group--settings .d-flex + button  {
+    margin-top: 10px;
+}
+
 .form__group--inner {
     max-width: 300px;
     margin-top: -10px;

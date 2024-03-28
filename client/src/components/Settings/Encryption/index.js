@@ -76,7 +76,7 @@ class Encryption extends Component {
         const { encryption, t } = this.props;
         const {
             enabled,
-            server_name,
+            server_names,
             force_https,
             port_https,
             port_dns_over_tls,
@@ -91,7 +91,7 @@ class Encryption extends Component {
 
         const initialValues = this.getInitialValues({
             enabled,
-            server_name,
+            server_names,
             force_https,
             port_https,
             port_dns_over_tls,

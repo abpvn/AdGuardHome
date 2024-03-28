@@ -1,7 +1,9 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
-import { Field, reduxForm, formValueSelector } from 'redux-form';
+import {
+    Field, FieldArray, reduxForm, formValueSelector,
+} from 'redux-form';
 import { Trans, withTranslation } from 'react-i18next';
 import flow from 'lodash/flow';
 
@@ -33,6 +35,26 @@ const validate = (values) => {
 
     return errors;
 };
+
+const renderInputFields = (props) => {
+    const { fields } = props;
+    return (
+        <>
+            {fields.map((field, index) => (
+                <div key={index} className='d-flex align-items-center'>
+                    <Field
+                        {...props}
+                        name={field}
+                        component={renderInputField}
+                    />
+                    <button className='btn btn-secondary btn-standart' onClick={() => fields.remove(index)}>-</button>
+                </div>
+            ))}
+            <button className='btn btn-success btn-standart' onClick={() => fields.push('')}>+</button>
+        </>
+    );
+};
+
 
 const clearFields = (change, setTlsConfig, validateTlsConfig, t) => {
     const fields = {
@@ -162,10 +184,10 @@ let Form = (props) => {
                 </div>
                 <div className="col-lg-6">
                     <div className="form__group form__group--settings">
-                        <Field
-                            id="server_name"
-                            name="server_name"
-                            component={renderInputField}
+                        <FieldArray
+                            id="server_names"
+                            name="server_names"
+                            component={renderInputFields}
                             type="text"
                             className="form-control"
                             placeholder={t('encryption_server_enter')}

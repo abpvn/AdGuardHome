@@ -128,7 +128,7 @@ func (s *Server) clientIDFromDNSContext(pctx *proxy.DNSContext) (clientID string
 		return "", nil
 	}
 
-	hostSrvName := s.conf.ServerName
+	hostSrvName := s.conf.ServerNames[0]
 	if hostSrvName == "" {
 		return "", nil
 	}

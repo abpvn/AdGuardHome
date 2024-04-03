@@ -25,6 +25,7 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Changed
 
+- Time Zone Database is now embedded in the binary ([#6758]).
 - Failed authentication attempts show the originating IP address in the logs, if
   the request came from a trusted proxy ([#5829]).
 
@@ -35,7 +36,16 @@ NOTE: Add new changes BELOW THIS COMMENT.
   will cause errors on startup in a future version.
 - Node.JS 16.  Future versions will require at least Node.JS 18 to build.
 
+### Fixed
+
+- Resetting DNS upstream mode when applying unrelated settings ([#6851]).
+- Symbolic links to config YAML are replaced by a copy of the real file by AGH
+  after startup ([#6717]).
+
 [#5829]: https://github.com/AdguardTeam/AdGuardHome/issues/5829
+[#6717]: https://github.com/AdguardTeam/AdGuardHome/issues/6717
+[#6758]: https://github.com/AdguardTeam/AdGuardHome/issues/6758
+[#6851]: https://github.com/AdguardTeam/AdGuardHome/issues/6851
 
 <!--
 NOTE: Add new changes ABOVE THIS COMMENT.

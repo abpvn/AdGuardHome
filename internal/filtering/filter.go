@@ -48,7 +48,7 @@ func ToFilterYAML(clientFilters []ClientFilterYAML, clientName string) []FilterY
 	filtersYAML := []FilterYAML{}
 	for _, cf := range clientFilters {
 		if clientName != AllClientName {
-			if _, ok := cf.Names[clientName]; ok {
+			if _, ok := cf.Names[clientName]; !ok {
 				// Skip filter does not own by clientName when it present
 				continue
 			}

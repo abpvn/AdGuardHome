@@ -319,7 +319,7 @@ func deduplicateFilters(filters []FilterYAML) (deduplicated []FilterYAML) {
 }
 
 func deduplicateClientFilters(filters []ClientFilterYAML) (deduplicated []ClientFilterYAML) {
-	urls := stringutil.NewSet()
+	urls := container.NewMapSet[string]()
 	lastIdx := 0
 
 	for _, filter := range filters {

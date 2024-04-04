@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 env:
-  GO_VERSION: '1.21.8'
+  GO_VERSION: '1.22.2'
   NODE_VERSION: '16'
   DIST_FOLDER: 'dist'
 

@@ -519,14 +519,17 @@ func (clients *clientsContainer) checkAndFilters(
 
 // bulkDeleteClientFilter bulk delete useless client filter
 func (clients *clientsContainer) bulkDeleteClientFilter(needDeleteIdx []int) (hasDeletedFilter bool) {
+	deletedFilter := 0
 	for _, deleteIdx := range needDeleteIdx {
-		deleted := config.Filtering.ClientsFilters[deleteIdx]
-		config.Filtering.ClientsFilters = slices.Delete(config.Filtering.ClientsFilters, deleteIdx, deleteIdx+1)
+		adjustedDeleteIdx := deleteIdx - deletedFilter
+		deleted := config.Filtering.ClientsFilters[adjustedDeleteIdx]
+		config.Filtering.ClientsFilters = slices.Delete(config.Filtering.ClientsFilters, adjustedDeleteIdx, adjustedDeleteIdx+1)
 		p := deleted.Path(config.Filtering.DataDir)
 		err := os.Remove(p)
 		if err != nil {
 			log.Error("Can not remove filter file %s", p)
 		}
+		deletedFilter = deletedFilter + 1
 		hasDeletedFilter = true
 	}
 	return hasDeletedFilter

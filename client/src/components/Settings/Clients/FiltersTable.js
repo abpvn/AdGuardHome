@@ -38,6 +38,7 @@ let FiltersTable = (props) => {
             modalFilterUrl,
         },
         clientDetail,
+        change,
     } = props;
 
     const filtersKey = useMemo(() => (whitelist ? 'whitelist_filters' : 'filters'), [whitelist]);
@@ -46,7 +47,7 @@ let FiltersTable = (props) => {
 
     useEffect(() => {
         if (clientDetail && clientDetail.name) {
-            props.change(
+            change(
                 FORM_NAME.CLIENT,
                 filtersKey,
                 whitelist ? clientDetail.whitelist_filters : clientDetail.filters,
@@ -70,7 +71,7 @@ let FiltersTable = (props) => {
     }, [client, filters, filtersChanged, filtersKey]);
 
     const onFiltersChange = () => {
-        props.change(FORM_NAME.CLIENT, filtersKey, deNormalizeFilters(filters));
+        change(FORM_NAME.CLIENT, filtersKey, deNormalizeFilters(filters));
         const newFiltersChanged = { ...filtersChanged };
         newFiltersChanged[filtersKey] = true;
         setFiltersChanged(newFiltersChanged);

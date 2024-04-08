@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { connect, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import {
-    Field, FieldArray, reduxForm, formValueSelector, change,
+    Field, FieldArray, reduxForm, formValueSelector,
 } from 'redux-form';
 import { Trans, withTranslation } from 'react-i18next';
 import flow from 'lodash/flow';
@@ -187,7 +187,7 @@ let Form = (props) => {
 
     const handleUserRuleChange = useCallback((e) => {
         const { value } = e.currentTarget;
-        props.change(FORM_NAME.CLIENT, 'user_rules', value ? value.split('\n') : []);
+        change('user_rules', value ? value.split('\n') : []);
     }, [userRules]);
 
     const tabs = {
@@ -570,11 +570,7 @@ const mapStateToProps = (state) => {
     };
 };
 
-const mapDispatchToProps = {
-    change,
-};
-
-Form = connect(mapStateToProps, mapDispatchToProps)(Form);
+Form = connect(mapStateToProps)(Form);
 
 export default flow([
     withTranslation(),

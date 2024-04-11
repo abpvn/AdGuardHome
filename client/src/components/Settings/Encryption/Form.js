@@ -65,7 +65,7 @@ const clearFields = (change, setTlsConfig, validateTlsConfig, t) => {
         port_https: STANDARD_HTTPS_PORT,
         port_dns_over_tls: DNS_OVER_TLS_PORT,
         port_dns_over_quic: DNS_OVER_QUIC_PORT,
-        server_name: '',
+        server_names: [],
         force_https: false,
         enabled: false,
         private_key_saved: false,
@@ -178,7 +178,7 @@ let Form = (props) => {
                     <hr />
                 </div>
                 <div className="col-12">
-                    <label className="form__label" htmlFor="server_name">
+                    <label className="form__label" htmlFor="server_names">
                         <Trans>encryption_server</Trans>
                     </label>
                 </div>

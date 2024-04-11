@@ -52,7 +52,7 @@ const encryption = handleActions({
             subject,
             warning_validation,
             dns_names,
-            server_names: payload.server_name || [],
+            server_names: payload.server_names || [],
             processingValidate: false,
         };
         return newState;

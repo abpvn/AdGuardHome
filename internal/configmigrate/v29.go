@@ -65,10 +65,10 @@ func migrateTo29(diskConf yobj) (err error) {
 
 	server_name, ok, err := fieldVal[string](tls, "server_name")
 	if !ok {
-		return err
+		tls["server_names"] = yarr{""}
+	} else {
+		tls["server_names"] = yarr{server_name}
 	}
-
-	tls["server_names"] = yarr{server_name}
 
 	delete(tls, "server_name")
 

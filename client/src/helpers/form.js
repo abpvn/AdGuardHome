@@ -9,7 +9,7 @@ import { R_MAC_WITHOUT_COLON, R_UNIX_ABSOLUTE_PATH, R_WIN_ABSOLUTE_PATH } from '
 export const renderField = (props, elementType) => {
     const {
         input, id, className, placeholder, type, disabled, normalizeOnBlur, onScroll,
-        autoComplete, meta: { touched, error }, min, max, step,
+        autoComplete, meta: { touched, error }, min, max, step, required,
     } = props;
 
     const onBlur = (event) => createOnBlurHandler(event, input, normalizeOnBlur);
@@ -27,6 +27,7 @@ export const renderField = (props, elementType) => {
         step,
         onBlur,
         onScroll,
+        required,
     });
 
     return (
@@ -55,6 +56,7 @@ renderField.propTypes = {
         touched: PropTypes.bool,
         error: PropTypes.string,
     }).isRequired,
+    required: PropTypes.bool,
 };
 
 export const renderTextareaField = (props) => renderField(props, 'textarea');

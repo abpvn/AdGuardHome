@@ -37,7 +37,7 @@ const validate = (values) => {
 };
 
 const renderInputFields = (props) => {
-    const { fields } = props;
+    const { fields, disabled } = props;
     return (
         <>
             {fields.map((field, index) => (
@@ -47,10 +47,10 @@ const renderInputFields = (props) => {
                         name={field}
                         component={renderInputField}
                     />
-                    <button className='btn btn-secondary btn-standart' onClick={() => fields.remove(index)}>-</button>
+                    {index > 0 && !disabled && <button className='btn btn-secondary btn-standart' type='button' onClick={() => fields.remove(index)}>-</button>}
                 </div>
             ))}
-            <button className='btn btn-success btn-standart' onClick={() => fields.push('')}>+</button>
+            {!disabled && <button className='btn btn-success btn-standart' type='button' onClick={() => fields.push('')}>+</button>}
         </>
     );
 };
@@ -185,7 +185,6 @@ let Form = (props) => {
                 <div className="col-lg-6">
                     <div className="form__group form__group--settings">
                         <FieldArray
-                            id="server_names"
                             name="server_names"
                             component={renderInputFields}
                             type="text"
@@ -193,6 +192,7 @@ let Form = (props) => {
                             placeholder={t('encryption_server_enter')}
                             onChange={handleChange}
                             disabled={!isEnabled}
+                            required={isEnabled}
                             validate={validateServerName}
                         />
                         <div className="form__desc">

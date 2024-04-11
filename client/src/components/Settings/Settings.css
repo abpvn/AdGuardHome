@@ -12,7 +12,7 @@
 }
 
 .form__group--settings .d-flex + .d-flex,
-.form__group--settings .d-flex + button  {
+.form__group--settings .d-flex + button {
     margin-top: 10px;
 }
 

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/AdguardTeam/dnsproxy/proxy"
@@ -31,31 +32,30 @@ func ValidateClientID(id string) (err error) {
 // client.  When strict is true, and client and host server name don't match,
 // clientIDFromClientServerName will return an error.
 func clientIDFromClientServerName(
-	hostSrvName string,
+	hostSrvNames []string,
 	cliSrvName string,
 	strict bool,
 ) (clientID string, err error) {
-	if hostSrvName == cliSrvName {
+	if slices.Contains(hostSrvNames, cliSrvName) {
 		return "", nil
 	}
+	clientID = ""
 
-	if !netutil.IsImmediateSubdomain(cliSrvName, hostSrvName) {
-		if !strict {
-			return "", nil
+	for _, hostSrvName := range hostSrvNames {
+		if !netutil.IsImmediateSubdomain(cliSrvName, hostSrvName) {
+			if !strict {
+				err = nil
+			} else {
+				err = fmt.Errorf(
+					"client server name %q doesn't match host server name %q",
+					cliSrvName,
+					hostSrvName,
+				)
+			}
+		} else {
+			clientID = cliSrvName[:len(cliSrvName)-len(hostSrvName)-1]
+			err = ValidateClientID(clientID)
 		}
-
-		return "", fmt.Errorf(
-			"client server name %q doesn't match host server name %q",
-			cliSrvName,
-			hostSrvName,
-		)
-	}
-
-	clientID = cliSrvName[:len(cliSrvName)-len(hostSrvName)-1]
-	err = ValidateClientID(clientID)
-	if err != nil {
-		// Don't wrap the error, because it's informative enough as is.
-		return "", err
 	}
 
 	return strings.ToLower(clientID), nil
@@ -128,8 +128,8 @@ func (s *Server) clientIDFromDNSContext(pctx *proxy.DNSContext) (clientID string
 		return "", nil
 	}
 
-	hostSrvName := s.conf.ServerNames[0]
-	if hostSrvName == "" {
+	hostSrvNames := s.conf.ServerNames
+	if len(hostSrvNames) == 0 {
 		return "", nil
 	}
 
@@ -139,7 +139,7 @@ func (s *Server) clientIDFromDNSContext(pctx *proxy.DNSContext) (clientID string
 	}
 
 	clientID, err = clientIDFromClientServerName(
-		hostSrvName,
+		hostSrvNames,
 		cliSrvName,
 		s.conf.StrictSNICheck,
 	)

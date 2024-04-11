@@ -49,8 +49,10 @@ class Encryption extends Component {
 
     getSubmitValues = (values) => {
         const {
-            certificate_source, key_source, private_key_saved, ...config
+            certificate_source, server_names, key_source, private_key_saved, ...config
         } = values;
+
+        config.server_names = server_names.filter((s) => !!s);
 
         if (certificate_source === ENCRYPTION_SOURCE.PATH) {
             config.certificate_chain = '';
@@ -76,7 +78,7 @@ class Encryption extends Component {
         const { encryption, t } = this.props;
         const {
             enabled,
-            server_name,
+            server_names,
             force_https,
             port_https,
             port_dns_over_tls,
@@ -91,7 +93,7 @@ class Encryption extends Component {
 
         const initialValues = this.getInitialValues({
             enabled,
-            server_name,
+            server_names,
             force_https,
             port_https,
             port_dns_over_tls,

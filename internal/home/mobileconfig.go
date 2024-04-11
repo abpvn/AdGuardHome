@@ -29,9 +29,9 @@ type dnsSettings struct {
 	// DNSProtocol is not "HTTPS".
 	ServerURL string `plist:",omitempty"`
 
-	// ServerName is the hostname of the DoT server.  It must be empty if
+	// ServerNames is the hostname of the DoT server.  It must be empty if
 	// DNSProtocol is not "TLS".
-	ServerName string `plist:",omitempty"`
+	ServerNames string `plist:",omitempty"`
 
 	// ServerAddresses is a list IP addresses of the server.
 	//
@@ -82,21 +82,21 @@ func encodeMobileConfig(d *dnsSettings, clientID string) ([]byte, error) {
 	var dspName string
 	switch proto := d.DNSProtocol; proto {
 	case dnsProtoHTTPS:
-		dspName = fmt.Sprintf("%s DoH", d.ServerName)
+		dspName = fmt.Sprintf("%s DoH", d.ServerNames)
 		u := &url.URL{
 			Scheme: aghhttp.SchemeHTTPS,
-			Host:   d.ServerName,
+			Host:   d.ServerNames,
 			Path:   path.Join("/dns-query", clientID),
 		}
 		d.ServerURL = u.String()
 
 		// Empty the ServerName field since it is only must be presented
 		// in DNS-over-TLS configuration.
-		d.ServerName = ""
+		d.ServerNames = ""
 	case dnsProtoTLS:
-		dspName = fmt.Sprintf("%s DoT", d.ServerName)
+		dspName = fmt.Sprintf("%s DoT", d.ServerNames)
 		if clientID != "" {
-			d.ServerName = clientID + "." + d.ServerName
+			d.ServerNames = clientID + "." + d.ServerNames
 		}
 	default:
 		return nil, fmt.Errorf("bad dns protocol %q", proto)
@@ -161,7 +161,7 @@ func handleMobileConfig(w http.ResponseWriter, r *http.Request, dnsp string) {
 
 	d := &dnsSettings{
 		DNSProtocol: dnsp,
-		ServerName:  host,
+		ServerNames: host,
 	}
 
 	mobileconfig, err := encodeMobileConfig(d, clientID)

@@ -1,7 +1,9 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
-import { Field, reduxForm, formValueSelector } from 'redux-form';
+import {
+    Field, FieldArray, reduxForm, formValueSelector,
+} from 'redux-form';
 import { Trans, withTranslation } from 'react-i18next';
 import flow from 'lodash/flow';
 
@@ -34,6 +36,26 @@ const validate = (values) => {
     return errors;
 };
 
+const renderInputFields = (props) => {
+    const { fields, disabled } = props;
+    return (
+        <>
+            {fields.map((field, index) => (
+                <div key={index} className='d-flex align-items-center'>
+                    <Field
+                        {...props}
+                        name={field}
+                        component={renderInputField}
+                    />
+                    {index > 0 && !disabled && <button className='btn btn-secondary btn-standart' type='button' onClick={() => fields.remove(index)}>-</button>}
+                </div>
+            ))}
+            {!disabled && <button className='btn btn-success btn-standart' type='button' onClick={() => fields.push('')}>+</button>}
+        </>
+    );
+};
+
+
 const clearFields = (change, setTlsConfig, validateTlsConfig, t) => {
     const fields = {
         private_key: '',
@@ -43,7 +65,7 @@ const clearFields = (change, setTlsConfig, validateTlsConfig, t) => {
         port_https: STANDARD_HTTPS_PORT,
         port_dns_over_tls: DNS_OVER_TLS_PORT,
         port_dns_over_quic: DNS_OVER_QUIC_PORT,
-        server_name: '',
+        server_names: [],
         force_https: false,
         enabled: false,
         private_key_saved: false,
@@ -156,21 +178,21 @@ let Form = (props) => {
                     <hr />
                 </div>
                 <div className="col-12">
-                    <label className="form__label" htmlFor="server_name">
+                    <label className="form__label" htmlFor="server_names">
                         <Trans>encryption_server</Trans>
                     </label>
                 </div>
                 <div className="col-lg-6">
                     <div className="form__group form__group--settings">
-                        <Field
-                            id="server_name"
-                            name="server_name"
-                            component={renderInputField}
+                        <FieldArray
+                            name="server_names"
+                            component={renderInputFields}
                             type="text"
                             className="form-control"
                             placeholder={t('encryption_server_enter')}
                             onChange={handleChange}
                             disabled={!isEnabled}
+                            required={isEnabled}
                             validate={validateServerName}
                         />
                         <div className="form__desc">

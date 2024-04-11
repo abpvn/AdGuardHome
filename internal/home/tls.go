@@ -192,7 +192,7 @@ func loadTLSConf(tlsConf *tlsConfigSettings, status *tlsConfigStatus) (err error
 		status,
 		tlsConf.CertificateChainData,
 		tlsConf.PrivateKeyData,
-		tlsConf.ServerName,
+		tlsConf.ServerNames,
 	)
 
 	return errors.Annotate(err, "validating certificate pair: %w")
@@ -373,7 +373,7 @@ func (m *tlsManager) setConfig(
 
 	// Note: don't do just `t.conf = data` because we must preserve all other members of t.conf
 	m.conf.Enabled = newConf.Enabled
-	m.conf.ServerName = newConf.ServerName
+	m.conf.ServerNames = newConf.ServerNames
 	m.conf.ForceHTTPS = newConf.ForceHTTPS
 	m.conf.PortHTTPS = newConf.PortHTTPS
 	m.conf.PortDNSOverTLS = newConf.PortDNSOverTLS
@@ -645,7 +645,7 @@ func validateCertificates(
 	status *tlsConfigStatus,
 	certChain []byte,
 	pkey []byte,
-	serverName string,
+	serverNames []string,
 ) (err error) {
 	// Check only the public certificate separately from the key.
 	if len(certChain) > 0 {
@@ -662,13 +662,16 @@ func validateCertificates(
 		status.NotAfter = mainCert.NotAfter
 		status.NotBefore = mainCert.NotBefore
 		status.DNSNames = mainCert.DNSNames
-
-		if chainErr := validateCertChain(certs, serverName); chainErr != nil {
-			// Let self-signed certs through and don't return this error to set
-			// its message into the status.WarningValidation afterwards.
-			err = chainErr
-		} else {
-			status.ValidChain = true
+		for _, serverName := range serverNames {
+			if chainErr := validateCertChain(certs, serverName); chainErr != nil {
+				// Let self-signed certs through and don't return this error to set
+				// its message into the status.WarningValidation afterwards.
+				err = chainErr
+				status.ValidChain = false
+				break
+			} else {
+				status.ValidChain = true
+			}
 		}
 	}
 

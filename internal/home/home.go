@@ -900,8 +900,8 @@ func printHTTPAddresses(proto string) {
 	}
 
 	// TODO(e.burkov): Inspect and perhaps merge with the previous condition.
-	if proto == aghhttp.SchemeHTTPS && tlsConf.ServerName != "" {
-		printWebAddrs(proto, tlsConf.ServerName, tlsConf.PortHTTPS)
+	if proto == aghhttp.SchemeHTTPS && len(tlsConf.ServerNames) != 0 {
+		printWebAddrs(proto, tlsConf.ServerNames[0], tlsConf.PortHTTPS)
 
 		return
 	}

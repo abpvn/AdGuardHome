@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { isArray } from 'lodash';
 
 import {
     MAX_PORT,
@@ -190,9 +191,18 @@ export const validateServerName = (value) => {
     if (!value) {
         return undefined;
     }
-    const formattedValue = value ? value.trim() : value;
-    if (formattedValue && !R_DOMAIN.test(formattedValue)) {
-        return 'form_error_server_name';
+    if (isArray(value)) {
+        for (let i = 0; i < value.length; i += 1) {
+            const formattedValue = value[i] ? value[i].trim() : value[i];
+            if (formattedValue && !R_DOMAIN.test(formattedValue)) {
+                return 'form_error_server_name';
+            }
+        }
+    } else {
+        const formattedValue = value ? value.trim() : value;
+        if (formattedValue && !R_DOMAIN.test(formattedValue)) {
+            return 'form_error_server_name';
+        }
     }
     return undefined;
 };

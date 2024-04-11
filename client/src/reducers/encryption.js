@@ -10,7 +10,7 @@ const encryption = handleActions({
             ...state,
             ...payload,
             /* TODO: handle property delete on api refactor */
-            server_name: payload.server_name || '',
+            server_names: payload.server_names || [],
             processing: false,
         };
         return newState;
@@ -22,7 +22,7 @@ const encryption = handleActions({
         const newState = {
             ...state,
             ...payload,
-            server_name: payload.server_name || '',
+            server_names: payload.server_names || [],
             processingConfig: false,
         };
         return newState;
@@ -52,7 +52,7 @@ const encryption = handleActions({
             subject,
             warning_validation,
             dns_names,
-            server_name: payload.server_name || '',
+            server_names: payload.server_names || [],
             processingValidate: false,
         };
         return newState;
@@ -80,7 +80,7 @@ const encryption = handleActions({
     status_key: '',
     certificate_chain: '',
     private_key: '',
-    server_name: '',
+    server_names: [],
     warning_validation: '',
     certificate_path: '',
     private_key_path: '',

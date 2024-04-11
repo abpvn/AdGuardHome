@@ -153,7 +153,7 @@ const getTabs = ({
     tlsAddress,
     httpsAddress,
     showDnsPrivacyNotice,
-    serverName,
+    serverNames,
     portHttps,
     t,
 }) => ({
@@ -276,7 +276,7 @@ const getTabs = ({
                         </div>
                         <MobileConfigForm
                             initialValues={{
-                                host: serverName,
+                                hosts: serverNames,
                                 clientId: '',
                                 protocol: MOBILE_CONFIG_LINKS.DOH,
                                 port: portHttps,
@@ -312,7 +312,7 @@ const renderContent = ({ title, list, getTitle }) => (
 
 const Guide = ({ dnsAddresses }) => {
     const { t } = useTranslation();
-    const serverName = useSelector((state) => state.encryption?.server_name);
+    const serverNames = useSelector((state) => state.encryption?.server_names);
     const portHttps = useSelector((state) => state.encryption?.port_https);
     const tlsAddress = dnsAddresses?.filter((item) => item.includes('tls://')) ?? '';
     const httpsAddress = dnsAddresses?.filter((item) => item.includes('https://')) ?? '';
@@ -324,7 +324,7 @@ const Guide = ({ dnsAddresses }) => {
         tlsAddress,
         httpsAddress,
         showDnsPrivacyNotice,
-        serverName,
+        serverNames,
         portHttps,
         t,
     });

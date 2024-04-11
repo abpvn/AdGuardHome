@@ -62,7 +62,7 @@ const MobileConfigForm = ({ invalid }) => {
     }
 
     const {
-        host, clientId, protocol, port,
+        hosts, clientId, protocol, port,
     } = formValues;
 
     const githubLink = (
@@ -80,10 +80,10 @@ const MobileConfigForm = ({ invalid }) => {
             && port !== STANDARD_HTTPS_PORT
             && protocol === MOBILE_CONFIG_LINKS.DOH
         ) {
-            return `${host}:${port}`;
+            return `${hosts[0]}:${port}`;
         }
 
-        return host;
+        return hosts[0];
     };
 
     return (
@@ -95,14 +95,17 @@ const MobileConfigForm = ({ invalid }) => {
                             <label htmlFor="host" className="form__label">
                                 {i18next.t('dhcp_table_hostname')}
                             </label>
-                            <Field
-                                name="host"
-                                type="text"
-                                component={renderInputField}
-                                className="form-control"
-                                placeholder={i18next.t('form_enter_hostname')}
-                                validate={validateServerName}
-                            />
+                            {hosts.map((host, index) => {
+                                return <Field
+                                    key={host}
+                                    name={`hosts.${index}`}
+                                    type="text"
+                                    component={renderInputField}
+                                    className="form-control"
+                                    placeholder={i18next.t('form_enter_hostname')}
+                                    validate={validateServerName}
+                                />;
+                            })}
                         </div>
                         {protocol === MOBILE_CONFIG_LINKS.DOH && (
                             <div className="col">

@@ -3,6 +3,8 @@ package configmigrate
 // migrateTo29 performs the following changes:
 //
 //	# BEFORE:
+//	'tls':
+//	  'server_name': domain
 //	'clients':
 //	  'persistent':
 //	     - safe_search:
@@ -12,6 +14,9 @@ package configmigrate
 //	# …
 //
 //	# AFTER:
+//	'tls':
+//	  'server_names':
+//	     - domain
 //	'clients_filters': []
 //	'clients':
 //	  'persistent':
@@ -52,6 +57,20 @@ func migrateTo29(diskConf yobj) (err error) {
 		c["use_global_filters"] = true
 		c["user_rules"] = yarr{}
 	}
+
+	tls, ok, err := fieldVal[yobj](diskConf, "tls")
+	if !ok {
+		return err
+	}
+
+	server_name, ok, err := fieldVal[string](tls, "server_name")
+	if !ok {
+		return err
+	}
+
+	tls["server_names"] = yarr{server_name}
+
+	delete(tls, "server_name")
 
 	return nil
 }

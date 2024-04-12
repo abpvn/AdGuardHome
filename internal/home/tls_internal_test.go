@@ -43,7 +43,7 @@ kXS9jgARhhiWXJrk
 func TestValidateCertificates(t *testing.T) {
 	t.Run("bad_certificate", func(t *testing.T) {
 		status := &tlsConfigStatus{}
-		err := validateCertificates(status, []byte("bad cert"), nil, "")
+		err := validateCertificates(status, []byte("bad cert"), nil, []string{""})
 		testutil.AssertErrorMsg(t, "empty certificate", err)
 		assert.False(t, status.ValidCert)
 		assert.False(t, status.ValidChain)
@@ -51,14 +51,14 @@ func TestValidateCertificates(t *testing.T) {
 
 	t.Run("bad_private_key", func(t *testing.T) {
 		status := &tlsConfigStatus{}
-		err := validateCertificates(status, nil, []byte("bad priv key"), "")
+		err := validateCertificates(status, nil, []byte("bad priv key"), []string{""})
 		testutil.AssertErrorMsg(t, "no valid keys were found", err)
 		assert.False(t, status.ValidKey)
 	})
 
 	t.Run("valid", func(t *testing.T) {
 		status := &tlsConfigStatus{}
-		err := validateCertificates(status, testCertChainData, testPrivateKeyData, "")
+		err := validateCertificates(status, testCertChainData, testPrivateKeyData, []string{""})
 		assert.Error(t, err)
 
 		notBefore := time.Date(2019, 2, 27, 9, 24, 23, 0, time.UTC)

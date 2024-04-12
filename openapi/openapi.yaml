@@ -1308,8 +1308,8 @@
       'parameters':
       - 'description': >
           Host for which the config is generated.  If no host is provided,
-          `tls.server_name` from the configuration file is used.  If
-          `tls.server_name` is not set, the API returns an error with a 500
+          `tls.server_names` from the configuration file is used.  If
+          `tls.server_names` is not set, the API returns an error with a 500
           status.
         'example': 'example.org'
         'in': 'query'
@@ -1343,8 +1343,8 @@
       'parameters':
       - 'description': >
           Host for which the config is generated.  If no host is provided,
-          `tls.server_name` from the configuration file is used.  If
-          `tls.server_name` is not set, the API returns an error with a 500
+          `tls.server_names` from the configuration file is used.  If
+          `tls.server_names` is not set, the API returns an error with a 500
           status.
         'example': 'example.org'
         'in': 'query'
@@ -2427,10 +2427,12 @@
           'type': 'boolean'
           'example': true
           'description': 'enabled is the encryption (DoT/DoH/HTTPS) status'
-        'server_name':
-          'type': 'string'
-          'example': 'example.org'
-          'description': 'server_name is the hostname of your HTTPS/TLS server'
+        'server_names':
+          'type': 'array'
+          'description': 'server_names is the hostnames of your HTTPS/TLS server'
+          'items':
+            'type': 'string'
+            'example': 'example.org'
         'force_https':
           'type': 'boolean'
           'example': true

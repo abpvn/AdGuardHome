@@ -212,7 +212,7 @@ func TestServer_clientIDFromDNSContext(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tlsConf := TLSConfig{
-				ServerNames:    tc.confSrvName,
+				ServerNames:    []string{tc.confSrvName},
 				StrictSNICheck: tc.strictSNI,
 			}
 

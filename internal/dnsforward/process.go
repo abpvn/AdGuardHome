@@ -380,8 +380,12 @@ func (s *Server) processDHCPAddrs(dctx *dnsContext) (rc resultCode) {
 		return resultCodeSuccess
 	}
 
+	req := pctx.Req
+	q := req.Question[0]
 	pref := pctx.RequestedPrivateRDNS
-	if pref == (netip.Prefix{}) {
+	// TODO(e.burkov):  Consider answering authoritatively for SOA and NS
+	// queries.
+	if pref == (netip.Prefix{}) || q.Qtype != dns.TypePTR {
 		return resultCodeSuccess
 	}
 
@@ -393,11 +397,10 @@ func (s *Server) processDHCPAddrs(dctx *dnsContext) (rc resultCode) {
 
 	log.Debug("dnsforward: dhcp client %s is %q", addr, host)
 
-	req := pctx.Req
 	resp := s.replyCompressed(req)
 	ptr := &dns.PTR{
 		Hdr: dns.RR_Header{
-			Name:   req.Question[0].Name,
+			Name:   q.Name,
 			Rrtype: dns.TypePTR,
 			// TODO(e.burkov):  Use [dhcpsvc.Lease.Expiry].  See
 			// https://github.com/AdguardTeam/AdGuardHome/issues/3932.
@@ -598,7 +601,8 @@ func (s *Server) processFilteringAfterResponse(dctx *dnsContext) (rc resultCode)
 		return resultCodeSuccess
 	case
 		filtering.Rewritten,
-		filtering.RewrittenRule:
+		filtering.RewrittenRule,
+		filtering.FilteredSafeSearch:
 
 		if dctx.origQuestion.Name == "" {
 			// origQuestion is set in case we get only CNAME without IP from
@@ -608,11 +612,10 @@ func (s *Server) processFilteringAfterResponse(dctx *dnsContext) (rc resultCode)
 
 		pctx := dctx.proxyCtx
 		pctx.Req.Question[0], pctx.Res.Question[0] = dctx.origQuestion, dctx.origQuestion
-		if len(pctx.Res.Answer) > 0 {
-			rr := s.genAnswerCNAME(pctx.Req, res.CanonName)
-			answer := append([]dns.RR{rr}, pctx.Res.Answer...)
-			pctx.Res.Answer = answer
-		}
+
+		rr := s.genAnswerCNAME(pctx.Req, res.CanonName)
+		answer := append([]dns.RR{rr}, pctx.Res.Answer...)
+		pctx.Res.Answer = answer
 
 		return resultCodeSuccess
 	default:

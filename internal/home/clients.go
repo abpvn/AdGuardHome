@@ -255,8 +255,6 @@ func (o *clientObject) toPersistent(
 	}
 
 	if o.SafeSearchConf.Enabled {
-		o.SafeSearchConf.CustomResolver = safeSearchResolver{}
-
 		err = cli.SetSafeSearch(
 			o.SafeSearchConf,
 			filteringConf.SafeSearchCacheSize,
@@ -424,7 +422,11 @@ func (clients *clientsContainer) clientOrArtificial(
 	}()
 
 	cli, ok := clients.find(id)
-	if ok {
+	if !ok {
+		cli = clients.clientIndex.FindByIPWithoutZone(ip)
+	}
+
+	if cli != nil {
 		return &querylog.Client{
 			Name:           cli.Name,
 			IgnoreQueryLog: cli.IgnoreQueryLog,

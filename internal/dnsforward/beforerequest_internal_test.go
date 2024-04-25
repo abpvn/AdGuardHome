@@ -123,7 +123,7 @@ func TestServer_HandleBefore_tls(t *testing.T) {
 
 			s, _ := createTestTLS(t, TLSConfig{
 				TLSListenAddrs: []*net.TCPAddr{{}},
-				ServerName:     tlsServerName,
+				ServerNames:    []string{tlsServerName},
 			})
 
 			s.conf.UpstreamDNS = []string{localUpsAddr}

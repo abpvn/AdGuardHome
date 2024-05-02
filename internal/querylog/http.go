@@ -290,7 +290,7 @@ func parseSearchCriterion(q url.Values, name string, ct criterionType) (
 		return false, sc, nil
 	}
 
-	strict := getDoubleQuotesEnclosedValue(&val)
+	strict := name == "client" || getDoubleQuotesEnclosedValue(&val)
 
 	var asciiVal string
 	switch ct {
@@ -362,6 +362,9 @@ func parseSearchParams(r *http.Request) (p *searchParams, err error) {
 		ct       criterionType
 	}{{
 		urlField: "search",
+		ct:       ctTerm,
+	}, {
+		urlField: "client",
 		ct:       ctTerm,
 	}, {
 		urlField: "response_status",

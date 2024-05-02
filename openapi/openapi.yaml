@@ -216,6 +216,11 @@
         'description': 'Filter by domain name or client IP'
         'schema':
           'type': 'string'
+      - 'name': 'client'
+        'in': 'query'
+        'description': 'Filter by client IP or client Name'
+        'schema':
+          'type': 'string'
       - 'name': 'response_status'
         'in': 'query'
         'description': 'Filter by response status'

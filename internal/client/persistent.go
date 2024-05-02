@@ -98,8 +98,8 @@ type Persistent struct {
 	IgnoreStatistics      bool
 
 	// TODO(d.kolyshev): Make SafeSearchConf a pointer.
-	SafeSearchConf filtering.SafeSearchConfig
-	UseGlobalFilters      bool
+	SafeSearchConf   filtering.SafeSearchConfig
+	UseGlobalFilters bool
 }
 
 // SetTags sets the tags if they are known, otherwise logs an unknown tag.

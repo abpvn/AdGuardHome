@@ -58,7 +58,7 @@ func clientIDFromClientServerName(
 		}
 	}
 
-	return strings.ToLower(clientID), nil
+	return strings.ToLower(clientID), err
 }
 
 // clientIDFromDNSContextHTTPS extracts the client's ID from the path of the

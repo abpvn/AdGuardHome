@@ -14,4 +14,4 @@ readonly commit_number
 #
 version="$BASE_VERSION-d.${commit_number}+$( git rev-parse --short HEAD )"
 echo "$version"
-make GOOGS='linux' GOARCH='amd64' VERSION="$version"
+make GOOS='linux' GOARCH='amd64' VERSION="$version"

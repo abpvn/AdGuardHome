@@ -361,10 +361,10 @@ func parseSearchParams(r *http.Request) (p *searchParams, err error) {
 		urlField string
 		ct       criterionType
 	}{{
-		urlField: "search",
+		urlField: "client",
 		ct:       ctTerm,
 	}, {
-		urlField: "client",
+		urlField: "search",
 		ct:       ctTerm,
 	}, {
 		urlField: "response_status",

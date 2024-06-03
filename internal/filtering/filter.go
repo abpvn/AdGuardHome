@@ -266,7 +266,7 @@ func (d *DNSFilter) LoadFilters(array []FilterYAML) {
 	}
 }
 
-// LoadFilters Load filters from the disk
+// LoadClientFilters Load client filters from the disk
 // And if any filter has zero ID, assign a new one
 func (d *DNSFilter) LoadClientFilters(array []ClientFilterYAML) {
 	for i := range array {

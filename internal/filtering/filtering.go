@@ -1080,6 +1080,7 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 
 	d.LoadFilters(d.conf.Filters)
 	d.LoadFilters(d.conf.WhitelistFilters)
+	d.LoadClientFilters(d.conf.ClientsFilters)
 
 	d.conf.Filters = deduplicateFilters(d.conf.Filters)
 	d.conf.WhitelistFilters = deduplicateFilters(d.conf.WhitelistFilters)

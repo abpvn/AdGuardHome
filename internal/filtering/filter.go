@@ -266,6 +266,30 @@ func (d *DNSFilter) LoadFilters(array []FilterYAML) {
 	}
 }
 
+// LoadFilters Load filters from the disk
+// And if any filter has zero ID, assign a new one
+func (d *DNSFilter) LoadClientFilters(array []ClientFilterYAML) {
+	for i := range array {
+		filter := &array[i] // otherwise we're operating on a copy
+		if filter.ID == 0 {
+			newID := d.idGen.next()
+			log.Info("filtering: warning: filter at index %d has no id; assigning to %d", i, newID)
+
+			filter.ID = newID
+		}
+
+		if !filter.Enabled {
+			// No need to load a filter that is not enabled
+			continue
+		}
+
+		err := d.loadClientFilter(filter)
+		if err != nil {
+			log.Error("filtering: loading filter %d: %s", filter.ID, err)
+		}
+	}
+}
+
 func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML, userRules []string) {
 	d.LoadFilters(whiteListFilters)
 	d.LoadFilters(filters)
@@ -650,6 +674,43 @@ func (d *DNSFilter) readerFromURL(fltURL string) (r io.ReadCloser, err error) {
 
 // loads filter contents from the file in dataDir
 func (d *DNSFilter) load(flt *FilterYAML) (err error) {
+	fileName := flt.Path(d.conf.DataDir)
+
+	log.Debug("filtering: loading filter %d from %q", flt.ID, fileName)
+
+	file, err := os.Open(fileName)
+	if errors.Is(err, os.ErrNotExist) {
+		// Do nothing, file doesn't exist.
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("opening filter file: %w", err)
+	}
+	defer func() { err = errors.WithDeferred(err, file.Close()) }()
+
+	st, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("getting filter file stat: %w", err)
+	}
+
+	log.Debug("filtering: file %q, id %d, length %d", fileName, flt.ID, st.Size())
+
+	bufPtr := d.bufPool.Get()
+	defer d.bufPool.Put(bufPtr)
+
+	p := rulelist.NewParser()
+	res, err := p.Parse(io.Discard, file, *bufPtr)
+	if err != nil {
+		return fmt.Errorf("parsing filter file: %w", err)
+	}
+
+	flt.ensureName(res.Title)
+	flt.RulesCount, flt.checksum, flt.LastUpdated = res.RulesCount, res.Checksum, st.ModTime()
+
+	return nil
+}
+
+// loads filter contents from the file in dataDir
+func (d *DNSFilter) loadClientFilter(flt *ClientFilterYAML) (err error) {
 	fileName := flt.Path(d.conf.DataDir)
 
 	log.Debug("filtering: loading filter %d from %q", flt.ID, fileName)

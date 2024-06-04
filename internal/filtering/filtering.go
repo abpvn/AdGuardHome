@@ -167,6 +167,9 @@ type Config struct {
 
 	// ProtectionEnabled defines whether or not use any of filtering features.
 	ProtectionEnabled bool `yaml:"protection_enabled"`
+
+	// globalDNSFilter use as param for init client DNSFilter
+	globalDNSFilter *DNSFilter `yaml:"-"`
 }
 
 // BlockingMode is an enum of all allowed blocking modes.
@@ -977,9 +980,11 @@ func (d *DNSFilter) matchHost(
 	if !setts.FilteringEnabled {
 		return Result{}, nil
 	}
+	// return d.processMatchHost(host, rrtype, setts)
 	if setts.ClientName != "" && !setts.UseGlobalFilters {
 		clientDNSFtl, ok := ClientDNSFilters[setts.ClientName]
 		if !ok {
+			d.conf.globalDNSFilter = d
 			newClientDNSFtl, _ := New(d.conf, nil)
 			newClientDNSFtl.InitForClient(setts.ClientWhiteListFilters, setts.ClientFilters, setts.UserRules)
 			ClientDNSFilters[setts.ClientName] = newClientDNSFtl
@@ -1030,25 +1035,47 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 
 	d.safeSearch = c.SafeSearch
 
-	d.hostCheckers = []hostChecker{{
-		check: d.matchSysHosts,
-		name:  "hosts container",
-	}, {
-		check: d.matchHost,
-		name:  "filtering",
-	}, {
-		check: matchBlockedServicesRules,
-		name:  "blocked services",
-	}, {
-		check: d.checkSafeBrowsing,
-		name:  "safe browsing",
-	}, {
-		check: d.checkParental,
-		name:  "parental",
-	}, {
-		check: d.checkSafeSearch,
-		name:  "safe search",
-	}}
+	if c.globalDNSFilter != nil {
+		d.hostCheckers = []hostChecker{{
+			check: c.globalDNSFilter.matchSysHosts,
+			name:  "hosts container",
+		}, {
+			check: c.globalDNSFilter.matchHost,
+			name:  "filtering",
+		}, {
+			check: matchBlockedServicesRules,
+			name:  "blocked services",
+		}, {
+			check: c.globalDNSFilter.checkSafeBrowsing,
+			name:  "safe browsing",
+		}, {
+			check: c.globalDNSFilter.checkParental,
+			name:  "parental",
+		}, {
+			check: c.globalDNSFilter.checkSafeSearch,
+			name:  "safe search",
+		}}
+	} else {
+		d.hostCheckers = []hostChecker{{
+			check: d.matchSysHosts,
+			name:  "hosts container",
+		}, {
+			check: d.matchHost,
+			name:  "filtering",
+		}, {
+			check: matchBlockedServicesRules,
+			name:  "blocked services",
+		}, {
+			check: d.checkSafeBrowsing,
+			name:  "safe browsing",
+		}, {
+			check: d.checkParental,
+			name:  "parental",
+		}, {
+			check: d.checkSafeSearch,
+			name:  "safe search",
+		}}
+	}
 
 	defer func() { err = errors.Annotate(err, "filtering: %w") }()
 

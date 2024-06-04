@@ -1025,17 +1025,17 @@ func InitModule() {
 // be non-nil.
 func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 	d = &DNSFilter{
-		idGen:                  newIDGenerator(int32(time.Now().Unix())),
-		bufPool:                syncutil.NewSlicePool[byte](rulelist.DefaultRuleBufSize),
-		refreshLock:            &sync.Mutex{},
-		safeBrowsingChecker:    c.SafeBrowsingChecker,
-		parentalControlChecker: c.ParentalControlChecker,
-		confMu:                 &sync.RWMutex{},
+		idGen:       newIDGenerator(int32(time.Now().Unix())),
+		bufPool:     syncutil.NewSlicePool[byte](rulelist.DefaultRuleBufSize),
+		refreshLock: &sync.Mutex{},
+		confMu:      &sync.RWMutex{},
 	}
 
 	d.safeSearch = c.SafeSearch
 
 	if c.globalDNSFilter != nil {
+		d.safeBrowsingChecker = c.globalDNSFilter.safeBrowsingChecker
+		d.parentalControlChecker = c.globalDNSFilter.parentalControlChecker
 		d.hostCheckers = []hostChecker{{
 			check: c.globalDNSFilter.matchSysHosts,
 			name:  "hosts container",
@@ -1056,6 +1056,8 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 			name:  "safe search",
 		}}
 	} else {
+		d.safeBrowsingChecker = c.SafeBrowsingChecker
+		d.parentalControlChecker = c.ParentalControlChecker
 		d.hostCheckers = []hostChecker{{
 			check: d.matchSysHosts,
 			name:  "hosts container",

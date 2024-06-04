@@ -1117,6 +1117,7 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 
 	d.idGen.fix(d.conf.Filters)
 	d.idGen.fix(d.conf.WhitelistFilters)
+	d.idGen.fixClient(d.conf.ClientsFilters)
 
 	return d, nil
 }

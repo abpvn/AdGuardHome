@@ -350,7 +350,7 @@ func setupBindOpts(opts options) (err error) {
 // setupDNSFilteringConf sets up DNS filtering configuration settings.
 func setupDNSFilteringConf(conf *filtering.Config) (err error) {
 	const (
-		dnsTimeout = 3 * time.Second
+		dnsTimeout = 5 * time.Second
 
 		sbService                 = "safe browsing"
 		defaultSafeBrowsingServer = `https://family.adguard-dns.com/dns-query`

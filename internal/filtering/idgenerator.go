@@ -72,3 +72,36 @@ func (g *idGenerator) fix(flts []FilterYAML) {
 		set.Add(newID)
 	}
 }
+
+// fix ensures that flts all have unique IDs.
+func (g *idGenerator) fixClient(flts []ClientFilterYAML) {
+	set := container.NewMapSet[rulelist.URLFilterID]()
+	for i, f := range flts {
+		id := f.ID
+		if id == 0 {
+			id = g.next()
+			flts[i].ID = id
+		}
+
+		if !set.Has(id) {
+			set.Add(id)
+
+			continue
+		}
+
+		newID := g.next()
+		for set.Has(newID) {
+			newID = g.next()
+		}
+
+		log.Info(
+			"filtering: warning: filter at index %d has duplicate id %d; reassigning to %d",
+			i,
+			id,
+			newID,
+		)
+
+		flts[i].ID = newID
+		set.Add(newID)
+	}
+}

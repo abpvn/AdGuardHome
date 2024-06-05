@@ -438,9 +438,9 @@ func (clients *clientsContainer) clientOrArtificial(
 
 	if cli != nil {
 		return &querylog.Client{
-			Name:            cli.Name,
-			IgnoreQueryLog:  cli.IgnoreQueryLog,
-			IsRuntimeClient: false,
+			Name:                  cli.Name,
+			IgnoreQueryLog:        cli.IgnoreQueryLog,
+			IsConfigurationClient: true,
 		}, false
 	}
 
@@ -449,9 +449,8 @@ func (clients *clientsContainer) clientOrArtificial(
 		_, host := rc.Info()
 
 		return &querylog.Client{
-			Name:            host,
-			WHOIS:           rc.WHOIS(),
-			IsRuntimeClient: true,
+			Name:  host,
+			WHOIS: rc.WHOIS(),
 		}, false
 	}
 

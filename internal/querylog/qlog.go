@@ -254,7 +254,7 @@ func (l *queryLog) ShouldLog(host string, _, _ uint16, ids []string) bool {
 		return false
 	}
 
-	if (c == nil || c.IsRuntimeClient) && l.conf.IgnoreNoneClientLog {
+	if (c == nil || !c.IsConfigurationClient) && l.conf.IgnoreNoneClientLog {
 		return false
 	}
 

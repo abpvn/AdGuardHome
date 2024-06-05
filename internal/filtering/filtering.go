@@ -913,6 +913,17 @@ func hostResultForOtherQType(dnsres *urlfilter.DNSResult) (res Result) {
 	return Result{}
 }
 
+func (d *DNSFilter) getFilteringEngine(setts *Settings) (filteringEngineAllow, filteringEngine *urlfilter.DNSEngine, isClientFiltering bool) {
+	filteringEngineAllow = d.filteringEngineAllow
+	filteringEngine = d.filteringEngine
+	if setts.ClientName != "" && !setts.UseGlobalFilters {
+		filteringEngineAllow = d.ClientsFilteringEngineAllow[setts.ClientName]
+		filteringEngine = d.ClientsFilteringEngine[setts.ClientName]
+		isClientFiltering = true
+	}
+	return filteringEngineAllow, filteringEngine, isClientFiltering
+}
+
 func (d *DNSFilter) processMatchHost(
 	host string,
 	rrtype uint16,
@@ -932,16 +943,7 @@ func (d *DNSFilter) processMatchHost(
 	//
 	// TODO(e.burkov):  Inspect if the above is true.
 	defer d.engineLock.RUnlock()
-	var filteringEngineAllow = d.filteringEngineAllow
-	var filteringEngine = d.filteringEngine
-	isClientFiltered := false
-
-	if setts.ClientName != "" && !setts.UseGlobalFilters {
-		filteringEngineAllow = d.ClientsFilteringEngineAllow[setts.ClientName]
-		filteringEngine = d.ClientsFilteringEngine[setts.ClientName]
-		isClientFiltered = true
-	}
-
+	filteringEngineAllow, filteringEngine, isClientFiltering := d.getFilteringEngine(setts)
 	if setts.ProtectionEnabled && filteringEngineAllow != nil {
 		dnsres, ok := filteringEngineAllow.MatchRequest(ufReq)
 		if ok {
@@ -977,7 +979,7 @@ func (d *DNSFilter) processMatchHost(
 			r.FilterListID,
 		)
 	}
-	res.IsClientFiltered = isClientFiltered
+	res.IsClientFiltered = isClientFiltering
 	return res, nil
 }
 

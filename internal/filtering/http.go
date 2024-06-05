@@ -272,7 +272,7 @@ func (d *DNSFilter) handleFilteringSetRules(w http.ResponseWriter, r *http.Reque
 	d.conf.UserRules = req.Rules
 	d.conf.ConfigModified()
 	d.EnableFilters(true)
-	for clientName, _ := range d.ClientsGlobalCustomRules {
+	for clientName := range d.ClientsGlobalCustomRules {
 		d.DeleteClientFtlEngine(clientName)
 	}
 }

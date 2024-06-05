@@ -193,6 +193,9 @@ type dnsConfig struct {
 	// in query log and statistics.
 	AnonymizeClientIP bool `yaml:"anonymize_client_ip"`
 
+	// IgnoreNoneClientLog defines only store query log of configured clients
+	IgnoreNoneClientLog bool `yaml:"ignore_non_client_log"`
+
 	// Config is the embed configuration with DNS params.
 	//
 	// TODO(a.garipov): Remove embed.
@@ -649,6 +652,7 @@ func (c *configuration) write() (err error) {
 		dc := querylog.Config{}
 		Context.queryLog.WriteDiskConfig(&dc)
 		config.DNS.AnonymizeClientIP = dc.AnonymizeClientIP
+		config.DNS.IgnoreNoneClientLog = dc.IgnoreNoneClientLog
 		config.QueryLog.Enabled = dc.Enabled
 		config.QueryLog.FileEnabled = dc.FileEnabled
 		config.QueryLog.Interval = timeutil.Duration{Duration: dc.RotationIvl}

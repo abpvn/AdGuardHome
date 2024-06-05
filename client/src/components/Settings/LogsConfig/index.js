@@ -45,6 +45,7 @@ class LogsConfig extends Component {
             processing,
             processingClear,
             anonymize_client_ip,
+            ignore_non_client_log,
             ignored,
             customInterval,
         } = this.props;
@@ -62,6 +63,7 @@ class LogsConfig extends Component {
                             interval,
                             customInterval,
                             anonymize_client_ip,
+                            ignore_non_client_log,
                             ignored: ignored?.join('\n'),
                         }}
                         onSubmit={this.handleFormSubmit}
@@ -80,6 +82,7 @@ LogsConfig.propTypes = {
     customInterval: PropTypes.number,
     enabled: PropTypes.bool.isRequired,
     anonymize_client_ip: PropTypes.bool.isRequired,
+    ignore_non_client_log: PropTypes.bool.isRequired,
     processing: PropTypes.bool.isRequired,
     ignored: PropTypes.array.isRequired,
     processingClear: PropTypes.bool.isRequired,

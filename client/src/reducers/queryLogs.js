@@ -98,6 +98,7 @@ const queryLogs = handleActions(
         filter: DEFAULT_LOGS_FILTER,
         isFiltered: false,
         anonymize_client_ip: false,
+        ignore_non_client_log: false,
         isDetailed: true,
         isEntireLog: false,
         customInterval: null,

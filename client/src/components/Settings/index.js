@@ -126,6 +126,7 @@ class Settings extends Component {
                                     interval={queryLogs.interval}
                                     customInterval={queryLogs.customInterval}
                                     anonymize_client_ip={queryLogs.anonymize_client_ip}
+                                    ignore_non_client_log={queryLogs.ignore_non_client_log}
                                     processing={queryLogs.processingSetConfig}
                                     processingClear={queryLogs.processingClear}
                                     setLogsConfig={setLogsConfig}
@@ -179,6 +180,7 @@ Settings.propTypes = {
         interval: PropTypes.number,
         customInterval: PropTypes.number,
         anonymize_client_ip: PropTypes.bool,
+        ignore_non_client_log: PropTypes.bool,
         processingSetConfig: PropTypes.bool,
         processingClear: PropTypes.bool,
         processingGetConfig: PropTypes.bool,

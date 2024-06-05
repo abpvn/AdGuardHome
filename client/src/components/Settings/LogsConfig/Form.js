@@ -97,6 +97,16 @@ let Form = (props) => {
                     disabled={processing}
                 />
             </div>
+            <div className="form__group form__group--settings">
+                <Field
+                    name="ignore_non_client_log"
+                    type="checkbox"
+                    component={CheckboxField}
+                    placeholder={t('ignore_non_client_log')}
+                    subtitle={t('ignore_non_client_log_desc')}
+                    disabled={processing}
+                />
+            </div>
             <label className="form__label">
                 <Trans>query_log_retention</Trans>
             </label>

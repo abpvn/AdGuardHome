@@ -74,6 +74,9 @@ type Config struct {
 	// AnonymizeClientIP tells if the query log should anonymize clients' IP
 	// addresses.
 	AnonymizeClientIP bool
+
+	// IgnoreNoneClientLog defines only store query log of configured clients
+	IgnoreNoneClientLog bool
 }
 
 // AddParams is the parameters for adding an entry.

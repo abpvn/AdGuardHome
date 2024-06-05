@@ -280,6 +280,8 @@
     "query_log_retention_confirm": "Bạn có chắc chắn muốn thay đổi xoay vòng nhật ký truy vấn không? Nếu bạn giảm giá trị khoảng thời gian, một số dữ liệu sẽ bị mất",
     "anonymize_client_ip": "Ẩn danh IP khách",
     "anonymize_client_ip_desc": "Không lưu địa chỉ IP đầy đủ của khách hàng trong nhật ký và thống kê",
+    "ignore_non_client_log": "Bỏ qua nhật ký công khai",
+    "ignore_non_client_log_desc": "Chỉ lưu nhật ký của các thiết bị đã cấu hình (tuân theo cài đặt thiết bị)",
     "dns_config": "Thiết lập máy chủ DNS",
     "dns_cache_config": "Cấu hình cache DNS",
     "dns_cache_config_desc": "Bạn có thể cấu hình cache cho DNS tại đây",

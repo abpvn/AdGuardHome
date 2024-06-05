@@ -447,7 +447,9 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 	}
 
 	clients.bulkUpdateClientFilters(&cj.Name)
-	Context.filters.DeleteClientFtlEngine(cj.Name)
+	if Context.filters != nil {
+		Context.filters.DeleteClientFtlEngine(cj.Name)
+	}
 
 	if !clients.testing {
 		onConfigModified()
@@ -641,6 +643,9 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 // updateClientDNSFtl Update DNSFilter for client
 func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, hasFilterChange, hasWhiteListFilterChange, hasUserRulesChange bool) {
+	if Context.filters == nil {
+		return
+	}
 	_, ok := Context.filters.ClientsFilteringEngine[prev.Name]
 	if ok {
 		if !prev.UseGlobalFilters && c.UseGlobalFilters {

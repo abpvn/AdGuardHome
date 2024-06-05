@@ -447,7 +447,7 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 	}
 
 	clients.bulkUpdateClientFilters(&cj.Name)
-	delete(filtering.ClientDNSFilters, cj.Name)
+	Context.filters.DeleteClientFtlEngine(cj.Name)
 
 	if !clients.testing {
 		onConfigModified()
@@ -641,17 +641,20 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 // updateClientDNSFtl Update DNSFilter for client
 func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, hasFilterChange, hasWhiteListFilterChange, hasUserRulesChange bool) {
-	clientDNSFtl, ok := filtering.ClientDNSFilters[prev.Name]
+	_, ok := Context.filters.ClientsFilteringEngine[prev.Name]
 	if ok {
 		if !prev.UseGlobalFilters && c.UseGlobalFilters {
-			// Client change to use global filter
-			delete(filtering.ClientDNSFilters, prev.Name)
+			// Client disable custom filter
+			Context.filters.DeleteClientFtlEngine(c.Name)
 		} else if c.Name != prev.Name {
 			// Client change name
-			filtering.ClientDNSFilters[c.Name] = clientDNSFtl
-			delete(filtering.ClientDNSFilters, prev.Name)
+			Context.filters.ClientsRulesStorage[c.Name] = Context.filters.ClientsRulesStorage[prev.Name]
+			Context.filters.ClientsFilteringEngine[c.Name] = Context.filters.ClientsFilteringEngine[prev.Name]
+			Context.filters.ClientsRulesStorageAllow[c.Name] = Context.filters.ClientsRulesStorageAllow[prev.Name]
+			Context.filters.ClientsFilteringEngineAllow[c.Name] = Context.filters.ClientsFilteringEngineAllow[prev.Name]
+			Context.filters.DeleteClientFtlEngine(c.Name)
 		} else if hasFilterChange || hasWhiteListFilterChange || hasUserRulesChange {
-			clientDNSFtl.InitForClient(c.WhitelistFilters, c.Filters, c.UserRules)
+			Context.filters.InitForClient(c.Name, c.WhitelistFilters, c.Filters, c.UserRules)
 		}
 	}
 }

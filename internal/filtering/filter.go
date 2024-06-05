@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/AdguardTeam/golibs/container"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/log"
+	"github.com/AdguardTeam/urlfilter"
 )
 
 // filterDir is the subdirectory of a data directory to store downloaded
@@ -290,7 +292,7 @@ func (d *DNSFilter) LoadClientFilters(array []ClientFilterYAML) {
 	}
 }
 
-func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML, userRules []string) {
+func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters []FilterYAML, userRules []string) {
 	d.LoadFilters(whiteListFilters)
 	d.LoadFilters(filters)
 	allowFilters := []Filter{}
@@ -305,7 +307,9 @@ func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML, userRu
 	var customRules []string
 	if customRules = userRules; len(userRules) == 0 {
 		customRules = d.conf.UserRules
-		d.useGlobalCustomRule = true
+		d.ClientsGlobalCustomRules[clientName] = true
+	} else {
+		delete(d.ClientsGlobalCustomRules, clientName)
 	}
 
 	blockFilters := []Filter{}
@@ -321,10 +325,34 @@ func (d *DNSFilter) InitForClient(whiteListFilters, filters []FilterYAML, userRu
 		blockFilters = append(blockFilters, filter.Filter)
 	}
 
-	err := d.initFiltering(allowFilters, blockFilters)
+	rulesStorage, err := newRuleStorage(blockFilters)
 	if err != nil {
 		log.Error("Init filter for client error %s", err)
+		return
 	}
+
+	rulesStorageAllow, err := newRuleStorage(allowFilters)
+	if err != nil {
+		log.Error("Init filter for client error %s", err)
+		return
+	}
+
+	filteringEngine := urlfilter.NewDNSEngine(rulesStorage)
+	filteringEngineAllow := urlfilter.NewDNSEngine(rulesStorageAllow)
+	func() {
+		d.engineLock.RLock()
+		defer d.engineLock.RUnlock()
+
+		d.ClientsRulesStorage[clientName] = rulesStorage
+		d.ClientsFilteringEngine[clientName] = filteringEngine
+		d.ClientsRulesStorageAllow[clientName] = rulesStorageAllow
+		d.ClientsFilteringEngineAllow[clientName] = filteringEngineAllow
+	}()
+
+	// Make sure that the OS reclaims memory as soon as possible.
+	debug.FreeOSMemory()
+
+	log.Debug("filtering: initialized client filtering engine")
 }
 
 func deduplicateFilters(filters []FilterYAML) (deduplicated []FilterYAML) {

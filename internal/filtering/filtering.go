@@ -167,9 +167,6 @@ type Config struct {
 
 	// ProtectionEnabled defines whether or not use any of filtering features.
 	ProtectionEnabled bool `yaml:"protection_enabled"`
-
-	// globalDNSFilter use as param for init client DNSFilter
-	globalDNSFilter *DNSFilter `yaml:"-"`
 }
 
 // BlockingMode is an enum of all allowed blocking modes.
@@ -242,6 +239,14 @@ type DNSFilter struct {
 	rulesStorageAllow    *filterlist.RuleStorage
 	filteringEngineAllow *urlfilter.DNSEngine
 
+	ClientsRulesStorage    map[string]*filterlist.RuleStorage
+	ClientsFilteringEngine map[string]*urlfilter.DNSEngine
+
+	ClientsRulesStorageAllow    map[string]*filterlist.RuleStorage
+	ClientsFilteringEngineAllow map[string]*urlfilter.DNSEngine
+
+	ClientsGlobalCustomRules map[string]bool
+
 	safeSearch SafeSearch
 
 	// safeBrowsingChecker is the safe browsing hash-prefix checker.
@@ -268,11 +273,7 @@ type DNSFilter struct {
 	refreshLock *sync.Mutex
 
 	hostCheckers []hostChecker
-
-	useGlobalCustomRule bool
 }
-
-var ClientDNSFilters map[string]*DNSFilter = make(map[string]*DNSFilter)
 
 // Filter represents a filter list
 type Filter struct {
@@ -931,19 +932,28 @@ func (d *DNSFilter) processMatchHost(
 	//
 	// TODO(e.burkov):  Inspect if the above is true.
 	defer d.engineLock.RUnlock()
+	var filteringEngineAllow = d.filteringEngineAllow
+	var filteringEngine = d.filteringEngine
+	isClientFiltered := false
 
-	if setts.ProtectionEnabled && d.filteringEngineAllow != nil {
-		dnsres, ok := d.filteringEngineAllow.MatchRequest(ufReq)
+	if setts.ClientName != "" && !setts.UseGlobalFilters {
+		filteringEngineAllow = d.ClientsFilteringEngineAllow[setts.ClientName]
+		filteringEngine = d.ClientsFilteringEngine[setts.ClientName]
+		isClientFiltered = true
+	}
+
+	if setts.ProtectionEnabled && filteringEngineAllow != nil {
+		dnsres, ok := filteringEngineAllow.MatchRequest(ufReq)
 		if ok {
 			return d.matchHostProcessAllowList(host, dnsres)
 		}
 	}
 
-	if d.filteringEngine == nil {
+	if filteringEngine == nil {
 		return Result{}, nil
 	}
 
-	dnsres, matchedEngine := d.filteringEngine.MatchRequest(ufReq)
+	dnsres, matchedEngine := filteringEngine.MatchRequest(ufReq)
 
 	// Check DNS rewrites first, because the API there is a bit awkward.
 	dnsRWRes := d.processDNSResultRewrites(dnsres, host)
@@ -967,6 +977,7 @@ func (d *DNSFilter) processMatchHost(
 			r.FilterListID,
 		)
 	}
+	res.IsClientFiltered = isClientFiltered
 	return res, nil
 }
 
@@ -982,21 +993,12 @@ func (d *DNSFilter) matchHost(
 	}
 	// return d.processMatchHost(host, rrtype, setts)
 	if setts.ClientName != "" && !setts.UseGlobalFilters {
-		clientDNSFtl, ok := ClientDNSFilters[setts.ClientName]
+		_, ok := d.ClientsFilteringEngine[setts.ClientName]
 		if !ok {
-			d.conf.globalDNSFilter = d
-			newClientDNSFtl, _ := New(d.conf, nil)
-			newClientDNSFtl.InitForClient(setts.ClientWhiteListFilters, setts.ClientFilters, setts.UserRules)
-			ClientDNSFilters[setts.ClientName] = newClientDNSFtl
-			res, err = newClientDNSFtl.processMatchHost(host, rrtype, setts)
-		} else {
-			res, err = clientDNSFtl.processMatchHost(host, rrtype, setts)
+			d.InitForClient(setts.ClientName, setts.ClientWhiteListFilters, setts.ClientFilters, setts.UserRules)
 		}
-		res.IsClientFiltered = true
-		return res, err
-	} else {
-		return d.processMatchHost(host, rrtype, setts)
 	}
+	return d.processMatchHost(host, rrtype, setts)
 }
 
 // makeResult returns a properly constructed Result.
@@ -1025,59 +1027,40 @@ func InitModule() {
 // be non-nil.
 func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 	d = &DNSFilter{
-		idGen:       newIDGenerator(int32(time.Now().Unix())),
-		bufPool:     syncutil.NewSlicePool[byte](rulelist.DefaultRuleBufSize),
-		refreshLock: &sync.Mutex{},
-		confMu:      &sync.RWMutex{},
+		idGen:                       newIDGenerator(int32(time.Now().Unix())),
+		bufPool:                     syncutil.NewSlicePool[byte](rulelist.DefaultRuleBufSize),
+		safeBrowsingChecker:         c.SafeBrowsingChecker,
+		parentalControlChecker:      c.ParentalControlChecker,
+		refreshLock:                 &sync.Mutex{},
+		confMu:                      &sync.RWMutex{},
+		ClientsRulesStorage:         make(map[string]*filterlist.RuleStorage),
+		ClientsFilteringEngine:      make(map[string]*urlfilter.DNSEngine),
+		ClientsRulesStorageAllow:    make(map[string]*filterlist.RuleStorage),
+		ClientsFilteringEngineAllow: make(map[string]*urlfilter.DNSEngine),
+		ClientsGlobalCustomRules:    map[string]bool{},
 	}
 
 	d.safeSearch = c.SafeSearch
 
-	if c.globalDNSFilter != nil {
-		d.safeBrowsingChecker = c.globalDNSFilter.safeBrowsingChecker
-		d.parentalControlChecker = c.globalDNSFilter.parentalControlChecker
-		d.hostCheckers = []hostChecker{{
-			check: c.globalDNSFilter.matchSysHosts,
-			name:  "hosts container",
-		}, {
-			check: c.globalDNSFilter.matchHost,
-			name:  "filtering",
-		}, {
-			check: matchBlockedServicesRules,
-			name:  "blocked services",
-		}, {
-			check: c.globalDNSFilter.checkSafeBrowsing,
-			name:  "safe browsing",
-		}, {
-			check: c.globalDNSFilter.checkParental,
-			name:  "parental",
-		}, {
-			check: c.globalDNSFilter.checkSafeSearch,
-			name:  "safe search",
-		}}
-	} else {
-		d.safeBrowsingChecker = c.SafeBrowsingChecker
-		d.parentalControlChecker = c.ParentalControlChecker
-		d.hostCheckers = []hostChecker{{
-			check: d.matchSysHosts,
-			name:  "hosts container",
-		}, {
-			check: d.matchHost,
-			name:  "filtering",
-		}, {
-			check: matchBlockedServicesRules,
-			name:  "blocked services",
-		}, {
-			check: d.checkSafeBrowsing,
-			name:  "safe browsing",
-		}, {
-			check: d.checkParental,
-			name:  "parental",
-		}, {
-			check: d.checkSafeSearch,
-			name:  "safe search",
-		}}
-	}
+	d.hostCheckers = []hostChecker{{
+		check: d.matchSysHosts,
+		name:  "hosts container",
+	}, {
+		check: d.matchHost,
+		name:  "filtering",
+	}, {
+		check: matchBlockedServicesRules,
+		name:  "blocked services",
+	}, {
+		check: d.checkSafeBrowsing,
+		name:  "safe browsing",
+	}, {
+		check: d.checkParental,
+		name:  "parental",
+	}, {
+		check: d.checkSafeSearch,
+		name:  "safe search",
+	}}
 
 	defer func() { err = errors.Annotate(err, "filtering: %w") }()
 

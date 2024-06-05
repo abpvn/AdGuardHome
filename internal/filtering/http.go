@@ -272,11 +272,18 @@ func (d *DNSFilter) handleFilteringSetRules(w http.ResponseWriter, r *http.Reque
 	d.conf.UserRules = req.Rules
 	d.conf.ConfigModified()
 	d.EnableFilters(true)
-	for clientName, clientDNSFtl := range ClientDNSFilters {
-		if clientDNSFtl.useGlobalCustomRule {
-			delete(ClientDNSFilters, clientName)
-		}
+	for clientName, _ := range d.ClientsGlobalCustomRules {
+		d.DeleteClientFtlEngine(clientName)
 	}
+}
+
+// DeleteClientFtlEngine delete exist client filtering engine to re init in next time
+func (d *DNSFilter) DeleteClientFtlEngine(clientName string) {
+	// Client change to use global filter
+	delete(d.ClientsRulesStorage, clientName)
+	delete(d.ClientsFilteringEngine, clientName)
+	delete(d.ClientsRulesStorageAllow, clientName)
+	delete(d.ClientsFilteringEngineAllow, clientName)
 }
 
 func (d *DNSFilter) handleFilteringRefresh(w http.ResponseWriter, r *http.Request) {

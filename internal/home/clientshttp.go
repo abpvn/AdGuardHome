@@ -619,6 +619,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 		return
 	}
+	// TODO: Missing handler for case update filter URL
 	var addedFiltersIndexs []int
 	var hasFilterChange bool
 	c.Filters, addedFiltersIndexs, hasFilterChange = clients.checkAndFilters(prev.Filters, c.Filters, c)

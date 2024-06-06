@@ -948,11 +948,9 @@ func (d *DNSFilter) processMatchHost(
 	//
 	// TODO(e.burkov):  Inspect if the above is true.
 	defer d.engineLock.RUnlock()
+	d.clientEngineLock.RLock()
+	defer d.clientEngineLock.RUnlock()
 	filteringEngineAllow, filteringEngine, isClientFiltering := d.getFilteringEngine(setts)
-	if isClientFiltering {
-		d.clientEngineLock.RLock()
-		defer d.clientEngineLock.RUnlock()
-	}
 	if setts.ProtectionEnabled && filteringEngineAllow != nil {
 		dnsres, ok := filteringEngineAllow.MatchRequest(ufReq)
 		if ok {

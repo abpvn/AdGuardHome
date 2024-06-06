@@ -505,6 +505,23 @@ func (d *DNSFilter) refreshClientFilterIntl(client *string, force bool, updNum *
 			*lists = append(*lists, listsC...)
 			*toUpd = append(*toUpd, toUpdC...)
 			*isNetErr = *isNetErr || isNetErrC
+			if updNumC > 0 {
+				d.cleanClientFilteringEngine(listsC)
+			}
+		}
+	}
+}
+
+// cleanClientFilteringEngine clean aftected clientFiltering after client filter updated
+func (d *DNSFilter) cleanClientFilteringEngine(updatedClientFilters []FilterYAML) {
+	for _, clientFtl := range d.conf.ClientsFilters {
+		for _, updatedFtl := range updatedClientFilters {
+			if clientFtl.ID == updatedFtl.ID {
+				for clientName, clientFltName := range clientFtl.Names {
+					log.Info("Clean client filtering engine for client: %s after updated filter: %s (%d)", clientName, clientFltName, clientFtl.ID)
+					d.DeleteClientFtlEngine(clientName)
+				}
+			}
 		}
 	}
 }

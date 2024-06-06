@@ -279,7 +279,8 @@ func (d *DNSFilter) handleFilteringSetRules(w http.ResponseWriter, r *http.Reque
 
 // DeleteClientFtlEngine delete exist client filtering engine to re init in next time
 func (d *DNSFilter) DeleteClientFtlEngine(clientName string) {
-	// Client change to use global filter
+	d.clientEngineLock.Lock()
+	defer d.clientEngineLock.Unlock()
 	delete(d.ClientsRulesStorage, clientName)
 	delete(d.ClientsFilteringEngine, clientName)
 	delete(d.ClientsRulesStorageAllow, clientName)

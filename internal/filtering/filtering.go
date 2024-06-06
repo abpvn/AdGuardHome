@@ -999,7 +999,6 @@ func (d *DNSFilter) matchHost(
 	if !setts.FilteringEnabled {
 		return Result{}, nil
 	}
-	// return d.processMatchHost(host, rrtype, setts)
 	if setts.ClientName != "" && !setts.UseGlobalFilters {
 		_, ok := d.ClientsFilteringEngine[setts.ClientName]
 		if !ok {

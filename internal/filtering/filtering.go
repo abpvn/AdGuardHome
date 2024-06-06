@@ -947,7 +947,9 @@ func (d *DNSFilter) processMatchHost(
 	if setts.ProtectionEnabled && filteringEngineAllow != nil {
 		dnsres, ok := filteringEngineAllow.MatchRequest(ufReq)
 		if ok {
-			return d.matchHostProcessAllowList(host, dnsres)
+			res, err = d.matchHostProcessAllowList(host, dnsres)
+			res.IsClientFiltered = isClientFiltering
+			return res, err
 		}
 	}
 
@@ -960,6 +962,7 @@ func (d *DNSFilter) processMatchHost(
 	// Check DNS rewrites first, because the API there is a bit awkward.
 	dnsRWRes := d.processDNSResultRewrites(dnsres, host)
 	if dnsRWRes.Reason != NotFilteredNotFound {
+		dnsRWRes.IsClientFiltered = isClientFiltering
 		return dnsRWRes, nil
 	} else if !matchedEngine {
 		return Result{}, nil

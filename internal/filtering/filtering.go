@@ -917,9 +917,12 @@ func (d *DNSFilter) getFilteringEngine(setts *Settings) (filteringEngineAllow, f
 	filteringEngineAllow = d.filteringEngineAllow
 	filteringEngine = d.filteringEngine
 	if setts.ClientName != "" && !setts.UseGlobalFilters {
-		filteringEngineAllow = d.ClientsFilteringEngineAllow[setts.ClientName]
-		filteringEngine = d.ClientsFilteringEngine[setts.ClientName]
-		isClientFiltering = true
+		_, ok := d.ClientsFilteringEngine[setts.ClientName]
+		if ok {
+			filteringEngineAllow = d.ClientsFilteringEngineAllow[setts.ClientName]
+			filteringEngine = d.ClientsFilteringEngine[setts.ClientName]
+			isClientFiltering = true
+		}
 	}
 	return filteringEngineAllow, filteringEngine, isClientFiltering
 }

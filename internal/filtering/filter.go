@@ -340,8 +340,8 @@ func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters [
 	filteringEngine := urlfilter.NewDNSEngine(rulesStorage)
 	filteringEngineAllow := urlfilter.NewDNSEngine(rulesStorageAllow)
 	func() {
-		d.engineLock.RLock()
-		defer d.engineLock.RUnlock()
+		d.engineLock.Lock()
+		defer d.engineLock.Unlock()
 
 		d.ClientsRulesStorage[clientName] = rulesStorage
 		d.ClientsFilteringEngine[clientName] = filteringEngine

@@ -273,6 +273,8 @@ type DNSFilter struct {
 	refreshLock *sync.Mutex
 
 	hostCheckers []hostChecker
+
+	clientEngineLock sync.RWMutex
 }
 
 // Filter represents a filter list
@@ -947,6 +949,10 @@ func (d *DNSFilter) processMatchHost(
 	// TODO(e.burkov):  Inspect if the above is true.
 	defer d.engineLock.RUnlock()
 	filteringEngineAllow, filteringEngine, isClientFiltering := d.getFilteringEngine(setts)
+	if isClientFiltering {
+		d.clientEngineLock.RLock()
+		defer d.clientEngineLock.RUnlock()
+	}
 	if setts.ProtectionEnabled && filteringEngineAllow != nil {
 		dnsres, ok := filteringEngineAllow.MatchRequest(ufReq)
 		if ok {

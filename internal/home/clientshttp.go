@@ -406,9 +406,9 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 	}
 	emptyFilters := []filtering.FilterYAML{}
 	var addedFiltersIndexs []int
-	c.Filters, addedFiltersIndexs, _ = clients.checkAndFilters(emptyFilters, c.Filters, c)
+	c.Filters, addedFiltersIndexs, _ = clients.checkAddedFilters(emptyFilters, c.Filters, c)
 	var addedFiltersIndexsWhitelist []int
-	c.WhitelistFilters, addedFiltersIndexsWhitelist, _ = clients.checkAndFilters(emptyFilters, c.WhitelistFilters, c)
+	c.WhitelistFilters, addedFiltersIndexsWhitelist, _ = clients.checkAddedFilters(emptyFilters, c.WhitelistFilters, c)
 	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
 	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
@@ -466,7 +466,7 @@ type updateJSON struct {
 func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYAML) (isExists bool, filterName string, isEnabled bool) {
 	isExists = false
 	for _, fj := range listFilters {
-		if filter.ID == fj.ID {
+		if filter.ID == fj.ID && filter.URL == fj.URL {
 			isExists = true
 			filterName = fj.Name
 			isEnabled = fj.Enabled
@@ -476,7 +476,7 @@ func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYA
 	return isExists, filterName, isEnabled
 }
 
-func (clients *clientsContainer) checkAndFilters(
+func (clients *clientsContainer) checkAddedFilters(
 	oldFilters []filtering.FilterYAML,
 	newFilters []filtering.FilterYAML,
 	client *client.Persistent,
@@ -492,7 +492,9 @@ func (clients *clientsContainer) checkAndFilters(
 			isExistInClientFilters := false
 			for _, cfj := range config.ClientsFilters {
 				if fj.URL == cfj.URL {
-					validFilters = append(validFilters, *cfj.FilterYAML)
+					clientFtl := *cfj.FilterYAML
+					clientFtl.Name = fj.Name
+					validFilters = append(validFilters, clientFtl)
 					cfj.Names[client.Name] = fj.Name
 					isExistInClientFilters = true
 					continue
@@ -622,10 +624,10 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 	// TODO: Missing handler for case update filter URL
 	var addedFiltersIndexs []int
 	var hasFilterChange bool
-	c.Filters, addedFiltersIndexs, hasFilterChange = clients.checkAndFilters(prev.Filters, c.Filters, c)
+	c.Filters, addedFiltersIndexs, hasFilterChange = clients.checkAddedFilters(prev.Filters, c.Filters, c)
 	var addedFiltersIndexsWhitelist []int
 	var hasWhiteListFilterChange bool
-	c.WhitelistFilters, addedFiltersIndexsWhitelist, hasWhiteListFilterChange = clients.checkAndFilters(prev.WhitelistFilters, c.WhitelistFilters, c)
+	c.WhitelistFilters, addedFiltersIndexsWhitelist, hasWhiteListFilterChange = clients.checkAddedFilters(prev.WhitelistFilters, c.WhitelistFilters, c)
 	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
 	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 

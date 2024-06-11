@@ -1,8 +1,8 @@
-const merge = require('webpack-merge');
-const yaml = require('js-yaml');
-const fs = require('fs');
-const common = require('./webpack.common.js');
-const { BASE_URL } = require('./constants');
+import { merge } from 'webpack-merge';
+import yaml from 'js-yaml';
+import fs from 'fs';
+import { BASE_URL } from './constants.js';
+import common from './webpack.common.js';
 
 const ZERO_HOST = '0.0.0.0';
 const LOCALHOST = '127.0.0.1';
@@ -18,8 +18,8 @@ const importConfig = () => {
         const { http } = doc;
         const { address } = http;
         const splitAddress = address.split(':');
-        bind_host = splitAddress[0];
-        bind_port = parseInt(splitAddress[1]);
+        const bind_host = splitAddress[0];
+        const bind_port = parseInt(splitAddress[1]);
         return {
             bind_host,
             bind_port,
@@ -45,26 +45,14 @@ const getDevServerConfig = (proxyUrl = BASE_URL) => {
         open: true,
         host: devServerHost,
         port: devServerPort,
-        proxy: {
-            [proxyUrl]: `http://${devServerHost}:${port}`,
-        },
+        proxy: [{
+            context: [proxyUrl],
+            target: `http://${devServerHost}:${port}`,
+        }],
     };
 };
 
-module.exports = merge(common, {
+export default merge(common, {
     devtool: 'eval-source-map',
-    module: {
-        rules: [
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                loader: 'eslint-loader',
-                options: {
-                    emitWarning: true,
-                    configFile: 'dev.eslintrc',
-                },
-            },
-        ],
-    },
-    ...(process.env.WEBPACK_DEV_SERVER ? { devServer: getDevServerConfig(BASE_URL) } : undefined),
+    ...(process.env.WEBPACK_SERVE ? { devServer: getDevServerConfig(BASE_URL) } : undefined),
 });

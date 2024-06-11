@@ -27,6 +27,14 @@ See also the [v0.107.52 GitHub milestone][ms-v0.107.52].
 NOTE: Add new changes BELOW THIS COMMENT.
 -->
 
+### Changed
+
+- Frontend rewritten in TypeScript.
+
+### Deprecated
+
+- Node 18 support, Node 20 will be required in future releases.
+
 <!--
 NOTE: Add new changes ABOVE THIS COMMENT.
 -->

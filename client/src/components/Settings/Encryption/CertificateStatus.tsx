@@ -5,8 +5,8 @@ import format from 'date-fns/format';
 import { EMPTY_DATE } from '../../../helpers/constants';
 
 interface CertificateStatusProps {
-    validChain: boolean;
-    validCert: boolean;
+    validChain?: boolean;
+    validCert?: boolean;
     subject?: string;
     issuer?: string;
     notAfter?: string;

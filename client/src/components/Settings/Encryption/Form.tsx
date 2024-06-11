@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { connect } from 'react-redux';
 import {
     Field, FieldArray, reduxForm, formValueSelector,
@@ -40,25 +40,6 @@ const validate = (values: any) => {
     }
 
     return errors;
-};
-
-const renderInputFields = (props: {fields: any, disabled: boolean}) => {
-    const { fields, disabled } = props;
-    return (
-        <>
-            {fields.map((field, index) => (
-                <div key={index} className='d-flex align-items-center'>
-                    <Field
-                        {...props}
-                        name={field}
-                        component={renderInputField}
-                    />
-                    {index > 0 && !disabled && <button className='btn btn-secondary btn-standart' type='button' onClick={() => fields.remove(index)}>-</button>}
-                </div>
-            ))}
-            {!disabled && <button className='btn btn-success btn-standart' type='button' onClick={() => fields.push('')}>+</button>}
-        </>
-    );
 };
 
 const clearFields = (change: any, setTlsConfig: any, validateTlsConfig: any, t: any) => {
@@ -187,6 +168,39 @@ let Form = (props: FormProps) => {
 
     const isDisabled = isSavingDisabled();
     const isWarning = valid_key && valid_cert && valid_pair;
+
+    const renderInputFields = useCallback((fieldsProps: { fields: any; disabled: boolean }) => {
+        const { fields, disabled } = fieldsProps;
+        return (
+            <>
+                {fields.map((field, index) => (
+                    <div key={index} className="d-flex align-items-center">
+                        <Field
+                            {...fieldsProps}
+                            name={field}
+                            type="text"
+                            className="form-control"
+                            onChange={handleChange}
+                            component={renderInputField}
+                        />
+                        {index > 0 && !disabled && (
+                            <button
+                                className="btn btn-secondary btn-standart"
+                                type="button"
+                                onClick={() => fields.remove(index)}>
+                                -
+                            </button>
+                        )}
+                    </div>
+                ))}
+                {!disabled && (
+                    <button className="btn btn-success btn-standart" type="button" onClick={() => fields.push('')}>
+                        +
+                    </button>
+                )}
+            </>
+        );
+    }, []);
 
     return (
         <form onSubmit={handleSubmit}>

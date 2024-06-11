@@ -2,8 +2,8 @@ import React, { Fragment } from 'react';
 import { withTranslation, Trans } from 'react-i18next';
 
 interface KeyStatusProps {
-    validKey: boolean;
-    keyType: string;
+    validKey?: boolean;
+    keyType?: string;
 }
 
 const KeyStatus = ({ validKey, keyType }: KeyStatusProps) => (

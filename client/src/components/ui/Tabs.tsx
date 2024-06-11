@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Dispatch, SetStateAction } from 'react';
 import classnames from 'classnames';
 
 import Tab from './Tab';
@@ -8,7 +8,7 @@ interface TabsProps {
     controlClass?: string;
     tabs: object;
     activeTabLabel: string;
-    setActiveTabLabel: (...args: unknown[]) => unknown;
+    setActiveTabLabel: Dispatch<SetStateAction<string>>;
     children: React.ReactElement;
 }
 

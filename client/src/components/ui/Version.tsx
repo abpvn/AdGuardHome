@@ -12,7 +12,7 @@ const Version = () => {
     const dashboard = useSelector((state: RootState) => state.dashboard, shallowEqual);
     const install = useSelector((state: RootState) => state.install, shallowEqual);
 
-    if (!dashboard || !install) {
+    if (!dashboard && !install) {
         return null;
     }
 

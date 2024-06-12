@@ -637,7 +637,14 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 		return
 	}
-	clients.bulkUpdateClientFilters(nil)
+	var delClientName *string
+
+	if c.Name != prev.Name {
+		// Name changed remove old name from client filter
+		delClientName = &prev.Name
+	}
+
+	clients.bulkUpdateClientFilters(delClientName)
 	clients.updateClientDNSFtl(*prev, *c, hasFilterChange, hasWhiteListFilterChange, !slices.Equal(prev.UserRules, c.UserRules))
 	if !clients.testing {
 		onConfigModified()

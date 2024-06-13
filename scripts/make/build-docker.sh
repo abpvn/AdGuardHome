@@ -76,8 +76,8 @@ in
 	;;
 ('development')
 	# Set both tags to an empty string for development builds.
-	docker_version_tag=''
-	docker_channel_tag=''
+	docker_version_tag="--tag=${docker_image_name}:${version}"
+	docker_channel_tag="--tag=${docker_image_name}:latest"
 	;;
 (*)
 	echo "invalid channel '$channel', supported values are\

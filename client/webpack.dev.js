@@ -1,12 +1,14 @@
 import { merge } from 'webpack-merge';
 import yaml from 'js-yaml';
 import fs from 'fs';
+// eslint-disable-next-line import/extensions
 import { BASE_URL } from './constants.js';
+// eslint-disable-next-line import/extensions
 import common from './webpack.common.js';
 
 const ZERO_HOST = '0.0.0.0';
 const LOCALHOST = '127.0.0.1';
-const DEFAULT_PORT = 80;
+const DEFAULT_PORT = 3000;
 
 /**
  * Get document, or throw exception on error
@@ -19,7 +21,7 @@ const importConfig = () => {
         const { address } = http;
         const splitAddress = address.split(':');
         const bind_host = splitAddress[0];
-        const bind_port = parseInt(splitAddress[1]);
+        const bind_port = parseInt(splitAddress[1], 10);
         return {
             bind_host,
             bind_port,

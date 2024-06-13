@@ -73,7 +73,28 @@ jobs:
         run: |
           make SIGN=0 VERBOSE=1 VERSION="${{env.VERSION}}" build-release
           rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
-      - name: Create release
+
+      - name: Create stable release
+        if: ${{ !contains(env.VERSION, 'd.') }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "${{ env.DIST_FOLDER }}/*.tar.gz,${{ env.DIST_FOLDER }}/*.zip,${{ env.DIST_FOLDER }}/checksums.txt"
+          body: |
+            ## Stable release for per client filter configuration
+
+            ### Build information:
+            * GO version: **${{ env.GO_VERSION }}**
+            * Node version: **${{ env.NODE_VERSION }}**
+            * Release version: **${{ env.VERSION }}**
+
+            ### What's changed:
+            ${{ env.CHANGE_LOGS }}
+
+            **Full Changelog**: https://github.com/abpvn/AdGuardHome/compare/${{env.PREV_VERSION}}...${{env.VERSION}}
+            **Notice**: This is just a custom implement by ABPVN. It's may contain bug and performance issue. Use at your own risk
+
+      - name: Create development release
+        if: ${{ contains(env.VERSION, 'd.') }}
         uses: ncipollo/release-action@v1
         with:
           artifacts: "${{ env.DIST_FOLDER }}/*.tar.gz,${{ env.DIST_FOLDER }}/*.zip,${{ env.DIST_FOLDER }}/checksums.txt"

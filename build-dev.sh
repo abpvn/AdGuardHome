@@ -1,7 +1,7 @@
 #!/bin/sh
 if [ "$BASE_VERSION" = '' ]
 then
-    BASE_VERSION='v0.108.1'
+    BASE_VERSION='v0.108.2'
     readonly BASE_VERSION
 fi
 commit_number="$( git rev-list --count master..HEAD )"

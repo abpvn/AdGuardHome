@@ -580,7 +580,7 @@ func run(opts options, clientBuildFS fs.FS, done chan struct{}) {
 	u := &url.URL{
 		Scheme: "https",
 		// TODO(a.garipov): Make configurable.
-		Host: "static.adtidy.org",
+		Host: "static.abpvn.com",
 		Path: path.Join("adguardhome", version.Channel(), "version.json"),
 	}
 

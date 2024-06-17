@@ -10,6 +10,8 @@ env:
   NODE_VERSION: '18.18.0'
   DIST_FOLDER: 'dist'
   REGISTRY: 'ghcr.io'
+  SSH_KEY_FILE_DIR: .keys
+  SSH_KEY_FILE_PATH: .keys/deploy_key.pem
 
 concurrency:
   group: ${{ github.ref_name }}
@@ -90,7 +92,7 @@ jobs:
       - name: Run release build
         if: ${{ !contains(env.VERSION, 'd.') }}
         run: |
-          make SIGN=0 VERBOSE=1 DOCKER_IMAGE_NAME="${{env.REGISTRY}}/abpvn/adguardhome" \
+          make SIGN=0 VERBOSE=1 CHANNEL="release" DOCKER_IMAGE_NAME="${{env.REGISTRY}}/abpvn/adguardhome" \
           DOCKER_OUTPUT="type=image,name=${{env.REGISTRY}}/abpvn/adguardhome,push=true" VERSION="${{env.VERSION}}" \
           build-release build-docker
           rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
@@ -112,6 +114,21 @@ jobs:
 
             **Full Changelog**: https://github.com/abpvn/AdGuardHome/compare/${{env.PREV_VERSION}}...${{env.VERSION}}
             **Notice**: This is just a custom implement by ABPVN. It's may contain bug and performance issue. Use at your own risk
+
+      - name: Create deploy key file
+        if: ${{ !contains(env.VERSION, 'd.') }}
+        run: |
+          mkdir ${{env.SSH_KEY_FILE_DIR}}
+          echo "${{secrets.SSH_DEPLOY_KEY}}" > ${{env.SSH_KEY_FILE_PATH}}
+          chmod 600 ${{env.SSH_KEY_FILE_PATH}}
+
+      - name: Deploy to Main Server
+        if: ${{ !contains(env.VERSION, 'd.') }}
+        run: |
+          rsync -have "ssh -i ${{env.SSH_KEY_FILE_PATH}} -o StrictHostKeyChecking=no" ${{ env.DIST_FOLDER }}/version.json ${{secrets.SSH_DEPLOY_USER}}@${{secrets.SSH_MAIN_HOST}}:${{secrets.DEPLOY_PATH}}/release/
+      - name: Clean deploy key file
+        if: ${{ !contains(env.VERSION, 'd.') }}
+        run: rm -rf ${{env.SSH_KEY_FILE_PATH}}
 
       # Development build block
       - name: Run development build

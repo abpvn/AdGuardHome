@@ -6,7 +6,7 @@ then
         BASE_VERSION='v0.108.5'
         readonly BASE_VERSION
     fi
-    commit_number="$( git rev-list --count master..HEAD )"
+    commit_number="$( git rev-list --count $BASE_VERSION..HEAD )"
     readonly commit_number
 
     # The development builds are described with a combination of unset semantic

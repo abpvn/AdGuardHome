@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/netip"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -324,7 +323,7 @@ func (clients *clientsContainer) forConfig() (objs []*clientObject) {
 	defer clients.lock.Unlock()
 
 	objs = make([]*clientObject, 0, clients.clientIndex.Size())
-	clients.clientIndex.Range(func(cli *client.Persistent) (cont bool) {
+	clients.clientIndex.RangeByName(func(cli *client.Persistent) (cont bool) {
 		objs = append(objs, &clientObject{
 			Name: cli.Name,
 
@@ -352,14 +351,6 @@ func (clients *clientsContainer) forConfig() (objs []*clientObject) {
 		})
 
 		return true
-	})
-
-	// Maps aren't guaranteed to iterate in the same order each time, so the
-	// above loop can generate different orderings when writing to the config
-	// file: this produces lots of diffs in config files, so sort objects by
-	// name before writing.
-	slices.SortStableFunc(objs, func(a, b *clientObject) (res int) {
-		return strings.Compare(a.Name, b.Name)
 	})
 
 	return objs

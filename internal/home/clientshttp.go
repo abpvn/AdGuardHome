@@ -103,7 +103,7 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http
 	clients.lock.Lock()
 	defer clients.lock.Unlock()
 
-	clients.clientIndex.Range(func(c *client.Persistent) (cont bool) {
+	clients.storage.RangeByName(func(c *client.Persistent) (cont bool) {
 		cj := clientToJSON(c)
 		data.Clients = append(data.Clients, cj)
 
@@ -153,7 +153,7 @@ func (clients *clientsContainer) handleGetClient(w http.ResponseWriter, r *http.
 	clients.lock.Lock()
 	defer clients.lock.Unlock()
 
-	if client, ok := clients.clientIndex.Find(clientName); ok {
+	if client, ok := clients.storage.FindByName(clientName); ok {
 		data = *clientToJSON(client)
 	} else {
 		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("client %s not found", clientName))
@@ -412,7 +412,7 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
 	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
-	err = clients.add(c)
+	err = clients.storage.Add(c)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
 
@@ -440,7 +440,7 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if !clients.remove(cj.Name) {
+	if !clients.storage.RemoveByName(cj.Name) {
 		aghhttp.Error(r, w, http.StatusBadRequest, "Client not found")
 
 		return
@@ -543,7 +543,7 @@ func (clients *clientsContainer) bulkDeleteClientFilter(needDeleteIdx []int) (ha
 
 // updateClientsFiltersByClient update clients filter by client list
 func (clients *clientsContainer) updateClientsFiltersByClient(fy *filtering.ClientFilterYAML, needDelete, shoudEnable *bool) {
-	clients.clientIndex.Range(func(c *client.Persistent) (cont bool) {
+	clients.storage.RangeByName(func(c *client.Persistent) (cont bool) {
 		isExistFilters, filterName, isEnabled := existsFilters(*fy.FilterYAML, c.Filters)
 		isExistWhitelistFilter, wFilterName, isEnabledWhiteList := existsFilters(*fy.FilterYAML, c.WhitelistFilters)
 		if !isExistFilters && !isExistWhitelistFilter {
@@ -599,6 +599,12 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 
+	c, err := clients.jsonToClient(dj.Data, nil)
+	if err != nil {
+		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
+
+		return
+	}
 	var prev *client.Persistent
 	var ok bool
 
@@ -606,7 +612,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		clients.lock.Lock()
 		defer clients.lock.Unlock()
 
-		prev, ok = clients.clientIndex.FindByName(dj.Name)
+		prev, ok = clients.storage.FindByName(dj.Name)
 	}()
 
 	if !ok {
@@ -615,13 +621,6 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 
-	c, err := clients.jsonToClient(dj.Data, prev)
-	if err != nil {
-		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
-
-		return
-	}
-	// TODO: Missing handler for case update filter URL
 	var addedFiltersIndexs []int
 	var hasFilterChange bool
 	c.Filters, addedFiltersIndexs, hasFilterChange = clients.checkAddedFilters(prev.Filters, c.Filters, c)
@@ -631,7 +630,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
 	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
-	err = clients.update(prev, c)
+	err = clients.storage.Update(dj.Name, c)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
 

@@ -83,17 +83,14 @@ const MobileConfigForm = ({ invalid }: MobileConfigFormProps) => {
                             <label htmlFor="host" className="form__label">
                                 {i18next.t('dhcp_table_hostname')}
                             </label>
-                            {hosts.map((host, index) => {
-                                return <Field
-                                    key={host}
-                                    name={`hosts.${index}`}
-                                    type="text"
-                                    component={renderInputField}
-                                    className="form-control"
-                                    placeholder={i18next.t('form_enter_hostname')}
-                                    validate={validateServerName}
-                                />;
-                            })}
+                            <Field
+                                name="hosts.0"
+                                type="text"
+                                component={renderInputField}
+                                className="form-control"
+                                placeholder={i18next.t('form_enter_hostname')}
+                                validate={validateServerName}
+                            />
                         </div>
                         {protocol === MOBILE_CONFIG_LINKS.DOH && (
                             <div className="col">

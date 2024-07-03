@@ -53,6 +53,7 @@ jobs:
           key: "${{ runner.os }}-node-${{ hashFiles('client/package-lock.json') }}"
           restore-keys: '${{ runner.os }}-node-'
       - name: Set previous version env
+        if: ${{ env.VERSION != env.DEV_VERSION_NAME }}
         run: |
           PREV_VERSION=$(git describe --tags --abbrev=0 ${{env.VERSION}}^)
           if [[ "$PREV_VERSION" == "v"* ]]
@@ -62,6 +63,7 @@ jobs:
             echo "Can not find prev version. Use ${{env.PREV_VERSION}} as prev version"
           fi
       - name: Set change logs env
+        if: ${{ env.VERSION != env.DEV_VERSION_NAME }}
         run: |
           CHANGE_LOGS=$(git log --pretty='format:* %h: %s' ${{env.VERSION}}...${{env.PREV_VERSION}})
           if [ "$CHANGE_LOGS" != "" ]

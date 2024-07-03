@@ -507,8 +507,6 @@ func (clients *clientsContainer) checkAddedFilters(
 				addedFiltersIndexs = append(addedFiltersIndexs, len(validFilters))
 				validFilters = append(validFilters, fj)
 			}
-		} else {
-			validFilters = append(validFilters, fj)
 		}
 	}
 	if !hasFilterChange {

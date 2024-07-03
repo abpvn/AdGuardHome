@@ -486,24 +486,20 @@ func (clients *clientsContainer) checkAddedFilters(
 	hasFilterChange bool,
 ) {
 	for _, fj := range newFilters {
-		isExists, _, _ := existsFilters(fj, oldFilters)
-		if !isExists {
-			// Check filter exist in clients filters and add
-			isExistInClientFilters := false
-			for _, cfj := range config.ClientsFilters {
-				if fj.URL == cfj.URL {
-					clientFtl := *cfj.FilterYAML
-					clientFtl.Name = fj.Name
-					validFilters = append(validFilters, clientFtl)
-					cfj.Names[client.Name] = fj.Name
-					fj.ID = cfj.ID
-					isExistInClientFilters = true
-					continue
-				}
+		// Check filter exist in clients filters and add
+		isExistInClientFilters := false
+		for _, cfj := range config.ClientsFilters {
+			if fj.URL == cfj.URL {
+				clientFtl := *cfj.FilterYAML
+				clientFtl.Name = fj.Name
+				validFilters = append(validFilters, clientFtl)
+				cfj.Names[client.Name] = fj.Name
+				fj.ID = cfj.ID
+				isExistInClientFilters = true
+				break
 			}
-			if isExistInClientFilters {
-				continue
-			}
+		}
+		if !isExistInClientFilters {
 			// Process add filter
 			err := filtering.ValidateFilterURL(fj.URL)
 			if err == nil {

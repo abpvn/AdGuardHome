@@ -496,6 +496,7 @@ func (clients *clientsContainer) checkAddedFilters(
 					clientFtl.Name = fj.Name
 					validFilters = append(validFilters, clientFtl)
 					cfj.Names[client.Name] = fj.Name
+					fj.ID = cfj.ID
 					isExistInClientFilters = true
 					continue
 				}

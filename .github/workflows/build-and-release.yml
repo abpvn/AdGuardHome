@@ -145,6 +145,7 @@ jobs:
         if: ${{ env.VERSION != env.DEV_VERSION_NAME && contains(env.VERSION, 'd.') }}
         uses: ncipollo/release-action@v1
         with:
+          prerelease: true
           artifacts: "${{ env.DIST_FOLDER }}/*.tar.gz,${{ env.DIST_FOLDER }}/*.zip,${{ env.DIST_FOLDER }}/checksums.txt"
           body: |
             ## Development release for per client filter configuration

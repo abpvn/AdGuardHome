@@ -3,7 +3,7 @@ if [ "$VERSION" = '' ]
 then
     if [ "$BASE_VERSION" = '' ]
     then
-        BASE_VERSION='v0.108.9'
+        BASE_VERSION=$(git describe --tags --abbrev=0 HEAD)
         readonly BASE_VERSION
     fi
     commit_number="$( git rev-list --count $BASE_VERSION..HEAD )"

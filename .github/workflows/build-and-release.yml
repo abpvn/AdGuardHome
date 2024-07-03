@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - master
 
 env:
   GO_VERSION: '1.22.4'
@@ -12,9 +14,10 @@ env:
   REGISTRY: 'ghcr.io'
   SSH_KEY_FILE_DIR: .keys
   SSH_KEY_FILE_PATH: .keys/deploy_key.pem
+  DEV_VERSION_NAME: 'v0.0.0-d.0'
 
 concurrency:
-  group: ${{ github.ref_name }}
+  group: build_${{ github.event.head_commit.id }}
   cancel-in-progress: true
 
 jobs:
@@ -23,7 +26,7 @@ jobs:
     env:
       GO111MODULE': 'on'
       GOPROXY: 'https://goproxy.cn'
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_name == 'master' && 'v0.0.0-d.0' || github.ref_name }}
       NPM_CACHE_DIR: ''
       PREV_VERSION: 'master'
       CHANGE_LOGS: '* ${{ github.event.head_commit.message }}'
@@ -137,7 +140,7 @@ jobs:
           make SIGN=0 VERBOSE=1 VERSION="${{env.VERSION}}" build-release
           rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
       - name: Create development release
-        if: ${{ contains(env.VERSION, 'd.') }}
+        if: ${{ env.VERSION != env.DEV_VERSION_NAME && contains(env.VERSION, 'd.') }}
         uses: ncipollo/release-action@v1
         with:
           artifacts: "${{ env.DIST_FOLDER }}/*.tar.gz,${{ env.DIST_FOLDER }}/*.zip,${{ env.DIST_FOLDER }}/checksums.txt"

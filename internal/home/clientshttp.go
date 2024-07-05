@@ -661,7 +661,7 @@ func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, h
 			Context.filters.ClientsFilteringEngine[c.Name] = Context.filters.ClientsFilteringEngine[prev.Name]
 			Context.filters.ClientsRulesStorageAllow[c.Name] = Context.filters.ClientsRulesStorageAllow[prev.Name]
 			Context.filters.ClientsFilteringEngineAllow[c.Name] = Context.filters.ClientsFilteringEngineAllow[prev.Name]
-			Context.filters.DeleteClientFtlEngine(c.Name)
+			Context.filters.DeleteClientFtlEngine(prev.Name)
 		} else if hasFilterChange || hasWhiteListFilterChange || hasUserRulesChange {
 			Context.filters.InitForClient(c.Name, c.WhitelistFilters, c.Filters, c.UserRules)
 		}

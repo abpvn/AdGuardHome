@@ -293,9 +293,7 @@ func (d *DNSFilter) LoadClientFilters(array []ClientFilterYAML) {
 }
 
 func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters []FilterYAML, userRules []string) {
-	d.clientEngineLock.Lock()
-	defer d.clientEngineLock.Unlock()
-	log.Info("Start init client filtering for client: %s", clientName)
+	log.Info("filtering: start init client filtering for client: %s", clientName)
 	d.LoadFilters(whiteListFilters)
 	d.LoadFilters(filters)
 	allowFilters := []Filter{}
@@ -330,22 +328,26 @@ func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters [
 
 	rulesStorage, err := newRuleStorage(blockFilters)
 	if err != nil {
-		log.Error("Init filter for client error %s", err)
+		log.Error("filtering: init filter for client error %s by rulesStorage", err)
 		return
 	}
 
 	rulesStorageAllow, err := newRuleStorage(allowFilters)
 	if err != nil {
-		log.Error("Init filter for client error %s", err)
+		log.Error("filtering: init filter for client error %s by rulesStorageAllow", err)
 		return
 	}
 
 	filteringEngine := urlfilter.NewDNSEngine(rulesStorage)
 	filteringEngineAllow := urlfilter.NewDNSEngine(rulesStorageAllow)
-	d.ClientsRulesStorage[clientName] = rulesStorage
-	d.ClientsFilteringEngine[clientName] = filteringEngine
-	d.ClientsRulesStorageAllow[clientName] = rulesStorageAllow
-	d.ClientsFilteringEngineAllow[clientName] = filteringEngineAllow
+	func() {
+		d.clientEngineLock.Lock()
+		defer d.clientEngineLock.Unlock()
+		d.ClientsRulesStorage[clientName] = rulesStorage
+		d.ClientsFilteringEngine[clientName] = filteringEngine
+		d.ClientsRulesStorageAllow[clientName] = rulesStorageAllow
+		d.ClientsFilteringEngineAllow[clientName] = filteringEngineAllow
+	}()
 
 	// Make sure that the OS reclaims memory as soon as possible.
 	debug.FreeOSMemory()
@@ -518,7 +520,7 @@ func (d *DNSFilter) cleanClientFilteringEngine(updatedClientFilters []FilterYAML
 		for _, updatedFtl := range updatedClientFilters {
 			if clientFtl.ID == updatedFtl.ID {
 				for clientName, clientFltName := range clientFtl.Names {
-					log.Info("Clean client filtering engine for client: %s after updated filter: %s (%d)", clientName, clientFltName, clientFtl.ID)
+					log.Info("filtering: clean client filtering engine for client: %s after update filter: %s (%d)", clientName, clientFltName, clientFtl.ID)
 					d.DeleteClientFtlEngine(clientName)
 				}
 			}

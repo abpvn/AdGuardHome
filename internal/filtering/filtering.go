@@ -921,10 +921,10 @@ func (d *DNSFilter) getFilteringEngine(setts *Settings) (filteringEngineAllow, f
 	if setts.ClientName != "" && !setts.UseGlobalFilters {
 		d.clientEngineLock.RLock()
 		defer d.clientEngineLock.RUnlock()
-		_, ok := d.ClientsFilteringEngine[setts.ClientName]
+		clientFilteringEngine, ok := d.ClientsFilteringEngine[setts.ClientName]
 		if ok {
 			filteringEngineAllow = d.ClientsFilteringEngineAllow[setts.ClientName]
-			filteringEngine = d.ClientsFilteringEngine[setts.ClientName]
+			filteringEngine = clientFilteringEngine
 			isClientFiltering = true
 		}
 	}

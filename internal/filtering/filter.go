@@ -293,6 +293,8 @@ func (d *DNSFilter) LoadClientFilters(array []ClientFilterYAML) {
 }
 
 func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters []FilterYAML, userRules []string) {
+	d.clientEngineLock.Lock()
+	defer d.clientEngineLock.Unlock()
 	log.Info("filtering: start init client filtering for client: %s", clientName)
 	d.LoadFilters(whiteListFilters)
 	d.LoadFilters(filters)
@@ -340,14 +342,10 @@ func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters [
 
 	filteringEngine := urlfilter.NewDNSEngine(rulesStorage)
 	filteringEngineAllow := urlfilter.NewDNSEngine(rulesStorageAllow)
-	func() {
-		d.clientEngineLock.Lock()
-		defer d.clientEngineLock.Unlock()
-		d.ClientsRulesStorage[clientName] = rulesStorage
-		d.ClientsFilteringEngine[clientName] = filteringEngine
-		d.ClientsRulesStorageAllow[clientName] = rulesStorageAllow
-		d.ClientsFilteringEngineAllow[clientName] = filteringEngineAllow
-	}()
+	d.ClientsRulesStorage[clientName] = rulesStorage
+	d.ClientsFilteringEngine[clientName] = filteringEngine
+	d.ClientsRulesStorageAllow[clientName] = rulesStorageAllow
+	d.ClientsFilteringEngineAllow[clientName] = filteringEngineAllow
 
 	// Make sure that the OS reclaims memory as soon as possible.
 	debug.FreeOSMemory()

@@ -295,6 +295,11 @@ func (d *DNSFilter) LoadClientFilters(array []ClientFilterYAML) {
 func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters []FilterYAML, userRules []string) {
 	d.clientEngineLock.Lock()
 	defer d.clientEngineLock.Unlock()
+	_, ok := d.ClientsFilteringEngine[clientName]
+	if ok {
+		log.Info("filtering: client filtering of client: %s already initiated", clientName)
+		return
+	}
 	log.Info("filtering: start init client filtering for client: %s", clientName)
 	d.LoadFilters(whiteListFilters)
 	d.LoadFilters(filters)
@@ -350,7 +355,7 @@ func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters [
 	// Make sure that the OS reclaims memory as soon as possible.
 	debug.FreeOSMemory()
 
-	log.Info("Finish init client filtering for client: %s", clientName)
+	log.Info("filtering: finish init client filtering for client: %s", clientName)
 }
 
 func deduplicateFilters(filters []FilterYAML) (deduplicated []FilterYAML) {

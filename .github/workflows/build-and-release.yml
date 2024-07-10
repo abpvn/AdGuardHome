@@ -97,7 +97,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set beta build channel
-        if: ${{ !contains(env.VERSION, 'b.') }}
+        if: ${{ contains(env.VERSION, 'b.') }}
         run: echo "BUILD_CHANNEL=beta" >> $GITHUB_ENV
       - name: Run release build
         if: ${{ !contains(env.VERSION, env.DEV_VERSION_CHECK) }}

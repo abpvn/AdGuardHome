@@ -106,7 +106,7 @@ jobs:
           DOCKER_OUTPUT="type=image,name=${{env.REGISTRY}}/abpvn/adguardhome,push=true" VERSION="${{env.VERSION}}" \
           build-release build-docker
           rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
-      - name: Create stable release
+      - name: Create release
         if: ${{ !contains(env.VERSION, env.DEV_VERSION_CHECK) }}
         uses: ncipollo/release-action@v1
         with:
@@ -133,7 +133,7 @@ jobs:
           echo "${{secrets.SSH_DEPLOY_KEY}}" > ${{env.SSH_KEY_FILE_PATH}}
           chmod 600 ${{env.SSH_KEY_FILE_PATH}}
 
-      - name: Copy release file to Server
+      - name: Copy version file to Server
         if: ${{ !contains(env.VERSION, env.DEV_VERSION_CHECK) }}
         run: |
           rsync -have "ssh -i ${{env.SSH_KEY_FILE_PATH}} -o StrictHostKeyChecking=no" ${{ env.DIST_FOLDER }}/version.json ${{secrets.SSH_DEPLOY_USER}}@${{secrets.SSH_MAIN_HOST}}:${{secrets.DEPLOY_PATH}}/${{env.BUILD_CHANNEL}}/

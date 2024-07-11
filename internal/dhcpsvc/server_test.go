@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"net/netip"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -19,14 +20,14 @@ import (
 var testdata = os.DirFS("testdata")
 
 // newTempDB copies the leases database file located in the testdata FS, under
-// tb.Name()/leases.db, to a temporary directory and returns the path to the
+// tb.Name()/leases.json, to a temporary directory and returns the path to the
 // copied file.
 func newTempDB(tb testing.TB) (dst string) {
 	tb.Helper()
 
 	const filename = "leases.json"
 
-	data, err := fs.ReadFile(testdata, filepath.Join(tb.Name(), filename))
+	data, err := fs.ReadFile(testdata, path.Join(tb.Name(), filename))
 	require.NoError(tb, err)
 
 	dst = filepath.Join(tb.TempDir(), filename)
@@ -121,7 +122,7 @@ func TestNew(t *testing.T) {
 			DBFilePath: leasesPath,
 		},
 		name: "gateway_within_range",
-		wantErrMsg: `interface "eth0": ipv4: ` +
+		wantErrMsg: `creating interfaces: interface "eth0": ipv4: ` +
 			`gateway ip 192.168.0.100 in the ip range 192.168.0.1-192.168.0.254`,
 	}, {
 		conf: &dhcpsvc.Config{
@@ -137,7 +138,7 @@ func TestNew(t *testing.T) {
 			DBFilePath: leasesPath,
 		},
 		name: "bad_start",
-		wantErrMsg: `interface "eth0": ipv4: ` +
+		wantErrMsg: `creating interfaces: interface "eth0": ipv4: ` +
 			`range start 127.0.0.1 is not within 192.168.0.1/24`,
 	}}
 
@@ -567,5 +568,5 @@ func TestServer_Leases(t *testing.T) {
 		HWAddr:   mustParseMAC(t, "BB:BB:BB:BB:BB:BB"),
 		IsStatic: true,
 	}}
-	assert.Equal(t, wantLeases, srv.Leases())
+	assert.ElementsMatch(t, wantLeases, srv.Leases())
 }

@@ -2651,6 +2651,8 @@
           'type': 'boolean'
         'duckduckgo':
           'type': 'boolean'
+        'ecosia':
+          'type': 'boolean'
         'google':
           'type': 'boolean'
         'pixabay':

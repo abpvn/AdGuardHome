@@ -27,5 +27,6 @@ AdGuardHome.yaml*
 coverage.txt
 node_modules/
 __debug_bin*
+.DS_Store
 
 !/build/gitkeep

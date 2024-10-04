@@ -217,13 +217,13 @@ func TestMigrateConfig_Migrate(t *testing.T) {
 }
 
 // TODO(a.garipov):  Consider ways of merging into the previous one.
-func TestMigrateConfig_Migrate_v29(t *testing.T) {
+func TestMigrateConfig_Migrate_v30(t *testing.T) {
 	const (
 		pathUnix       = `/path/to/file.txt`
-		userDirPatUnix = `TestMigrateConfig_Migrate/v29/data/userfilters/*`
+		userDirPatUnix = `TestMigrateConfig_Migrate/v30/data/userfilters/*`
 
 		pathWindows       = `C:\path\to\file.txt`
-		userDirPatWindows = `TestMigrateConfig_Migrate\v29\data\userfilters\*`
+		userDirPatWindows = `TestMigrateConfig_Migrate\v30\data\userfilters\*`
 	)
 
 	pathToReplace := pathUnix
@@ -233,12 +233,12 @@ func TestMigrateConfig_Migrate_v29(t *testing.T) {
 		patternToReplace = userDirPatWindows
 	}
 
-	body, err := fs.ReadFile(testdata, "TestMigrateConfig_Migrate/v29/input.yml")
+	body, err := fs.ReadFile(testdata, "TestMigrateConfig_Migrate/v30/input.yml")
 	require.NoError(t, err)
 
 	body = bytes.ReplaceAll(body, []byte("FILEPATH"), []byte(pathToReplace))
 
-	wantBody, err := fs.ReadFile(testdata, "TestMigrateConfig_Migrate/v29/output.yml")
+	wantBody, err := fs.ReadFile(testdata, "TestMigrateConfig_Migrate/v30/output.yml")
 	require.NoError(t, err)
 
 	wantBody = bytes.ReplaceAll(wantBody, []byte("FILEPATH"), []byte(pathToReplace))
@@ -246,10 +246,10 @@ func TestMigrateConfig_Migrate_v29(t *testing.T) {
 
 	migrator := configmigrate.New(&configmigrate.Config{
 		WorkingDir: t.Name(),
-		DataDir:    "TestMigrateConfig_Migrate/v29/data",
+		DataDir:    "TestMigrateConfig_Migrate/v30/data",
 	})
 
-	newBody, upgraded, err := migrator.Migrate(body, 29)
+	newBody, upgraded, err := migrator.Migrate(body, 30)
 	require.NoError(t, err)
 	require.True(t, upgraded)
 

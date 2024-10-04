@@ -583,9 +583,15 @@ func TestSafeSearch(t *testing.T) {
 		t.Run(tc.host, func(t *testing.T) {
 			req := createTestMessage(tc.host)
 
+			// TODO(a.garipov):  Create our own helper for this.
 			var reply *dns.Msg
-			reply, _, err = client.Exchange(req, addr)
-			require.NoErrorf(t, err, "couldn't talk to server %s: %s", addr, err)
+			once := &sync.Once{}
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				r, _, errExch := client.Exchange(req, addr)
+				if assert.NoError(c, errExch) {
+					once.Do(func() { reply = r })
+				}
+			}, testTimeout*10, testTimeout)
 
 			if tc.wantCNAME != "" {
 				require.Len(t, reply.Answer, 2)

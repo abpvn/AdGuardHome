@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AdguardTeam/AdGuardHome/internal/aghos"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghrenameio"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering/rulelist"
 	"github.com/AdguardTeam/golibs/container"
@@ -622,11 +623,7 @@ func (d *DNSFilter) updateIntl(flt *FilterYAML) (ok bool, err error) {
 
 	var res *rulelist.ParseResult
 
-	// Change the default 0o600 permission to something more acceptable by end
-	// users.
-	//
-	// See https://github.com/AdguardTeam/AdGuardHome/issues/3198.
-	tmpFile, err := aghrenameio.NewPendingFile(flt.Path(d.conf.DataDir), 0o644)
+	tmpFile, err := aghrenameio.NewPendingFile(flt.Path(d.conf.DataDir), aghos.DefaultPermFile)
 	if err != nil {
 		return false, err
 	}
@@ -694,6 +691,11 @@ func (d *DNSFilter) reader(fltURL string) (r io.ReadCloser, err error) {
 		}
 
 		return r, nil
+	}
+
+	fltURL = filepath.Clean(fltURL)
+	if !pathMatchesAny(d.safeFSPatterns, fltURL) {
+		return nil, fmt.Errorf("path %q does not match safe patterns", fltURL)
 	}
 
 	r, err = os.Open(fltURL)

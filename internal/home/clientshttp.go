@@ -493,7 +493,7 @@ func (clients *clientsContainer) checkAddedFilters(
 		}
 		if !isExistInClientFilters {
 			// Process add filter
-			err := filtering.ValidateFilterURL(fj.URL)
+			err := Context.filters.ValidateFilterURL(fj.URL)
 			if err == nil {
 				hasFilterChange = true
 				addedFiltersIndexs = append(addedFiltersIndexs, len(validFilters))

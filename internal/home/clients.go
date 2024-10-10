@@ -277,6 +277,7 @@ func (clients *clientsContainer) forConfig() (objs []*clientObject) {
 			Filters:          slices.Clone(cli.Filters),
 			WhitelistFilters: slices.Clone(cli.WhitelistFilters),
 			Upstreams:        slices.Clone(cli.Upstreams),
+			UserRules:        slices.Clone(cli.UserRules),
 
 			UID: cli.UID,
 

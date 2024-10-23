@@ -1,8 +1,10 @@
 package client
 
 import (
+	"context"
 	"encoding"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/netip"
 	"slices"
@@ -12,7 +14,7 @@ import (
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/dnsproxy/upstream"
 	"github.com/AdguardTeam/golibs/errors"
-	"github.com/AdguardTeam/golibs/log"
+	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/netutil"
 	"github.com/google/uuid"
 )
@@ -138,7 +140,7 @@ type Persistent struct {
 
 // validate returns an error if persistent client information contains errors.
 // allTags must be sorted.
-func (c *Persistent) validate(allTags []string) (err error) {
+func (c *Persistent) validate(ctx context.Context, l *slog.Logger, allTags []string) (err error) {
 	switch {
 	case c.Name == "":
 		return errors.Error("empty name")
@@ -155,7 +157,7 @@ func (c *Persistent) validate(allTags []string) (err error) {
 
 	err = conf.Close()
 	if err != nil {
-		log.Error("client: closing upstream config: %s", err)
+		l.ErrorContext(ctx, "client: closing upstream config", slogutil.KeyError, err)
 	}
 
 	for _, t := range c.Tags {

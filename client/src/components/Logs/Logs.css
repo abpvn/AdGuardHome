@@ -141,7 +141,7 @@
 }
 
 .form-control--search {
-    padding: 0 2.5rem;
+    padding: 0 4rem 0 2.5em;
     height: 2.25rem;
     flex-grow: 1;
 }
@@ -156,7 +156,7 @@
 
 .input-group-search {
     background-color: transparent;
-    position: relative;
+    position: absolute;
     width: 1.5rem;
     height: 1.5rem;
     top: 0.4rem;
@@ -167,12 +167,12 @@
 }
 
 .input-group-search__icon--cross {
-    left: -4.5rem;
+    right: 4rem;
     cursor: pointer;
 }
 
 .input-group-search__icon--tooltip {
-    left: -4rem;
+    right: 2rem;
 }
 
 .form-control--container {
@@ -182,6 +182,18 @@
 .field__search {
     display: flex;
     flex-grow: 1;
+    position: relative;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+@media (max-width: 1279.98px) and (min-width: 992px) {
+    .page-header--logs .page-title {
+        margin-bottom: 1rem;
+    }
+    .field__search {
+        margin-left: -24px;
+    }
 }
 
 .field__select + .field__select {
@@ -198,19 +210,27 @@
         width: 100%;
     }
 
+    .field__search {
+        margin: 0 -24px;
+    }
+
     .field__select {
         margin-top: 1.5rem;
-        padding-left: 24px;
-        padding-right: 24px;
     }
+
     .field__select + .field__select {
         margin-left: 0;
     }
 }
 
-@media (max-width: 991.98px) {
-    .field__select + .field__select {
+@media (max-width: 991.98px) and (min-width: 768px) {
+    .field__select {
         margin-top: 1.5rem;
+        flex: 1;
+    }
+    .field__search {
+        width: calc(100% + 48px);
+        margin: 0 -24px;
     }
 }
 

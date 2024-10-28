@@ -748,5 +748,6 @@
     "enable_upstream_dns_cache": "Bật bộ nhớ cache cho cấu hình ngược dòng của máy chủ upstream của khách hàng này",
     "dns_cache_size": "Kích thước bộ nhớ cache DNS, tính bằng byte",
     "use_global_filters": "Dùng bộ lọc toàn cầu",
-    "clients_filters_name": "Bộ lọc thiết bị: {{name}}"
+    "clients_filters_name": "Bộ lọc thiết bị: {{name}}",
+    "all_client": "Tất cả thiết bị"
 }

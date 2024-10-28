@@ -19,7 +19,7 @@ import useDebounce from '../../../helpers/useDebounce';
 import { createOnBlurHandler, getLogsUrlParams } from '../../../helpers/helpers';
 
 import Tooltip from '../../ui/Tooltip';
-import { RootState } from '../../../initialState';
+import { Client, RootState } from '../../../initialState';
 
 interface renderFilterFieldProps {
     input: {
@@ -102,6 +102,7 @@ const renderFilterField = ({
 const FORM_NAMES = {
     search: 'search',
     response_status: 'response_status',
+    client: 'client',
 };
 
 type FiltersFormProps = {
@@ -116,8 +117,9 @@ const Form = (props: FiltersFormProps & InjectedFormProps) => {
     const { t } = useTranslation();
     const dispatch = useDispatch();
     const history = useHistory();
+    const clients = useSelector((state: RootState) => state.dashboard.clients);
 
-    const { response_status, search } = useSelector(
+    const { response_status, search, client } = useSelector(
         (state: RootState) => state?.form[FORM_NAME.LOGS_FILTER].values,
         shallowEqual,
     );
@@ -129,11 +131,12 @@ const Form = (props: FiltersFormProps & InjectedFormProps) => {
             setLogsFilter({
                 response_status,
                 search: debouncedSearch,
+                client,
             }),
         );
 
-        history.replace(`${getLogsUrlParams(debouncedSearch, response_status)}`);
-    }, [response_status, debouncedSearch]);
+        history.replace(`${getLogsUrlParams(debouncedSearch, response_status, client)}`);
+    }, [response_status, debouncedSearch, client]);
 
     if (response_status && !(response_status in RESPONSE_FILTER_QUERIES)) {
         change(FORM_NAMES.response_status, DEFAULT_LOGS_FILTER[FORM_NAMES.response_status]);
@@ -173,7 +176,6 @@ const Form = (props: FiltersFormProps & InjectedFormProps) => {
                     normalizeOnBlur={normalizeOnBlur}
                 />
             </div>
-
             <div className="field__select">
                 <Field
                     name={FORM_NAMES.response_status}
@@ -185,6 +187,22 @@ const Form = (props: FiltersFormProps & InjectedFormProps) => {
                     {Object.values(RESPONSE_FILTER).map(({ QUERY, LABEL, disabled }: any) => (
                         <option key={LABEL} value={QUERY} disabled={disabled}>
                             {t(LABEL)}
+                        </option>
+                    ))}
+                </Field>
+            </div>
+            <div className="field__select">
+                <Field
+                    name={FORM_NAMES.client}
+                    component="select"
+                    className={classNames(
+                        'form-control custom-select custom-select--logs custom-select__arrow--left form-control--transparent',
+                        responseStatusClass,
+                    )}>
+                    <option value="">{t('all_client')}</option>
+                    {clients.map(({ name }: Client) => (
+                        <option key={name} value={name}>
+                            {name}
                         </option>
                     ))}
                 </Field>

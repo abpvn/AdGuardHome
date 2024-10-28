@@ -69,9 +69,11 @@ const Logs = () => {
     const dispatch = useDispatch();
     const history = useHistory();
 
-    const { response_status: response_status_url_param, search: search_url_param } = queryString.parse(
-        history.location.search,
-    );
+    const {
+        response_status: response_status_url_param,
+        search: search_url_param,
+        client: client_url_param,
+    } = queryString.parse(history.location.search);
 
     const {
         enabled,
@@ -87,6 +89,7 @@ const Logs = () => {
 
     const search = search_url_param || filter?.search || '';
     const response_status = response_status_url_param || filter?.response_status || '';
+    const client = client_url_param || filter?.client || '';
 
     const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth <= MEDIUM_SCREEN_SIZE);
     const [detailedDataCurrent, setDetailedDataCurrent] = useState({});
@@ -103,11 +106,12 @@ const Logs = () => {
                 setFilteredLogs({
                     search,
                     response_status,
+                    client
                 }),
             );
             setIsLoading(false);
         })();
-    }, [response_status, search]);
+    }, [response_status, search, client]);
 
     const mediaQuery = window.matchMedia(`(max-width: ${MEDIUM_SCREEN_SIZE}px)`);
     const mediaQueryHandler = (e: any) => {
@@ -178,6 +182,7 @@ const Logs = () => {
                 filter={{
                     response_status,
                     search,
+                    client,
                 }}
                 setIsLoading={setIsLoading}
                 processingGetLogs={processingGetLogs}

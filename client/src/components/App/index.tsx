@@ -54,7 +54,7 @@ const ROUTES = [
         exact: true,
     },
     {
-        path: [`${MENU_URLS.logs}${getLogsUrlParams(':search?', ':response_status?')}`, MENU_URLS.logs],
+        path: [`${MENU_URLS.logs}${getLogsUrlParams(':search?', ':response_status?', ':client?')}`, MENU_URLS.logs],
         component: Logs,
     },
     {

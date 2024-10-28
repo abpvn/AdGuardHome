@@ -184,6 +184,10 @@
     flex-grow: 1;
 }
 
+.field__select + .field__select {
+    margin-left: 1.5rem;
+}
+
 @media (max-width: 767.98px) {
     .form-control--container {
         width: 100%;
@@ -198,6 +202,15 @@
         margin-top: 1.5rem;
         padding-left: 24px;
         padding-right: 24px;
+    }
+    .field__select + .field__select {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .field__select + .field__select {
+        margin-top: 1.5rem;
     }
 }
 

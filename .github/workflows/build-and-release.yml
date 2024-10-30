@@ -67,7 +67,7 @@ jobs:
       - name: Set change logs env
         if: ${{ env.VERSION != env.DEV_VERSION_NAME }}
         run: |
-          CHANGE_LOGS=$(git log --pretty='format:* %h: %s' ${{env.VERSION}}...${{env.PREV_VERSION}})
+          CHANGE_LOGS=$(git log --no-merges --pretty='format:* %h: %s' ${{env.VERSION}}...${{env.PREV_VERSION}})
           if [ "$CHANGE_LOGS" != "" ]
           then
             {

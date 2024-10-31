@@ -115,15 +115,16 @@ func Main(clientBuildFS fs.FS) {
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 
 	go func() {
+		ctx := context.Background()
 		for {
 			sig := <-signals
 			log.Info("Received signal %q", sig)
 			switch sig {
 			case syscall.SIGHUP:
-				Context.clients.storage.ReloadARP()
+				Context.clients.storage.ReloadARP(ctx)
 				Context.tls.reload()
 			default:
-				cleanup(context.Background())
+				cleanup(ctx)
 				cleanupAlways()
 				close(done)
 			}
@@ -642,7 +643,7 @@ func run(opts options, clientBuildFS fs.FS, done chan struct{}) {
 	}
 
 	dataDir := Context.getDataDir()
-	err = os.MkdirAll(dataDir, aghos.DefaultPermDir)
+	err = aghos.MkdirAll(dataDir, aghos.DefaultPermDir)
 	fatalOnError(errors.Annotate(err, "creating DNS data dir at %s: %w", dataDir))
 
 	GLMode = opts.glinetMode

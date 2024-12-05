@@ -27,9 +27,10 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Security
 
+- The permission check and migration on Windows has been fixed to use the
+  Windows security model more accurately ([#7400]).
 - Go version has been updated to prevent the possibility of exploiting the Go
-  vulnerabilities fixed in [1.23.3][go-1.23.3].
-
+  vulnerabilities fixed in [1.23.4][go-1.23.4].
 - The release executables are now signed.
 
 ### Added
@@ -38,9 +39,17 @@ NOTE: Add new changes BELOW THIS COMMENT.
   permissions for the security-sensitive files and directories, which caused
   issues on Windows ([#7400]).
 
+### Fixed
+
+- Goroutine leak during the upstream DNS server test ([#7357]).
+- Goroutine leak during configuration update resulting in increased response
+  time ([#6818]).
+
+[#6818]: https://github.com/AdguardTeam/AdGuardHome/issues/6818
+[#7357]: https://github.com/AdguardTeam/AdGuardHome/issues/7357
 [#7400]: https://github.com/AdguardTeam/AdGuardHome/issues/7400
 
-[go-1.23.3]: https://groups.google.com/g/golang-announce/c/X5KodEJYuqI
+[go-1.23.4]: https://groups.google.com/g/golang-announce/c/3DyiMkYx4Fo
 
 <!--
 NOTE: Add new changes ABOVE THIS COMMENT.

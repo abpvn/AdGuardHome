@@ -167,13 +167,13 @@ func setupContext(opts options) (err error) {
 	if err != nil {
 		log.Error("parsing configuration file: %s", err)
 
-		os.Exit(1)
+		os.Exit(osutil.ExitCodeFailure)
 	}
 
 	if opts.checkConfig {
 		log.Info("configuration file is ok")
 
-		os.Exit(0)
+		os.Exit(osutil.ExitCodeSuccess)
 	}
 
 	return nil
@@ -523,18 +523,20 @@ func isUpdateEnabled(ctx context.Context, l *slog.Logger, opts *options, customU
 	}
 }
 
-// initWeb initializes the web module.
+// initWeb initializes the web module.  upd and baseLogger must not be nil.
 func initWeb(
 	ctx context.Context,
 	opts options,
 	clientBuildFS fs.FS,
 	upd *updater.Updater,
-	l *slog.Logger,
+	baseLogger *slog.Logger,
 	customURL bool,
 ) (web *webAPI, err error) {
+	logger := baseLogger.With(slogutil.KeyPrefix, "webapi")
+
 	var clientFS fs.FS
 	if opts.localFrontend {
-		log.Info("warning: using local frontend files")
+		logger.WarnContext(ctx, "using local frontend files")
 
 		clientFS = os.DirFS("build/static")
 	} else {
@@ -544,10 +546,12 @@ func initWeb(
 		}
 	}
 
-	disableUpdate := !isUpdateEnabled(ctx, l, &opts, customURL)
+	disableUpdate := !isUpdateEnabled(ctx, baseLogger, &opts, customURL)
 
 	webConf := &webConfig{
-		updater: upd,
+		updater:    upd,
+		logger:     logger,
+		baseLogger: baseLogger,
 
 		clientFS: clientFS,
 
@@ -563,7 +567,7 @@ func initWeb(
 		serveHTTP3:       config.DNS.ServeHTTP3,
 	}
 
-	web = newWebAPI(webConf, l)
+	web = newWebAPI(ctx, webConf)
 	if web == nil {
 		return nil, errors.Error("can not initialize web")
 	}
@@ -641,7 +645,7 @@ func run(opts options, clientBuildFS fs.FS, done chan struct{}) {
 		fatalOnError(err)
 
 		if config.HTTPConfig.Pprof.Enabled {
-			startPprof(config.HTTPConfig.Pprof.Port)
+			startPprof(slogLogger, config.HTTPConfig.Pprof.Port)
 		}
 	}
 
@@ -693,7 +697,7 @@ func run(opts options, clientBuildFS fs.FS, done chan struct{}) {
 		checkPermissions(ctx, slogLogger, Context.workDir, confPath, dataDir, statsDir, querylogDir)
 	}
 
-	Context.web.start()
+	Context.web.start(ctx)
 
 	// Wait for other goroutines to complete their job.
 	<-done
@@ -804,15 +808,15 @@ func (c *configuration) anonymizer() (ipmut *aghnet.IPMut) {
 	return aghnet.NewIPMut(anonFunc)
 }
 
-// startMods initializes and starts the DNS server after installation.  l must
-// not be nil.
-func startMods(l *slog.Logger) (err error) {
+// startMods initializes and starts the DNS server after installation.
+// baseLogger must not be nil.
+func startMods(baseLogger *slog.Logger) (err error) {
 	statsDir, querylogDir, err := checkStatsAndQuerylogDirs(&Context, config)
 	if err != nil {
 		return err
 	}
 
-	err = initDNS(l, statsDir, querylogDir)
+	err = initDNS(baseLogger, statsDir, querylogDir)
 	if err != nil {
 		return err
 	}
@@ -985,7 +989,7 @@ func loadCmdLineOpts() (opts options) {
 			exitWithError()
 		}
 
-		os.Exit(0)
+		os.Exit(osutil.ExitCodeSuccess)
 	}
 
 	return opts

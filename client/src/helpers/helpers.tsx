@@ -499,13 +499,10 @@ export const getParamsForClientsSearch = (data: any, param: any, additionalParam
             clients.add(e[additionalParam]);
         }
     });
-    const params = {};
-    const ids = Array.from(clients.values());
-    ids.forEach((id, i) => {
-        params[`ip${i}`] = id;
-    });
 
-    return params;
+    return {
+        clients: Array.from(clients).map(id => ({ id })),
+    };
 };
 
 /**
@@ -572,7 +569,7 @@ export const getObjDiff = (initialValues: any, values: any) =>
  * @param num {number} to format
  * @returns {string} Returns a string with a language-sensitive representation of this number
  */
-export const formatNumber = (num: any) => {
+export const formatNumber = (num: number): string => {
     const currentLanguage = i18n.languages[0] || DEFAULT_LANGUAGE;
     return num.toLocaleString(currentLanguage);
 };

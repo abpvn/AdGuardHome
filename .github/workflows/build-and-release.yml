@@ -9,7 +9,7 @@ on:
 
 env:
   GO_VERSION: '1.23.4'
-  NODE_VERSION: '18.20.4'
+  NODE_VERSION: '18.20.5'
   DIST_FOLDER: 'dist'
   REGISTRY: 'ghcr.io'
   SSH_KEY_FILE_DIR: .keys

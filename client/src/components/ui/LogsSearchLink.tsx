@@ -11,19 +11,21 @@ interface LogsSearchLinkProps {
     search?: string;
     response_status?: string;
     link?: string;
+    client?: string;
 }
 
 const LogsSearchLink = ({
     search = '',
     response_status = '',
     children,
+    client,
     link = MENU_URLS.logs,
 }: LogsSearchLinkProps) => {
     const { t } = useTranslation();
 
     const to =
         link === MENU_URLS.logs
-            ? `${MENU_URLS.logs}${getLogsUrlParams(search && `"${search}"`, response_status)}`
+            ? `${MENU_URLS.logs}${getLogsUrlParams(search && `"${search}"`, response_status, client)}`
             : link;
 
     return (

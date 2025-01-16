@@ -328,7 +328,7 @@ const ClientsTable = ({
                     return content;
                 }
 
-                return <LogsSearchLink search={row.original.name}>{content}</LogsSearchLink>;
+                return <LogsSearchLink client={row.original.name}>{content}</LogsSearchLink>;
             },
         },
         {

@@ -336,8 +336,8 @@ func clientToJSON(c *client.Persistent) (cj *clientJSON) {
 	safeSearchConf := &cloneVal
 	allowfiltersJSON := []filtering.FilterJSON{}
 	blockedfiltersJSON := []filtering.FilterJSON{}
-	Context.filters.LoadFilters(c.WhitelistFilters)
-	Context.filters.LoadFilters(c.Filters)
+	globalContext.filters.LoadFilters(c.WhitelistFilters)
+	globalContext.filters.LoadFilters(c.Filters)
 	for _, filter := range c.WhitelistFilters {
 		allowfiltersJSON = append(allowfiltersJSON, filtering.FilterToJSON(filter))
 	}
@@ -381,7 +381,7 @@ func appendClientFilter(addedFiltersIndexs []int, filtersYAML []filtering.Filter
 		for index, fy := range filtersYAML {
 			if slices.Contains(addedFiltersIndexs, index) {
 				fy := fy
-				ok, _ := Context.filters.Update(&fy)
+				ok, _ := globalContext.filters.Update(&fy)
 				if ok {
 					names := map[string]string{}
 					names[clientName] = fy.Name
@@ -452,8 +452,8 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 	}
 
 	clients.bulkUpdateClientFilters(&cj.Name)
-	if Context.filters != nil {
-		Context.filters.DeleteClientFtlEngine(cj.Name)
+	if globalContext.filters != nil {
+		globalContext.filters.DeleteClientFtlEngine(cj.Name)
 	}
 
 	if !clients.testing {
@@ -506,7 +506,7 @@ func (clients *clientsContainer) checkAddedFilters(
 		}
 		if !isExistInClientFilters {
 			// Process add filter
-			err := Context.filters.ValidateFilterURL(fj.URL)
+			err := globalContext.filters.ValidateFilterURL(fj.URL)
 			if err == nil {
 				hasFilterChange = true
 				addedFiltersIndexs = append(addedFiltersIndexs, len(validFilters))
@@ -519,7 +519,7 @@ func (clients *clientsContainer) checkAddedFilters(
 			return fy1.ID == fy2.ID && fy1.Enabled == fy2.Enabled
 		})
 	}
-	Context.filters.LoadFilters(validFilters)
+	globalContext.filters.LoadFilters(validFilters)
 	return validFilters, addedFiltersIndexs, hasFilterChange
 }
 
@@ -652,23 +652,23 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 // updateClientDNSFtl Update DNSFilter for client
 func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, hasFilterChange, hasWhiteListFilterChange, hasUserRulesChange bool) {
-	if Context.filters == nil {
+	if globalContext.filters == nil {
 		return
 	}
-	_, ok := Context.filters.ClientsFilteringEngine[prev.Name]
+	_, ok := globalContext.filters.ClientsFilteringEngine[prev.Name]
 	if ok {
 		if !prev.UseGlobalFilters && c.UseGlobalFilters {
 			// Client disable custom filter
-			Context.filters.DeleteClientFtlEngine(c.Name)
+			globalContext.filters.DeleteClientFtlEngine(c.Name)
 		} else if c.Name != prev.Name {
 			// Client change name
-			Context.filters.ClientsRulesStorage[c.Name] = Context.filters.ClientsRulesStorage[prev.Name]
-			Context.filters.ClientsFilteringEngine[c.Name] = Context.filters.ClientsFilteringEngine[prev.Name]
-			Context.filters.ClientsRulesStorageAllow[c.Name] = Context.filters.ClientsRulesStorageAllow[prev.Name]
-			Context.filters.ClientsFilteringEngineAllow[c.Name] = Context.filters.ClientsFilteringEngineAllow[prev.Name]
-			Context.filters.DeleteClientFtlEngine(prev.Name)
+			globalContext.filters.ClientsRulesStorage[c.Name] = globalContext.filters.ClientsRulesStorage[prev.Name]
+			globalContext.filters.ClientsFilteringEngine[c.Name] = globalContext.filters.ClientsFilteringEngine[prev.Name]
+			globalContext.filters.ClientsRulesStorageAllow[c.Name] = globalContext.filters.ClientsRulesStorageAllow[prev.Name]
+			globalContext.filters.ClientsFilteringEngineAllow[c.Name] = globalContext.filters.ClientsFilteringEngineAllow[prev.Name]
+			globalContext.filters.DeleteClientFtlEngine(prev.Name)
 		} else if hasFilterChange || hasWhiteListFilterChange || hasUserRulesChange {
-			Context.filters.InitForClient(c.Name, c.WhitelistFilters, c.Filters, c.UserRules)
+			globalContext.filters.InitForClient(c.Name, c.WhitelistFilters, c.Filters, c.UserRules)
 		}
 	}
 }

@@ -322,12 +322,11 @@ const ClientsTable = ({
             sortMethod: (a: any, b: any) => b - a,
             minWidth: 120,
             Cell: (row: any) => {
-                let content = CellWrap(row);
+                const content = CellWrap(row, formatNumber);
 
                 if (!row.value) {
                     return content;
                 }
-                content = typeof content === "number" ? formatNumber(content) : content;
                 return <LogsSearchLink client={row.original.name}>{content}</LogsSearchLink>;
             },
         },

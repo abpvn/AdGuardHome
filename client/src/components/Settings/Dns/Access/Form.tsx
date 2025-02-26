@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 
 import { Field, reduxForm, formValueSelector } from 'redux-form';
-import { Trans, withTranslation } from 'react-i18next';
+import { Trans, useTranslation, withTranslation } from 'react-i18next';
 import flow from 'lodash/flow';
 
 import { renderTextareaField } from '../../../../helpers/form';
@@ -28,6 +28,13 @@ const fields = [
         subtitle: 'access_blocked_desc',
         normalizeOnBlur: removeEmptyLines,
     },
+    {
+        id: 'blocked_countries',
+        title: 'blocked_countries_title',
+        subtitle: 'blocked_countries_desc',
+        placeholder: 'blocked_countries_placeholder',
+        normalizeOnBlur: removeEmptyLines,
+    },
 ];
 
 interface FormProps {
@@ -45,6 +52,7 @@ interface renderFieldProps {
     id?: string;
     title?: string;
     subtitle?: string;
+    placeholder?: string;
     disabled?: boolean;
     processingSet?: boolean;
     normalizeOnBlur?: (...args: unknown[]) => unknown;
@@ -52,11 +60,13 @@ interface renderFieldProps {
 
 let Form = (props: FormProps) => {
     const { allowedClients, handleSubmit, submitting, invalid, processingSet } = props;
+    const {t} = useTranslation();
 
     const renderField = ({
         id,
         title,
         subtitle,
+        placeholder,
         disabled = false,
         processingSet,
         normalizeOnBlur,
@@ -91,6 +101,7 @@ let Form = (props: FormProps) => {
                 component={renderTextareaField}
                 type="text"
                 className="form-control form-control--textarea font-monospace"
+                placeholder={t(placeholder)}
                 disabled={disabled || processingSet}
                 normalizeOnBlur={normalizeOnBlur}
             />

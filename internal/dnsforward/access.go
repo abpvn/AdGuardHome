@@ -24,8 +24,9 @@ type accessManager struct {
 	allowedIPs *container.MapSet[netip.Addr]
 	blockedIPs *container.MapSet[netip.Addr]
 
-	allowedClientIDs *container.MapSet[string]
-	blockedClientIDs *container.MapSet[string]
+	allowedClientIDs    *container.MapSet[string]
+	blockedClientIDs    *container.MapSet[string]
+	BlockedCountriesIDs *container.MapSet[string]
 
 	// TODO(s.chzhen):  Use [aghnet.IgnoreEngine].
 	blockedHostsEng *urlfilter.DNSEngine
@@ -64,13 +65,14 @@ func processAccessClients(
 }
 
 // newAccessCtx creates a new accessCtx.
-func newAccessCtx(allowed, blocked, blockedHosts []string) (a *accessManager, err error) {
+func newAccessCtx(allowed, blocked, blockedHosts, BlockedCountries []string) (a *accessManager, err error) {
 	a = &accessManager{
 		allowedIPs: container.NewMapSet[netip.Addr](),
 		blockedIPs: container.NewMapSet[netip.Addr](),
 
-		allowedClientIDs: container.NewMapSet[string](),
-		blockedClientIDs: container.NewMapSet[string](),
+		allowedClientIDs:    container.NewMapSet[string](),
+		blockedClientIDs:    container.NewMapSet[string](),
+		BlockedCountriesIDs: container.NewMapSet[string](BlockedCountries...),
 	}
 
 	err = processAccessClients(allowed, a.allowedIPs, &a.allowedNets, a.allowedClientIDs)
@@ -171,6 +173,7 @@ type accessListJSON struct {
 	AllowedClients    []string `json:"allowed_clients"`
 	DisallowedClients []string `json:"disallowed_clients"`
 	BlockedHosts      []string `json:"blocked_hosts"`
+	BlockedCountries  []string `json:"blocked_countries"`
 }
 
 func (s *Server) accessListJSON() (j accessListJSON) {
@@ -181,6 +184,7 @@ func (s *Server) accessListJSON() (j accessListJSON) {
 		AllowedClients:    slices.Clone(s.conf.AllowedClients),
 		DisallowedClients: slices.Clone(s.conf.DisallowedClients),
 		BlockedHosts:      slices.Clone(s.conf.BlockedHosts),
+		BlockedCountries:  slices.Clone(s.conf.BlockedCountries),
 	}
 }
 
@@ -206,6 +210,11 @@ func validateAccessSet(list *accessListJSON) (err error) {
 	_, err = validateStrUniq(list.BlockedHosts)
 	if err != nil {
 		return fmt.Errorf("validating blocked hosts: %w", err)
+	}
+
+	_, err = validateStrUniq(list.BlockedCountries)
+	if err != nil {
+		return fmt.Errorf("validating blocked countries: %w", err)
 	}
 
 	merged := allowed.Merge(disallowed)
@@ -245,7 +254,7 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var a *accessManager
-	a, err = newAccessCtx(list.AllowedClients, list.DisallowedClients, list.BlockedHosts)
+	a, err = newAccessCtx(list.AllowedClients, list.DisallowedClients, list.BlockedHosts, list.BlockedCountries)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "creating access ctx: %s", err)
 
@@ -253,10 +262,11 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer log.Debug(
-		"access: updated lists: %d, %d, %d",
+		"access: updated lists: %d, %d, %d, %d",
 		len(list.AllowedClients),
 		len(list.DisallowedClients),
 		len(list.BlockedHosts),
+		len(list.BlockedCountries),
 	)
 
 	defer s.conf.ConfigModified()
@@ -267,5 +277,6 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 	s.conf.AllowedClients = list.AllowedClients
 	s.conf.DisallowedClients = list.DisallowedClients
 	s.conf.BlockedHosts = list.BlockedHosts
+	s.conf.BlockedCountries = list.BlockedCountries
 	s.access = a
 }

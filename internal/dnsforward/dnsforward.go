@@ -304,6 +304,7 @@ func (s *Server) WriteDiskConfig(c *Config) {
 	c.AllowedClients = slices.Clone(sc.AllowedClients)
 	c.DisallowedClients = slices.Clone(sc.DisallowedClients)
 	c.BlockedHosts = slices.Clone(sc.BlockedHosts)
+	c.BlockedCountries = slices.Clone(sc.BlockedCountries)
 	c.TrustedProxies = slices.Clone(sc.TrustedProxies)
 	c.UpstreamDNS = slices.Clone(sc.UpstreamDNS)
 }
@@ -504,6 +505,7 @@ func (s *Server) Prepare(conf *ServerConfig) (err error) {
 		s.conf.AllowedClients,
 		s.conf.DisallowedClients,
 		s.conf.BlockedHosts,
+		s.conf.BlockedCountries,
 	)
 	if err != nil {
 		return fmt.Errorf("preparing access: %w", err)

@@ -749,5 +749,8 @@
     "dns_cache_size": "Kích thước bộ nhớ cache DNS, tính bằng byte",
     "use_global_filters": "Dùng bộ lọc toàn cầu",
     "clients_filters_name": "Bộ lọc thiết bị: {{name}}",
-    "all_client": "Tất cả thiết bị"
+    "all_client": "Tất cả thiết bị",
+    "blocked_countries_title": "Quốc gia bị chặn",
+    "blocked_countries_desc": "Chặn truy cập từ các quốc gia cụ thể. Sử dụng mã quốc gia hai ký tự, mỗi mã quốc gia một dòng.",
+    "blocked_countries_placeholder": "Ví dụ:\nUS\nGB\nDE"
 }

@@ -11,12 +11,14 @@ type FormData = {
     allowed_clients: string;
     disallowed_clients: string;
     blocked_hosts: string;
+    blocked_countries: string;
 };
 
 const fields: {
     id: keyof FormData;
     title: string;
     subtitle: ReactNode;
+    placeholder?: string;
     normalizeOnBlur: (value: string) => string;
 }[] = [
     {
@@ -49,6 +51,13 @@ const fields: {
         id: 'blocked_hosts',
         title: i18next.t('access_blocked_title'),
         subtitle: i18next.t('access_blocked_desc'),
+        normalizeOnBlur: removeEmptyLines,
+    },
+    {
+        id: 'blocked_countries',
+        title: i18next.t('blocked_countries_title'),
+        subtitle: i18next.t('blocked_countries_desc'),
+        placeholder: i18next.t('blocked_countries_placeholder'),
         normalizeOnBlur: removeEmptyLines,
     },
 ];
@@ -86,11 +95,13 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
         id,
         title,
         subtitle,
+        placeholder,
         normalizeOnBlur,
     }: {
         id: keyof FormData;
         title: string;
         subtitle: ReactNode;
+        placeholder?: string;
         normalizeOnBlur: (value: string) => string;
     }) => {
         const disabled = allowedClients && id === 'disallowed_clients';
@@ -113,6 +124,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
                             id={id}
                             data-testid={id}
                             disabled={disabled || processingSet}
+                            placeholder={placeholder}
                             onBlur={(e) => {
                                 field.onChange(normalizeOnBlur(e.target.value));
                             }}

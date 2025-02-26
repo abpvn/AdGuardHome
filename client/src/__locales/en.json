@@ -752,5 +752,8 @@
     "dns_cache_size": "DNS cache size, in bytes",
     "use_global_filters": "Use global filters",
     "clients_filters_name": "Clients filters: {{name}}",
-    "all_client": "All client"
+    "all_client": "All client",
+    "blocked_countries_title": "Blocked countries",
+    "blocked_countries_desc": "Block all DNS queries from the selected countries. Use two-character country codes, each country on a new line.",
+    "blocked_countries_placeholder": "Example:\nUS\nGB\nDE"
 }

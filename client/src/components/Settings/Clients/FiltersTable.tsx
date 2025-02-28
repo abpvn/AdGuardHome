@@ -1,17 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { connect } from 'react-redux';
-import {
-    formValueSelector, change,
-    FormAction,
-} from 'redux-form';
 import { withTranslation } from 'react-i18next';
 import { toggleFilteringModal, refreshFilters } from '../../../actions/filtering';
-import {
-    normalizeFilters,
-    getCurrentFilter,
-    deNormalizeFilters,
-    Filter,
-} from '../../../helpers/helpers';
+import { normalizeFilters, getCurrentFilter, deNormalizeFilters, Filter } from '../../../helpers/helpers';
 import Card from '../../ui/Card';
 import Table from '../../Filters/Table';
 import Modal from '../../Filters/Modal';
@@ -28,17 +19,10 @@ interface FiltersTableProps {
     t?: (key: string) => string;
     title: string;
     toggleFilteringModal?: (options?: any) => void;
-    filtering?: FilteringData,
-    change?: (
-        form: string,
-        field: string,
-        value: any,
-        touch?: boolean,
-        persistentSubmitErrors?: boolean,
-    ) => FormAction,
-    refreshFilters?: (params?: any) => void,
-    client?: string,
-    clientDetail?: Client,
+    filtering?: FilteringData;
+    refreshFilters?: (params?: any) => void;
+    client?: string;
+    clientDetail?: Client;
 }
 
 let FiltersTable = (props: FiltersTableProps) => {
@@ -60,7 +44,6 @@ let FiltersTable = (props: FiltersTableProps) => {
             modalFilterUrl,
         },
         clientDetail,
-        change,
     } = props;
 
     const filtersKey = useMemo(() => (whitelist ? 'whitelist_filters' : 'filters'), [whitelist]);
@@ -69,19 +52,20 @@ let FiltersTable = (props: FiltersTableProps) => {
 
     useEffect(() => {
         if (clientDetail && clientDetail.name) {
-            change(
-                FORM_NAME.CLIENT,
-                filtersKey,
-                whitelist ? clientDetail.whitelist_filters : clientDetail.filters,
-            );
+            // change(
+            //     FORM_NAME.CLIENT,
+            //     filtersKey,
+            //     whitelist ? clientDetail.whitelist_filters : clientDetail.filters,
+            // );
         }
     }, [clientDetail]);
 
-    const loading = processingConfigFilter
-            || processingFilters
-            || processingAddFilter
-            || processingRemoveFilter
-            || processingRefreshFilters;
+    const loading =
+        processingConfigFilter ||
+        processingFilters ||
+        processingAddFilter ||
+        processingRemoveFilter ||
+        processingRefreshFilters;
 
     const [filtersChanged, setFiltersChanged] = useState({
         whitelist_filters: false,
@@ -93,7 +77,7 @@ let FiltersTable = (props: FiltersTableProps) => {
     }, [client, filters, filtersChanged, filtersKey]);
 
     const onFiltersChange = () => {
-        change(FORM_NAME.CLIENT, filtersKey, deNormalizeFilters(filters));
+        // change(FORM_NAME.CLIENT, filtersKey, deNormalizeFilters(filters));
         const newFiltersChanged = { ...filtersChanged };
         newFiltersChanged[filtersKey] = true;
         setFiltersChanged(newFiltersChanged);
@@ -144,16 +128,15 @@ let FiltersTable = (props: FiltersTableProps) => {
                     return acc;
                 }, {});
 
-                Object.keys(changedValues)
-                    .forEach((fieldName) => {
-                        // filterId is actually in the field name
-                        const { source, name } = filtersCatalog.filters[fieldName];
-                        filters.push({
-                            enabled: true,
-                            name,
-                            url: source,
-                        });
+                Object.keys(changedValues).forEach((fieldName) => {
+                    // filterId is actually in the field name
+                    const { source, name } = filtersCatalog.filters[fieldName];
+                    filters.push({
+                        enabled: true,
+                        name,
+                        url: source,
                     });
+                });
                 onFiltersChange();
                 break;
             }
@@ -165,66 +148,67 @@ let FiltersTable = (props: FiltersTableProps) => {
         props.refreshFilters({ whitelist: false, client });
     };
     const currentFilterData = getCurrentFilter(modalFilterUrl, filters);
-    return (<>
-        <div className="form__label--bot form__label--bold">
-            {title}
-        </div>
-        <div className="row">
-            <div className="col-md-12">
-                <Card subtitle={t('filters_and_hosts_hint')}>
-                    <Table
-                        filters={filters}
-                        loading={loading}
-                        whitelist={whitelist}
-                        processingConfigFilter={processingConfigFilter}
-                        toggleFilteringModal={toggleFilteringModal}
-                        handleDelete={deleteFilter}
-                        toggleFilter={toggleFilter}
-                    />
-                    <Actions
-                        normalButton
-                        hideRefresh={hideRefreshButton}
-                        whitelist={whitelist}
-                        handleAdd={openSelectTypeModal}
-                        handleRefresh={handleRefreshFilter}
-                        processingRefreshFilters={processingConfigFilter}
-                    />
-                </Card>
+    return (
+        <>
+            <div className="form__label--bot form__label--bold">{title}</div>
+            <div className="row">
+                <div className="col-md-12">
+                    <Card subtitle={t('filters_and_hosts_hint')}>
+                        <Table
+                            filters={filters}
+                            loading={loading}
+                            whitelist={whitelist}
+                            processingConfigFilter={processingConfigFilter}
+                            toggleFilteringModal={toggleFilteringModal}
+                            handleDelete={deleteFilter}
+                            toggleFilter={toggleFilter}
+                        />
+                        <Actions
+                            normalButton
+                            hideRefresh={hideRefreshButton}
+                            whitelist={whitelist}
+                            handleAdd={openSelectTypeModal}
+                            handleRefresh={handleRefreshFilter}
+                            processingRefreshFilters={processingConfigFilter}
+                        />
+                    </Card>
+                </div>
             </div>
-        </div>
-        <Modal
-            filters={filters}
-            filtersCatalog={filtersCatalog}
-            isOpen={isModalOpen}
-            toggleFilteringModal={toggleFilteringModal}
-            isFilterAdded={isFilterAdded}
-            processingAddFilter={processingAddFilter}
-            processingConfigFilter={processingConfigFilter}
-            handleSubmit={handleSubmitFilter}
-            modalType={modalType}
-            currentFilterData={currentFilterData}
-            whitelist={whitelist}
-        />
-    </>
+            <Modal
+                filters={filters}
+                filtersCatalog={filtersCatalog}
+                isOpen={isModalOpen}
+                toggleFilteringModal={toggleFilteringModal}
+                isFilterAdded={isFilterAdded}
+                processingAddFilter={processingAddFilter}
+                processingConfigFilter={processingConfigFilter}
+                handleSubmit={handleSubmitFilter}
+                modalType={modalType}
+                currentFilterData={currentFilterData}
+                whitelist={whitelist}
+            />
+        </>
     );
 };
 
-
-const selector = formValueSelector(FORM_NAME.CLIENT);
+// const selector = formValueSelector(FORM_NAME.CLIENT);
 const mapStateToProps = (state) => {
-    const filters = selector(state, 'filters');
-    const whitelistFilters = selector(state, 'whitelist_filters');
-    const { filtering, client: { clientDetail } } = state;
+    // const filters = selector(state, 'filters');
+    // const whitelistFilters = selector(state, 'whitelist_filters');
+    const {
+        filtering,
+        client: { clientDetail },
+    } = state;
     return {
-        filters,
-        whitelistFilters,
+        // filters,
+        // whitelistFilters,
         filtering,
         clientDetail,
     };
 };
 const mapDispatchToProps = {
     toggleFilteringModal,
-    change,
+    // change,
     refreshFilters,
 };
 

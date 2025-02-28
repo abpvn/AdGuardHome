@@ -1,7 +1,6 @@
 import { combineReducers } from 'redux';
 import { loadingBarReducer } from 'react-redux-loading-bar';
 
-import { reducer as formReducer } from 'redux-form';
 import toasts from './toasts';
 import encryption from './encryption';
 import clients from './clients';
@@ -33,5 +32,4 @@ export default combineReducers({
     stats,
     dnsConfig,
     loadingBar: loadingBarReducer,
-    form: formReducer,
 });

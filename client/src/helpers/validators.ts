@@ -25,7 +25,6 @@ import { ip4ToInt, isValidAbsolutePath } from './form';
 import { isIpInCidr, parseSubnetMask } from './helpers';
 
 // Validation functions
-// https://redux-form.com/8.3.0/examples/fieldlevelvalidation/
 // If the value is valid, the validation function should return undefined.
 /**
  * @param value {string|number}
@@ -36,7 +35,7 @@ export const validateRequiredValue = (value: any) => {
     if (formattedValue || formattedValue === 0 || (formattedValue && formattedValue.length !== 0)) {
         return undefined;
     }
-    return 'form_error_required';
+    return i18next.t('form_error_required');
 };
 
 /**
@@ -52,7 +51,7 @@ export const validateIpv4RangeEnd = (_: any, allValues: any) => {
     const { range_end, range_start } = allValues.v4;
 
     if (ip4ToInt(range_end) <= ip4ToInt(range_start)) {
-        return 'greater_range_start_error';
+        return i18next.t('greater_range_start_error');
     }
 
     return undefined;
@@ -64,7 +63,7 @@ export const validateIpv4RangeEnd = (_: any, allValues: any) => {
  */
 export const validateIpv4 = (value: any) => {
     if (value && !R_IPV4.test(value)) {
-        return 'form_error_ip4_format';
+        return i18next.t('form_error_ip4_format');
     }
     return undefined;
 };
@@ -109,16 +108,16 @@ export const validateNotInRange = (value: any, allValues: any) => {
  */
 export const validateGatewaySubnetMask = (_: any, allValues: any) => {
     if (!allValues || !allValues.v4 || !allValues.v4.subnet_mask || !allValues.v4.gateway_ip) {
-        return 'gateway_or_subnet_invalid';
+        return i18next.t('gateway_or_subnet_invalid');
     }
 
     const { subnet_mask, gateway_ip } = allValues.v4;
 
     if (validateIpv4(gateway_ip)) {
-        return 'gateway_or_subnet_invalid';
+        return i18next.t('gateway_or_subnet_invalid');
     }
 
-    return parseSubnetMask(subnet_mask) ? undefined : 'gateway_or_subnet_invalid';
+    return parseSubnetMask(subnet_mask) ? undefined : i18next.t('gateway_or_subnet_invalid');
 };
 
 /**
@@ -127,7 +126,7 @@ export const validateGatewaySubnetMask = (_: any, allValues: any) => {
  * @param allValues
  */
 export const validateIpForGatewaySubnetMask = (value: any, allValues: any) => {
-    if (!allValues || !allValues.v4 || !value) {
+    if (!allValues || !allValues.v4 || !value || !allValues.gateway_ip || !allValues.subnet_mask) {
         return undefined;
     }
 
@@ -140,7 +139,7 @@ export const validateIpForGatewaySubnetMask = (value: any, allValues: any) => {
     const subnetPrefix = parseSubnetMask(subnet_mask);
 
     if (!isIpInCidr(value, `${gateway_ip}/${subnetPrefix}`)) {
-        return 'subnet_error';
+        return i18next.t('subnet_error');
     }
 
     return undefined;
@@ -150,7 +149,7 @@ export const validateIpForGatewaySubnetMask = (value: any, allValues: any) => {
  * @param value {string}
  * @returns {undefined|string}
  */
-export const validateClientId = (value: any) => {
+export const validateClientId = (value: string) => {
     if (!value) {
         return undefined;
     }
@@ -166,7 +165,7 @@ export const validateClientId = (value: any) => {
             R_CLIENT_ID.test(formattedValue)
         )
     ) {
-        return 'form_error_client_id_format';
+        return i18next.t('form_error_client_id_format');
     }
     return undefined;
 };
@@ -181,7 +180,7 @@ export const validateConfigClientId = (value: any) => {
     }
     const formattedValue = value.trim();
     if (formattedValue && !R_CLIENT_ID.test(formattedValue)) {
-        return 'form_error_client_id_format';
+        return i18next.t('form_error_client_id_format');
     }
     return undefined;
 };
@@ -204,7 +203,7 @@ export const validateServerName = (value: any) => {
     } else {
         const formattedValue = value ? value.trim() : value;
         if (formattedValue && !R_DOMAIN.test(formattedValue)) {
-            return 'form_error_server_name';
+            return i18next.t('form_error_server_name');
         }
     }
     return undefined;
@@ -216,7 +215,7 @@ export const validateServerName = (value: any) => {
  */
 export const validateIpv6 = (value: any) => {
     if (value && !R_IPV6.test(value)) {
-        return 'form_error_ip6_format';
+        return i18next.t('form_error_ip6_format');
     }
     return undefined;
 };
@@ -227,7 +226,7 @@ export const validateIpv6 = (value: any) => {
  */
 export const validateIp = (value: any) => {
     if (value && !R_IPV4.test(value) && !R_IPV6.test(value)) {
-        return 'form_error_ip_format';
+        return i18next.t('form_error_ip_format');
     }
     return undefined;
 };
@@ -238,7 +237,7 @@ export const validateIp = (value: any) => {
  */
 export const validateMac = (value: any) => {
     if (value && !R_MAC.test(value)) {
-        return 'form_error_mac_format';
+        return i18next.t('form_error_mac_format');
     }
     return undefined;
 };
@@ -249,7 +248,7 @@ export const validateMac = (value: any) => {
  */
 export const validatePort = (value: any) => {
     if ((value || value === 0) && (value < STANDARD_WEB_PORT || value > MAX_PORT)) {
-        return 'form_error_port_range';
+        return i18next.t('form_error_port_range');
     }
     return undefined;
 };
@@ -260,7 +259,7 @@ export const validatePort = (value: any) => {
  */
 export const validateInstallPort = (value: any) => {
     if (value < 1 || value > MAX_PORT) {
-        return 'form_error_port';
+        return i18next.t('form_error_port');
     }
     return undefined;
 };
@@ -274,7 +273,7 @@ export const validatePortTLS = (value: any) => {
         return undefined;
     }
     if (value && (value < STANDARD_WEB_PORT || value > MAX_PORT)) {
-        return 'form_error_port_range';
+        return i18next.t('form_error_port_range');
     }
     return undefined;
 };
@@ -291,7 +290,7 @@ export const validatePortQuic = validatePortTLS;
  */
 export const validateIsSafePort = (value: any) => {
     if (UNSAFE_PORTS.includes(value)) {
-        return 'form_error_port_unsafe';
+        return i18next.t('form_error_port_unsafe');
     }
     return undefined;
 };
@@ -302,7 +301,7 @@ export const validateIsSafePort = (value: any) => {
  */
 export const validateDomain = (value: any) => {
     if (value && !R_HOST.test(value)) {
-        return 'form_error_domain_format';
+        return i18next.t('form_error_domain_format');
     }
     return undefined;
 };
@@ -313,7 +312,7 @@ export const validateDomain = (value: any) => {
  */
 export const validateAnswer = (value: any) => {
     if (value && !R_IPV4.test(value) && !R_IPV6.test(value) && !R_HOST.test(value)) {
-        return 'form_error_answer_format';
+        return i18next.t('form_error_answer_format');
     }
     return undefined;
 };
@@ -324,7 +323,7 @@ export const validateAnswer = (value: any) => {
  */
 export const validatePath = (value: any) => {
     if (value && !isValidAbsolutePath(value) && !R_URL_REQUIRES_PROTOCOL.test(value)) {
-        return 'form_error_url_or_path_format';
+        return i18next.t('form_error_url_or_path_format');
     }
     return undefined;
 };
@@ -412,7 +411,7 @@ export const validatePlainDns = (value: any, allValues: any) => {
     const { enabled } = allValues;
 
     if (!enabled && !value) {
-        return 'encryption_plain_dns_error';
+        return i18next.t('encryption_plain_dns_error');
     }
 
     return undefined;

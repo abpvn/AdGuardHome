@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { connect } from 'react-redux';
 import { withTranslation } from 'react-i18next';
+import { useFormContext } from 'react-hook-form';
 import { toggleFilteringModal, refreshFilters } from '../../../actions/filtering';
 import { normalizeFilters, getCurrentFilter, deNormalizeFilters, Filter } from '../../../helpers/helpers';
 import Card from '../../ui/Card';
@@ -9,8 +10,9 @@ import Modal from '../../Filters/Modal';
 import Actions from '../../Filters/Actions';
 import filtersCatalog from '../../../helpers/filters/filters';
 
-import { FORM_NAME, MODAL_TYPE } from '../../../helpers/constants';
+import { MODAL_TYPE } from '../../../helpers/constants';
 import { Client, FilteringData } from '../../../initialState';
+import { ClientForm } from './Form/types';
 
 interface FiltersTableProps {
     whitelist?: boolean;
@@ -46,17 +48,15 @@ let FiltersTable = (props: FiltersTableProps) => {
         clientDetail,
     } = props;
 
+    const { watch, setValue } = useFormContext<ClientForm>();
+
     const filtersKey = useMemo(() => (whitelist ? 'whitelist_filters' : 'filters'), [whitelist]);
 
-    const filters = normalizeFilters(whitelist ? props.whitelistFilters : props.filters);
+    const filters = normalizeFilters(whitelist ? watch('whitelist_filters') : watch('filters'));
 
     useEffect(() => {
         if (clientDetail && clientDetail.name) {
-            // change(
-            //     FORM_NAME.CLIENT,
-            //     filtersKey,
-            //     whitelist ? clientDetail.whitelist_filters : clientDetail.filters,
-            // );
+            setValue(filtersKey, deNormalizeFilters(filters));
         }
     }, [clientDetail]);
 
@@ -77,7 +77,7 @@ let FiltersTable = (props: FiltersTableProps) => {
     }, [client, filters, filtersChanged, filtersKey]);
 
     const onFiltersChange = () => {
-        // change(FORM_NAME.CLIENT, filtersKey, deNormalizeFilters(filters));
+        setValue(filtersKey, deNormalizeFilters(filters));
         const newFiltersChanged = { ...filtersChanged };
         newFiltersChanged[filtersKey] = true;
         setFiltersChanged(newFiltersChanged);

@@ -20,6 +20,7 @@ export type ClientForm = {
     parental_enabled: boolean;
     ignore_querylog: boolean;
     ignore_statistics: boolean;
+    use_global_filters: boolean;
 };
 
 export type SubmitClientForm = Omit<ClientForm, 'ids' | 'tags'> & {

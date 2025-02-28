@@ -30,6 +30,18 @@ const settingsCheckboxes: {
     },
 ];
 
+type FiltersSettings = 'use_global_filters';
+
+const filtersCheckboxes: {
+    name: FiltersSettings;
+    placeholder: string;
+}[] = [
+    {
+        name: 'use_global_filters',
+        placeholder: i18next.t('use_global_filters'),
+    },
+];
+
 type LogsStatsSettings = 'ignore_querylog' | 'ignore_statistics';
 
 const logAndStatsCheckboxes: { name: LogsStatsSettings; placeholder: string }[] = [
@@ -55,6 +67,18 @@ export const MainSettings = ({ safeSearchServices }: Props) => {
 
     return (
         <div title={t('main_settings')}>
+            <div className="form__label--bot form__label--bold">{t('filters')}</div>
+            {filtersCheckboxes.map((setting) => (
+                <div className="form__group" key={setting.name}>
+                    <Controller
+                        name={setting.name}
+                        control={control}
+                        render={({ field }) => (
+                            <Checkbox {...field} data-testid={`clients_${setting.name}`} title={setting.placeholder} />
+                        )}
+                    />
+                </div>
+            ))}
             <div className="form__label--bot form__label--bold">{t('protection_section_label')}</div>
             {settingsCheckboxes.map((setting) => (
                 <div className="form__group" key={setting.name}>

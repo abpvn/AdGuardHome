@@ -33,6 +33,7 @@ const defaultFormValues: ClientForm = {
     blocked_services_schedule: {
         time_zone: LOCAL_TIMEZONE_VALUE,
     },
+    use_global_filters: true,
 };
 
 type Props = {

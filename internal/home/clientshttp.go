@@ -497,6 +497,7 @@ func (clients *clientsContainer) checkAddedFilters(
 			if fj.URL == cfj.URL {
 				clientFtl := *cfj.FilterYAML
 				clientFtl.Name = fj.Name
+				clientFtl.Enabled = fj.Enabled
 				validFilters = append(validFilters, clientFtl)
 				cfj.Names[client.Name] = fj.Name
 				fj.ID = cfj.ID

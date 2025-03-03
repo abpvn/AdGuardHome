@@ -191,24 +191,18 @@ let FiltersTable = (props: FiltersTableProps) => {
     );
 };
 
-// const selector = formValueSelector(FORM_NAME.CLIENT);
 const mapStateToProps = (state) => {
-    // const filters = selector(state, 'filters');
-    // const whitelistFilters = selector(state, 'whitelist_filters');
     const {
         filtering,
         client: { clientDetail },
     } = state;
     return {
-        // filters,
-        // whitelistFilters,
         filtering,
         clientDetail,
     };
 };
 const mapDispatchToProps = {
     toggleFilteringModal,
-    // change,
     refreshFilters,
 };
 

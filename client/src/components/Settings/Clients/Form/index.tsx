@@ -18,6 +18,7 @@ import {
     ScheduleServices,
     UpstreamDns,
     DNSAllowLists,
+    CustomRules,
 } from './components';
 
 import '../Service.css';
@@ -44,7 +45,7 @@ const defaultFormValues: ClientForm = {
     use_global_filters: true,
     filters: [],
     whitelist_filters: [],
-    custom_rules: [],
+    user_rules: '',
 };
 
 type Props = {
@@ -86,6 +87,7 @@ export const Form = ({
     } = methods;
 
     const services = useSelector((store: RootState) => store?.services);
+    const { isModalOpen: isDisableSaveClient } = useSelector((store: RootState) => store?.filtering);
     const { safe_search } = initialValues;
     const safeSearchServices = { ...safe_search };
     delete safeSearchServices.enabled;
@@ -117,41 +119,17 @@ export const Form = ({
             title: 'dns_allowlists',
             component: <DNSAllowLists client={initialValues.name} />,
         },
-        // custom_filtering_rules: {
-        //     title: 'custom_filtering_rules',
-        //     component: <div title={props.t('custom_filtering_rules')}>
-        //         {useGLobalFilters ? <Trans>use_global_filters</Trans> : <>
-        //             <div className="form__desc mb-3">
-        //                 <Trans components={[<a href="#custom_rules" key="0">link</a>]}>
-        //                     custom_rules_client_desc
-        //                 </Trans>
-        //             </div>
-        //             <div className='card-subtitle'><Trans>custom_filter_rules_hint</Trans></div>
-        //             <div className="text-edit-container mt-4 mb-4">
-        //                 <textarea
-        //                     className="form-control font-monospace text-input"
-        //                     value={userRules}
-        //                     onScroll={onScroll}
-        //                     onChange={handleUserRuleChange}
-        //                 />
-        //                 {getTextareaCommentsHighlight(
-        //                     ref,
-        //                     userRules,
-        //                     [COMMENT_LINE_DEFAULT_TOKEN, '!'],
-        //                 )}
-        //             </div>
-        //             <hr />
-        //             <UserRuleExample />
-        //         </>}
-        //     </div>,
-        // },
+        custom_filtering_rules: {
+            title: 'custom_filtering_rules',
+            component: <CustomRules />,
+        },
     };
 
     const activeTab = tabs[activeTabLabel].component;
 
     return (
         <FormProvider {...methods}>
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form onSubmit={isDisableSaveClient ? undefined : handleSubmit(onSubmit)}>
                 <div className="modal-body">
                     <div className="form__group mb-0">
                         <div className="form__group">

@@ -5,3 +5,4 @@ export { MainSettings } from './MainSettings';
 export { UpstreamDns } from './UpstreamDns';
 export { DNSBlockLists } from './DNSBlockLists';
 export { DNSAllowLists } from './DNSAllowLists';
+export { CustomRules } from './CustomRules';

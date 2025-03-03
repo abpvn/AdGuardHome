@@ -105,10 +105,22 @@ const ClientsTable = ({
                 config.upstreams = [];
             }
 
+            if (values.user_rules) {
+                config.user_rules = splitByNewLine(values.user_rules);
+            } else {
+                config.user_rules = [];
+            }
+
             if (values.tags) {
                 config.tags = values.tags.map((tag: any) => tag.value);
             } else {
                 config.tags = [];
+            }
+
+            if (values.ids) {
+                config.ids = values.ids.map((id) => id.name);
+            } else {
+                config.ids = [];
             }
 
             if (typeof values.upstreams_cache_size === 'string') {
@@ -137,10 +149,11 @@ const ClientsTable = ({
         const client = clients.find((item: any) => name === item.name);
 
         if (client) {
-            const { upstreams, tags, ...values } = client;
+            const { upstreams, tags, user_rules, ...values } = client;
             return {
                 upstreams: (upstreams && upstreams.join('\n')) || '',
                 tags: (tags && getOptionsWithLabels(tags)) || [],
+                user_rules: (user_rules && user_rules.join('\n')) || '',
                 ...values,
             };
         }
@@ -156,7 +169,7 @@ const ClientsTable = ({
             },
             filters: [],
             whitelist_filters: [],
-            user_rules: [],
+            user_rules: '',
             safe_search: { ...(globalSettings?.safesearch || {}) },
         };
     };

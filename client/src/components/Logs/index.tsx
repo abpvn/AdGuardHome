@@ -7,7 +7,8 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import queryString from 'query-string';
 import classNames from 'classnames';
-import { BLOCK_ACTIONS, MEDIUM_SCREEN_SIZE } from '../../helpers/constants';
+import { FormProvider, useForm } from 'react-hook-form';
+import { BLOCK_ACTIONS, DEFAULT_LOGS_FILTER, MEDIUM_SCREEN_SIZE } from '../../helpers/constants';
 
 import Loading from '../ui/Loading';
 
@@ -29,7 +30,13 @@ import { BUTTON_PREFIX } from './Cells/helpers';
 import AnonymizerNotification from './AnonymizerNotification';
 import { RootState } from '../../initialState';
 
-const processContent = (data: any, buttonType: string) =>
+export type SearchFormValues = {
+    search: string;
+    response_status: string;
+    client: string;
+};
+
+const processContent = (data: any, _buttonType: string) =>
     Object.entries(data).map(([key, value]) => {
         if (!value) {
             return null;
@@ -78,7 +85,6 @@ const Logs = () => {
     const {
         enabled,
         processingGetConfig,
-        // processingAdditionalLogs,
         processingGetLogs,
         anonymize_client_ip: anonymizeClientIp,
     } = useSelector((state: RootState) => state.queryLogs, shallowEqual);
@@ -90,6 +96,18 @@ const Logs = () => {
     const search = search_url_param || filter?.search || '';
     const response_status = response_status_url_param || filter?.response_status || '';
     const client = client_url_param || filter?.client || '';
+
+    const formMethods = useForm<SearchFormValues>({
+        mode: 'onBlur',
+        defaultValues: {
+            search: search || DEFAULT_LOGS_FILTER.search,
+            response_status: response_status || DEFAULT_LOGS_FILTER.response_status,
+            client: client || DEFAULT_LOGS_FILTER.client,
+        },
+    });
+
+    const { watch } = formMethods;
+    const currentQuery = watch('search');
 
     const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth <= MEDIUM_SCREEN_SIZE);
     const [detailedDataCurrent, setDetailedDataCurrent] = useState({});
@@ -178,16 +196,12 @@ const Logs = () => {
 
     const renderPage = () => (
         <>
-            <Filters
-                filter={{
-                    response_status,
-                    search,
-                    client,
-                }}
-                setIsLoading={setIsLoading}
-                processingGetLogs={processingGetLogs}
-                // processingAdditionalLogs={processingAdditionalLogs}
-            />
+            <FormProvider {...formMethods}>
+                <Filters
+                    setIsLoading={setIsLoading}
+                    processingGetLogs={processingGetLogs}
+                />
+            </FormProvider>
 
             <InfiniteTable
                 isLoading={isLoading}
@@ -196,6 +210,7 @@ const Logs = () => {
                 setDetailedDataCurrent={setDetailedDataCurrent}
                 setButtonType={setButtonType}
                 setModalOpened={setModalOpened}
+                currentQuery={currentQuery}
             />
 
             <Modal

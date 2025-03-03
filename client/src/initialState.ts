@@ -9,6 +9,14 @@ import {
 import { DEFAULT_BLOCKING_IPV4, DEFAULT_BLOCKING_IPV6 } from './reducers/dnsConfig';
 import { ClientFilter, Filter } from './helpers/helpers';
 
+export type InstallInterface = {
+    flags: string;
+    hardware_address: string;
+    ip_addresses: string[];
+    mtu: number;
+    name: string;
+};
+
 export type InstallData = {
     step: number;
     processingDefault: boolean;
@@ -31,13 +39,7 @@ export type InstallData = {
         ip: string;
         error: string;
     };
-    interfaces: {
-        flags: string;
-        hardware_address: string;
-        ip_addresses: string[];
-        mtu: number;
-        name: string;
-    }[];
+    interfaces: InstallInterface[];
     dnsVersion: string;
 };
 
@@ -76,17 +78,17 @@ export type EncryptionData = {
 };
 
 export type Client = {
-    blocked_services: string[],
+    blocked_services: string[];
     blocked_services_schedule: {
-        sun?: { start: number, end: number },
-        mon?: { start: number, end: number },
-        tue?: { start: number, end: number },
-        wed?: { start: number, end: number },
-        thu?: { start: number, end: number },
-        fri?: { start: number, end: number },
-        sat?: { start: number, end: number },
+        sun?: { start: number; end: number };
+        mon?: { start: number; end: number };
+        tue?: { start: number; end: number };
+        wed?: { start: number; end: number };
+        thu?: { start: number; end: number };
+        fri?: { start: number; end: number };
+        sat?: { start: number; end: number };
         time_zone: string;
-    },
+    };
     filtering_enabled: boolean;
     ids: string[];
     ignore_querylog: boolean;
@@ -102,18 +104,14 @@ export type Client = {
     upstreams_cache_size: number;
     use_global_blocked_services: boolean;
     use_global_settings: boolean;
-    use_global_filters: boolean;
-    whitelist_filters: Filter[];
-    filters: Filter[];
-    user_rules: string[];
-}
+};
 
 export type AutoClient = {
     ip: string;
     name: string;
     source: string;
     whois_info: any;
-}
+};
 
 export type DashboardData = {
     processing: boolean;
@@ -153,13 +151,13 @@ export type SettingsData = {
             order: number;
             subtitle: string;
             title: string;
-        },
+        };
         safebrowsing: {
             enabled: boolean;
             order: number;
             subtitle: string;
             title: string;
-        },
+        };
         safesearch: Record<string, boolean>;
     };
 };
@@ -184,7 +182,7 @@ export type RewritesData = {
 export type NormalizedTopClients = {
     auto: Record<string, number>;
     configured: Record<string, number>;
-}
+};
 
 export type StatsData = {
     processingGetConfig: boolean;
@@ -258,13 +256,13 @@ export type DhcpData = {
     interface_name: string;
     check?: {
         v4?: {
-            other_server?: { found: string; error?: string },
-            static_ip?: {static: string, ip: string},
-        },
+            other_server?: { found: string; error?: string };
+            static_ip?: { static: string; ip: string };
+        };
         v6?: {
-            other_server?: { found: string; error?: string },
-            static_ip?: {static: string, ip: string},
-        },
+            other_server?: { found: string; error?: string };
+            static_ip?: { static: string; ip: string };
+        };
     };
     v4: {
         gateway_ip: string;
@@ -323,7 +321,7 @@ export type DnsConfigData = {
     ratelimit_subnet_len_ipv4?: number;
     ratelimit_subnet_len_ipv6?: number;
     edns_cs_use_custom?: boolean;
-    edns_cs_custom_ip?: boolean;
+    edns_cs_custom_ip?: string;
     cache_size?: number;
     cache_ttl_max?: number;
     cache_ttl_min?: number;
@@ -394,7 +392,6 @@ export type RootState = {
     install?: InstallData;
     toasts: { notices: any[] };
     loadingBar: any;
-    form: any;
 };
 
 export type InstallState = {
@@ -621,5 +618,4 @@ export const initialState: RootState = {
     },
     toasts: { notices: [] },
     loadingBar: {},
-    form: {},
 };

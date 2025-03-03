@@ -30,6 +30,19 @@ import {
 import { LOCAL_STORAGE_KEYS, LocalStorageHelper } from './localStorageHelper';
 import { DhcpInterface, InstallInterface } from '../initialState';
 
+export type Filter = {
+    enabled: boolean;
+    id: number;
+    lastUpdated: string;
+    name: string;
+    rulesCount: number;
+    url: string;
+};
+
+export type ClientFilter = Filter & {
+    names: string[];
+};
+
 /**
  * @param time {string} The time to format
  * @param options {string}
@@ -39,7 +52,6 @@ export const formatTime = (time: any, options = DEFAULT_TIME_FORMAT) => {
     const parsedTime = dateParse(time);
     return dateFormat(parsedTime, options);
 };
-
 
 /**
  *
@@ -199,29 +211,22 @@ export const normalizeFilters = (filters: any) =>
           })
         : [];
 
-export const deNormalizeFilters = (filters) => (
-    filters ? filters.map((filter) => {
-        const {
-            id,
-            url,
-            enabled,
-            lastUpdated,
-            name = 'Default name',
-            rulesCount = 0,
-            names,
-        } = filter;
+export const deNormalizeFilters = (filters) =>
+    filters
+        ? filters.map((filter) => {
+              const { id, url, enabled, lastUpdated, name = 'Default name', rulesCount = 0, names } = filter;
 
-        return {
-            id,
-            url,
-            enabled,
-            last_updated: lastUpdated,
-            name,
-            rules_count: rulesCount,
-            names,
-        };
-    }) : []
-);
+              return {
+                  id,
+                  url,
+                  enabled,
+                  last_updated: lastUpdated,
+                  name,
+                  rules_count: rulesCount,
+                  names,
+              };
+          })
+        : [];
 
 export const normalizeFilteringStatus = (filteringStatus: any) => {
     const { enabled, filters, user_rules: userRules, interval, whitelist_filters, clients_filters } = filteringStatus;
@@ -904,19 +909,6 @@ export const getSpecialFilterName = (filterId: any) => {
     }
 };
 
-export type Filter = {
-    enabled: boolean;
-    id: number;
-    lastUpdated: string;
-    name: string;
-    rulesCount: number;
-    url: string;
-};
-
-export type ClientFilter = Filter & {
-    names: string[]
-}
-
 export type Rule = {
     filter_list_id: number;
     text: string;
@@ -947,12 +939,21 @@ export const getFilterName = (
     return resolveFilterName(filter);
 };
 
-export const getFilterNames = (rules: Rule[], filters: Filter[], whitelistFilters: Filter[], clientsFilters: Filter[]) =>
-    rules.map(({ filter_list_id }: any) => getFilterName(filters, whitelistFilters, clientsFilters, filter_list_id));
+export const getFilterNames = (
+    rules: Rule[],
+    filters: Filter[],
+    whitelistFilters: Filter[],
+    clientsFilters: Filter[],
+) => rules.map(({ filter_list_id }: any) => getFilterName(filters, whitelistFilters, clientsFilters, filter_list_id));
 
 export const getRuleNames = (rules: Rule[]) => rules.map(({ text }: Rule) => text);
 
-export const getFilterNameToRulesMap = (rules: Rule[], filters: Filter[], whitelistFilters: Filter[], clientsFilters: Filter[]) =>
+export const getFilterNameToRulesMap = (
+    rules: Rule[],
+    filters: Filter[],
+    whitelistFilters: Filter[],
+    clientsFilters: Filter[],
+) =>
     rules.reduce((acc: any, { text, filter_list_id }: Rule) => {
         const filterName = getFilterName(filters, whitelistFilters, clientsFilters, filter_list_id);
 
@@ -971,7 +972,12 @@ export const getRulesToFilterList = (
         filter: 'filteringRules__filter',
     },
 ) => {
-    const filterNameToRulesMap: { string: string[] } = getFilterNameToRulesMap(rules, filters, whitelistFilters, clientsFilters);
+    const filterNameToRulesMap: { string: string[] } = getFilterNameToRulesMap(
+        rules,
+        filters,
+        whitelistFilters,
+        clientsFilters,
+    );
 
     return (
         <dl className={classes.list}>

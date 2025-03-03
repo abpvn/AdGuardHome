@@ -1,5 +1,3 @@
-import client from '../reducers/client';
-
 export const R_URL_REQUIRES_PROTOCOL = /^https?:\/\/[^/\s]+(\/.*)?$/;
 
 // matches hostname or *.wildcard

@@ -10,22 +10,31 @@ interface ActionsProps {
     hideRefresh?: boolean,
 }
 
-const Actions = ({ handleAdd, handleRefresh, processingRefreshFilters, whitelist, normalButton, hideRefresh }: ActionsProps) => (
+const Actions = ({
+    handleAdd,
+    handleRefresh,
+    processingRefreshFilters,
+    whitelist,
+    normalButton,
+    hideRefresh,
+}: ActionsProps) => (
     <div className="card-actions">
-        <button className="btn btn-success btn-standard mr-2 btn-large mb-2" 
+        <button
+            className="btn btn-success btn-standard mr-2 btn-large mb-2"
             type={normalButton ? 'button' : 'submit'}
             onClick={handleAdd}>
             {whitelist ? <Trans>add_allowlist</Trans> : <Trans>add_blocklist</Trans>}
         </button>
 
-        {!hideRefresh && <button
-            className="btn btn-primary btn-standard mb-2"
-            type={normalButton ? 'button' : 'submit'}
-            onClick={handleRefresh}
-            disabled={processingRefreshFilters}
-    >
-        <Trans>check_updates_btn</Trans>
-        </button>}
+        {!hideRefresh && (
+            <button
+                className="btn btn-primary btn-standard mb-2"
+                type={normalButton ? 'button' : 'submit'}
+                onClick={handleRefresh}
+                disabled={processingRefreshFilters}>
+                <Trans>check_updates_btn</Trans>
+            </button>
+        )}
     </div>
 );
 

@@ -67,6 +67,7 @@ type FormProps = {
         allowed_clients?: string;
         disallowed_clients?: string;
         blocked_hosts?: string;
+        blocked_countries?: string;
     };
     onSubmit: (data: FormData) => void;
     processingSet: boolean;
@@ -86,6 +87,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
             allowed_clients: initialValues?.allowed_clients || '',
             disallowed_clients: initialValues?.disallowed_clients || '',
             blocked_hosts: initialValues?.blocked_hosts || '',
+            blocked_countries: initialValues?.blocked_countries || '',
         },
     });
 

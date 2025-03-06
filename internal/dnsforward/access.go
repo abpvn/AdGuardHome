@@ -72,7 +72,7 @@ func newAccessCtx(allowed, blocked, blockedHosts, BlockedCountries []string) (a 
 
 		allowedClientIDs:    container.NewMapSet[string](),
 		blockedClientIDs:    container.NewMapSet[string](),
-		BlockedCountriesIDs: container.NewMapSet[string](BlockedCountries...),
+		BlockedCountriesIDs: container.NewMapSet(BlockedCountries...),
 	}
 
 	err = processAccessClients(allowed, a.allowedIPs, &a.allowedNets, a.allowedClientIDs)
@@ -127,6 +127,21 @@ func (a *accessManager) isBlockedClientID(id string) (ok bool) {
 	}
 
 	return a.blockedClientIDs.Has(id)
+}
+
+// isBlockedCountry returns true if the country should be blocked.
+func (a *accessManager) isBlockedCountry(id string, country string) (ok bool) {
+	allowlistMode := a.allowlistMode()
+	if id == "" {
+		// In allowlist mode, consider requests without ClientIDs blocked by
+		// default.
+		return allowlistMode
+	}
+
+	if allowlistMode {
+		return !a.allowedClientIDs.Has(id)
+	}
+	return a.BlockedCountriesIDs.Has(strings.ToUpper(country))
 }
 
 // isBlockedHost returns true if host should be blocked.
@@ -254,6 +269,9 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var a *accessManager
+	for i, country := range list.BlockedCountries {
+		list.BlockedCountries[i] = strings.ToUpper(country)
+	}
 	a, err = newAccessCtx(list.AllowedClients, list.DisallowedClients, list.BlockedHosts, list.BlockedCountries)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "creating access ctx: %s", err)

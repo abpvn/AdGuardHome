@@ -14,12 +14,12 @@ func TestIsBlockedClientID(t *testing.T) {
 	clientID := "client-1"
 	clients := []string{clientID}
 
-	a, err := newAccessCtx(clients, nil, nil)
+	a, err := newAccessCtx(clients, nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.False(t, a.isBlockedClientID(clientID))
 
-	a, err = newAccessCtx(nil, clients, nil)
+	a, err = newAccessCtx(nil, clients, nil, nil)
 	require.NoError(t, err)
 
 	assert.True(t, a.isBlockedClientID(clientID))
@@ -32,7 +32,7 @@ func TestIsBlockedHost(t *testing.T) {
 		"||host3.com^",
 		"||*^$dnstype=HTTPS",
 		"|.^",
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -115,10 +115,10 @@ func TestIsBlockedIP(t *testing.T) {
 		"5.6.7.8/24",
 	}
 
-	allowCtx, err := newAccessCtx(clients, nil, nil)
+	allowCtx, err := newAccessCtx(clients, nil, nil, nil)
 	require.NoError(t, err)
 
-	blockCtx, err := newAccessCtx(nil, clients, nil)
+	blockCtx, err := newAccessCtx(nil, clients, nil, nil)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -163,4 +163,40 @@ func TestIsBlockedIP(t *testing.T) {
 			assert.Equal(t, tc.wantRule, rule)
 		}
 	})
+}
+
+func TestIsBlockedCountry(t *testing.T) {
+	countries := []string{"US", "CN"}
+
+	ctx, err := newAccessCtx(nil, nil, nil, countries)
+	require.NoError(t, err)
+
+	testCases := []struct {
+		clientID    string
+		countryCode string
+		name        string
+		wantBlocked bool
+	}{{
+		clientID:    "client-1",
+		countryCode: "US",
+		name:        "match_country_us",
+		wantBlocked: true,
+	}, {
+		clientID:    "client-1",
+		countryCode: "CN",
+		name:        "match_country_cn",
+		wantBlocked: true,
+	}, {
+		clientID:    "client-1",
+		countryCode: "JP",
+		name:        "no_match_country_jp",
+		wantBlocked: false,
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			blocked := ctx.isBlockedCountry(tc.clientID, tc.countryCode)
+			assert.Equal(t, tc.wantBlocked, blocked)
+		})
+	}
 }

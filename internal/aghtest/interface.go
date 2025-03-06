@@ -88,8 +88,9 @@ func (s *ServiceWithConfig[ConfigType]) Config() (c ConfigType) {
 // AddressProcessor is a fake [client.AddressProcessor] implementation for
 // tests.
 type AddressProcessor struct {
-	OnProcess func(ctx context.Context, ip netip.Addr)
-	OnClose   func() (err error)
+	OnProcess      func(ctx context.Context, ip netip.Addr)
+	OnClose        func() (err error)
+	OnProcessWHOIS func(ctx context.Context, ip netip.Addr) (info *whois.Info)
 }
 
 // Process implements the [client.AddressProcessor] interface for
@@ -102,6 +103,12 @@ func (p *AddressProcessor) Process(ctx context.Context, ip netip.Addr) {
 // *AddressProcessor.
 func (p *AddressProcessor) Close() (err error) {
 	return p.OnClose()
+}
+
+// ProcessWHOIS implements the [client.AddressProcessor] interface for
+// *AddressProcessor.
+func (p *AddressProcessor) ProcessWHOIS(ctx context.Context, ip netip.Addr) (info *whois.Info) {
+	return p.OnProcessWHOIS(ctx, ip)
 }
 
 // AddressUpdater is a fake [client.AddressUpdater] implementation for tests.

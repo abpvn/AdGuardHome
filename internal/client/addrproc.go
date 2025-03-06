@@ -22,6 +22,7 @@ const ErrClosed errors.Error = "use of closed address processor"
 // AddressProcessor is the interface for types that can process clients.
 type AddressProcessor interface {
 	Process(ctx context.Context, ip netip.Addr)
+	ProcessWHOIS(ctx context.Context, ip netip.Addr) (info *whois.Info)
 	Close() (err error)
 }
 
@@ -33,6 +34,9 @@ var _ AddressProcessor = EmptyAddrProc{}
 
 // Process implements the [AddressProcessor] interface for EmptyAddrProc.
 func (EmptyAddrProc) Process(_ context.Context, _ netip.Addr) {}
+
+// Process implements the [AddressProcessor] interface for EmptyAddrProc.
+func (EmptyAddrProc) ProcessWHOIS(_ context.Context, _ netip.Addr) (_ *whois.Info) { return nil }
 
 // Close implements the [AddressProcessor] interface for EmptyAddrProc.
 func (EmptyAddrProc) Close() (_ error) { return nil }
@@ -243,7 +247,7 @@ func (p *DefaultAddrProc) process(ctx context.Context, catchPanics bool) {
 
 	for ip := range p.clientIPs {
 		host := p.processRDNS(ctx, ip)
-		info := p.processWHOIS(ctx, ip)
+		info := p.ProcessWHOIS(ctx, ip)
 
 		p.addrUpdater.UpdateAddress(ctx, ip, host, info)
 	}
@@ -285,10 +289,10 @@ func (p *DefaultAddrProc) shouldResolve(ip netip.Addr) (ok bool) {
 	return !ip.IsLoopback() && (p.usePrivateRDNS || !p.privateSubnets.Contains(ip))
 }
 
-// processWHOIS looks up the information about clients' IP addresses in the
+// ProcessWHOIS looks up the information about clients' IP addresses in the
 // WHOIS databases.  info is nil if there were errors or if the information
 // hasn't changed.
-func (p *DefaultAddrProc) processWHOIS(ctx context.Context, ip netip.Addr) (info *whois.Info) {
+func (p *DefaultAddrProc) ProcessWHOIS(ctx context.Context, ip netip.Addr) (info *whois.Info) {
 	start := time.Now()
 	p.logger.DebugContext(ctx, "processing whois", "ip", ip)
 	defer func() {

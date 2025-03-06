@@ -896,17 +896,26 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 
 	allowlistMode := s.access.allowlistMode()
 	blockedByClientID := s.access.isBlockedClientID(clientID)
+	info := s.addrProc.ProcessWHOIS(context.TODO(), ip)
+	blockedByCountry := false
+	if info != nil {
+		blockedByCountry = s.access.isBlockedCountry(clientID, info.Country)
+	}
 
 	// Allow if at least one of the checks allows in allowlist mode, but block
 	// if at least one of the checks blocks in blocklist mode.
-	if allowlistMode && blockedByIP && blockedByClientID {
+	if allowlistMode && blockedByIP && blockedByClientID && blockedByCountry {
 		log.Debug("dnsforward: client %v (id %q) is not in access allowlist", ip, clientID)
 
 		// Return now without substituting the empty rule for the
 		// clientID because the rule can't be empty here.
 		return true, rule
-	} else if !allowlistMode && (blockedByIP || blockedByClientID) {
-		log.Debug("dnsforward: client %v (id %q) is in access blocklist", ip, clientID)
+	} else if !allowlistMode && (blockedByIP || blockedByClientID || blockedByCountry) {
+		if blockedByCountry {
+			log.Debug("dnsforward: client %v (country %q) is in access blocklist by country", ip, info.Country)
+		} else {
+			log.Debug("dnsforward: client %v (id %q) is in access blocklist", ip, clientID)
+		}
 
 		blocked = true
 	}

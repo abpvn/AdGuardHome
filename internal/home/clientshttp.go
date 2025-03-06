@@ -704,7 +704,7 @@ func (clients *clientsContainer) findClient(idStr string) (cj *clientJSON) {
 	}
 
 	cj = clientToJSON(c)
-	disallowed, rule := clients.clientChecker.IsBlockedClient(ip, idStr)
+	disallowed, rule, _ := clients.clientChecker.IsBlockedClient(ip, idStr)
 	cj.Disallowed, cj.DisallowedRule = &disallowed, &rule
 
 	return cj
@@ -755,12 +755,15 @@ func (clients *clientsContainer) findRuntime(ip netip.Addr, idStr string) (cj *c
 		// blocked IP list.
 		//
 		// See https://github.com/AdguardTeam/AdGuardHome/issues/2428.
-		disallowed, rule := clients.clientChecker.IsBlockedClient(ip, idStr)
+		disallowed, rule, whoisInfo := clients.clientChecker.IsBlockedClient(ip, idStr)
+		if whoisInfo == nil {
+			whoisInfo = &whois.Info{}
+		}
 		cj = &clientJSON{
 			IDs:            []string{idStr},
 			Disallowed:     &disallowed,
 			DisallowedRule: &rule,
-			WHOIS:          &whois.Info{},
+			WHOIS:          whoisInfo,
 		}
 
 		return cj
@@ -773,7 +776,7 @@ func (clients *clientsContainer) findRuntime(ip netip.Addr, idStr string) (cj *c
 		WHOIS: whoisOrEmpty(rc),
 	}
 
-	disallowed, rule := clients.clientChecker.IsBlockedClient(ip, idStr)
+	disallowed, rule, _ := clients.clientChecker.IsBlockedClient(ip, idStr)
 	cj.Disallowed, cj.DisallowedRule = &disallowed, &rule
 
 	return cj

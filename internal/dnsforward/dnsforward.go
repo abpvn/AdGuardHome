@@ -23,6 +23,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/querylog"
 	"github.com/AdguardTeam/AdGuardHome/internal/rdns"
 	"github.com/AdguardTeam/AdGuardHome/internal/stats"
+	"github.com/AdguardTeam/AdGuardHome/internal/whois"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/dnsproxy/upstream"
 	"github.com/AdguardTeam/golibs/cache"
@@ -883,22 +884,31 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) isBlockedCountry(allowListMode bool, clentID string, ip netip.Addr) (bool, string) {
-	if allowListMode {
-		return allowListMode, ""
+func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID bool, clentID string, ip netip.Addr) (bool, string, *whois.Info) {
+	if allowlistMode {
+		return allowlistMode, "", nil
+	}
+	alreadyBlocked := blockedByIP || blockedByClientID
+	if alreadyBlocked {
+		return true, "", nil
 	}
 
-	info := s.addrProc.ProcessWHOIS(context.TODO(), ip)
+	info := s.addrProc.ProcessWHOIS(context.TODO(), ip, true)
 	if info == nil {
-		return false, ""
+		return false, "", nil
 	}
 
-	return s.access.isBlockedCountry(clentID, info.Country), info.Country
+	blocked := s.access.isBlockedCountry(clentID, info.Country)
+
+	if blocked {
+		return true, "COUNTRY:" + info.Country, info
+	}
+	return false, "", nil
 }
 
 // IsBlockedClient returns true if the client is blocked by the current access
 // settings.
-func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, rule string) {
+func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, rule string, whois *whois.Info) {
 	s.serverLock.RLock()
 	defer s.serverLock.RUnlock()
 
@@ -909,7 +919,7 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 
 	allowlistMode := s.access.allowlistMode()
 	blockedByClientID := s.access.isBlockedClientID(clientID)
-	blockedByCountry, country := s.isBlockedCountry(allowlistMode, clientID, ip)
+	blockedByCountry, countryRule, whois := s.isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID, clientID, ip)
 
 	// Allow if at least one of the checks allows in allowlist mode, but block
 	// if at least one of the checks blocks in blocklist mode.
@@ -918,12 +928,12 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 
 		// Return now without substituting the empty rule for the
 		// clientID because the rule can't be empty here.
-		return true, rule
+		return true, rule, whois
 	} else if !allowlistMode && (blockedByIP || blockedByClientID || blockedByCountry) {
-		log.Debug("dnsforward: client %v (id %q, country %q) is in access blocklist", ip, clientID, country)
+		log.Debug("dnsforward: client %v (id %q, country %q) is in access blocklist", ip, clientID, countryRule)
 
 		blocked = true
 	}
 
-	return blocked, cmp.Or(rule, clientID)
+	return blocked, cmp.Or(countryRule, rule, clientID), whois
 }

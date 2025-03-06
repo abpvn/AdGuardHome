@@ -33,7 +33,7 @@ const (
 // testBlockedClientChecker is a mock implementation of the
 // [BlockedClientChecker] interface.
 type testBlockedClientChecker struct {
-	onIsBlockedClient func(ip netip.Addr, clientiD string) (blocked bool, rule string)
+	onIsBlockedClient func(ip netip.Addr, clientiD string) (blocked bool, rule string, whois *whois.Info)
 }
 
 // type check
@@ -44,7 +44,7 @@ var _ BlockedClientChecker = (*testBlockedClientChecker)(nil)
 func (c *testBlockedClientChecker) IsBlockedClient(
 	ip netip.Addr,
 	clientID string,
-) (blocked bool, rule string) {
+) (blocked bool, rule string, whois *whois.Info) {
 	return c.onIsBlockedClient(ip, clientID)
 }
 
@@ -346,8 +346,8 @@ func TestClientsContainer_HandleUpdateClient(t *testing.T) {
 func TestClientsContainer_HandleFindClient(t *testing.T) {
 	clients := newClientsContainer(t)
 	clients.clientChecker = &testBlockedClientChecker{
-		onIsBlockedClient: func(ip netip.Addr, clientID string) (ok bool, rule string) {
-			return false, ""
+		onIsBlockedClient: func(ip netip.Addr, clientID string) (ok bool, rule string, whois *whois.Info) {
+			return false, "", nil
 		},
 	}
 
@@ -427,12 +427,12 @@ func TestClientsContainer_HandleSearchClient(t *testing.T) {
 
 	clients := newClientsContainer(t)
 	clients.clientChecker = &testBlockedClientChecker{
-		onIsBlockedClient: func(ip netip.Addr, _ string) (ok bool, rule string) {
+		onIsBlockedClient: func(ip netip.Addr, _ string) (ok bool, rule string, whois *whois.Info) {
 			if ip == netip.MustParseAddr(blockedCliIP) {
-				return true, disallowedRule
+				return true, disallowedRule, nil
 			}
 
-			return false, emptyRule
+			return false, emptyRule, nil
 		},
 	}
 

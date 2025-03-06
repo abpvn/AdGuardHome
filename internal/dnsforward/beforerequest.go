@@ -31,7 +31,7 @@ func (s *Server) HandleBefore(
 		}
 	}
 
-	blocked, _ := s.IsBlockedClient(pctx.Addr.Addr(), clientID)
+	blocked, _, _ := s.IsBlockedClient(pctx.Addr.Addr(), clientID)
 	if blocked {
 		return s.preBlockedResponse(pctx)
 	}

@@ -885,12 +885,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID bool, clentID string, ip netip.Addr) (bool, string, *whois.Info) {
-	if allowlistMode {
-		return allowlistMode, "", nil
-	}
-	alreadyBlocked := blockedByIP || blockedByClientID
-	if alreadyBlocked {
+	if allowlistMode || blockedByIP || blockedByClientID {
 		return true, "", nil
+	}
+
+	if s.access.BlockedCountriesIDs.Len() == 0 {
+		return false, "", nil
 	}
 
 	info := s.addrProc.ProcessWHOIS(context.TODO(), ip, true)
@@ -898,11 +898,10 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 		return false, "", nil
 	}
 
-	blocked := s.access.isBlockedCountry(clentID, info.Country)
-
-	if blocked {
+	if s.access.isBlockedCountry(clentID, info.Country) {
 		return true, "COUNTRY:" + info.Country, info
 	}
+
 	return false, "", nil
 }
 

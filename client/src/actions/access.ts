@@ -50,17 +50,21 @@ export const toggleClientBlockRequest = createAction('TOGGLE_CLIENT_BLOCK_REQUES
 export const toggleClientBlockFailure = createAction('TOGGLE_CLIENT_BLOCK_FAILURE');
 export const toggleClientBlockSuccess = createAction('TOGGLE_CLIENT_BLOCK_SUCCESS');
 
-export const toggleClientBlock = (ip: any, disallowed: any, disallowed_rule: any) => async (dispatch: any) => {
+export const toggleClientBlock = (ip: any, disallowed: any, disallowed_rule: string) => async (dispatch: any) => {
     dispatch(toggleClientBlockRequest());
     try {
         const accessList = await apiClient.getAccessList();
         const blocked_hosts = accessList.blocked_hosts ?? [];
         let allowed_clients = accessList.allowed_clients ?? [];
         let disallowed_clients = accessList.disallowed_clients ?? [];
+        let blocked_countries = accessList.blocked_countries	 ?? [];
 
         if (disallowed) {
             if (!disallowed_rule) {
                 allowed_clients = allowed_clients.concat(ip);
+            } else if (disallowed_rule.startsWith('COUNTRY:')) {
+                const un_blocked_country = disallowed_rule.split(':')[1];
+                blocked_countries = blocked_countries.filter((country: any) => country !== un_blocked_country);
             } else {
                 disallowed_clients = disallowed_clients.filter((client: any) => client !== disallowed_rule);
             }
@@ -73,6 +77,7 @@ export const toggleClientBlock = (ip: any, disallowed: any, disallowed_rule: any
             allowed_clients,
             blocked_hosts,
             disallowed_clients,
+            blocked_countries,
         };
 
         await apiClient.setAccessList(values);

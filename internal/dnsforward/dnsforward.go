@@ -23,6 +23,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/querylog"
 	"github.com/AdguardTeam/AdGuardHome/internal/rdns"
 	"github.com/AdguardTeam/AdGuardHome/internal/stats"
+	"github.com/AdguardTeam/AdGuardHome/internal/whois"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/dnsproxy/upstream"
 	"github.com/AdguardTeam/golibs/cache"
@@ -896,10 +897,13 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 
 	allowlistMode := s.access.allowlistMode()
 	blockedByClientID := s.access.isBlockedClientID(clientID)
-	info := s.addrProc.ProcessWHOIS(context.TODO(), ip)
 	blockedByCountry := allowlistMode
-	if info != nil {
-		blockedByCountry = s.access.isBlockedCountry(clientID, info.Country)
+	var info *whois.Info
+	if !allowlistMode {
+		info = s.addrProc.ProcessWHOIS(context.TODO(), ip)
+		if info != nil {
+			blockedByCountry = s.access.isBlockedCountry(clientID, info.Country)
+		}
 	}
 
 	// Allow if at least one of the checks allows in allowlist mode, but block

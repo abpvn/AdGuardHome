@@ -897,7 +897,7 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 	allowlistMode := s.access.allowlistMode()
 	blockedByClientID := s.access.isBlockedClientID(clientID)
 	info := s.addrProc.ProcessWHOIS(context.TODO(), ip)
-	blockedByCountry := false
+	blockedByCountry := allowlistMode
 	if info != nil {
 		blockedByCountry = s.access.isBlockedCountry(clientID, info.Country)
 	}

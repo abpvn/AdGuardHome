@@ -23,7 +23,6 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/querylog"
 	"github.com/AdguardTeam/AdGuardHome/internal/rdns"
 	"github.com/AdguardTeam/AdGuardHome/internal/stats"
-	"github.com/AdguardTeam/AdGuardHome/internal/whois"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/dnsproxy/upstream"
 	"github.com/AdguardTeam/golibs/cache"
@@ -884,6 +883,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) isBlockedCountry(allowListMode bool, clentID string, ip netip.Addr) (bool, string) {
+	if allowListMode {
+		return allowListMode, ""
+	}
+
+	info := s.addrProc.ProcessWHOIS(context.TODO(), ip)
+	if info == nil {
+		return false, ""
+	}
+
+	return s.access.isBlockedCountry(clentID, info.Country), info.Country
+}
+
 // IsBlockedClient returns true if the client is blocked by the current access
 // settings.
 func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, rule string) {
@@ -897,14 +909,7 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 
 	allowlistMode := s.access.allowlistMode()
 	blockedByClientID := s.access.isBlockedClientID(clientID)
-	blockedByCountry := allowlistMode
-	var info *whois.Info
-	if !allowlistMode {
-		info = s.addrProc.ProcessWHOIS(context.TODO(), ip)
-		if info != nil {
-			blockedByCountry = s.access.isBlockedCountry(clientID, info.Country)
-		}
-	}
+	blockedByCountry, country := s.isBlockedCountry(allowlistMode, clientID, ip)
 
 	// Allow if at least one of the checks allows in allowlist mode, but block
 	// if at least one of the checks blocks in blocklist mode.
@@ -915,11 +920,7 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 		// clientID because the rule can't be empty here.
 		return true, rule
 	} else if !allowlistMode && (blockedByIP || blockedByClientID || blockedByCountry) {
-		if blockedByCountry {
-			log.Debug("dnsforward: client %v (country %q) is in access blocklist by country", ip, info.Country)
-		} else {
-			log.Debug("dnsforward: client %v (id %q) is in access blocklist", ip, clientID)
-		}
+		log.Debug("dnsforward: client %v (id %q, country %q) is in access blocklist", ip, clientID, country)
 
 		blocked = true
 	}

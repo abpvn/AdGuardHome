@@ -35,7 +35,7 @@ var _ AddressProcessor = EmptyAddrProc{}
 // Process implements the [AddressProcessor] interface for EmptyAddrProc.
 func (EmptyAddrProc) Process(_ context.Context, _ netip.Addr) {}
 
-// Process implements the [AddressProcessor] interface for EmptyAddrProc.
+// ProcessWHOIS Process implements the [AddressProcessor] interface for EmptyAddrProc.
 func (EmptyAddrProc) ProcessWHOIS(_ context.Context, _ netip.Addr) (_ *whois.Info) { return nil }
 
 // Close implements the [AddressProcessor] interface for EmptyAddrProc.

@@ -58,7 +58,7 @@ const fields: {
         title: i18next.t('blocked_countries_title'),
         subtitle: i18next.t('blocked_countries_desc'),
         placeholder: i18next.t('blocked_countries_placeholder'),
-        normalizeOnBlur: removeEmptyLines,
+        normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
     },
 ];
 

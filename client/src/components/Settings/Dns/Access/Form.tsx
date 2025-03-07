@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -80,7 +80,8 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
         control,
         handleSubmit,
         watch,
-        formState: { isSubmitting, isDirty },
+        formState: { isSubmitting, isDirty, isSubmitSuccessful },
+        reset
     } = useForm<FormData>({
         mode: 'onBlur',
         defaultValues: {
@@ -90,6 +91,12 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
             blocked_countries: initialValues?.blocked_countries || '',
         },
     });
+
+    useEffect(() => {
+        if (isSubmitSuccessful) {
+            reset(watch(), {keepValues: true, keepDirty: false, keepDefaultValues: false});
+        }
+    }, [isSubmitSuccessful, reset]);
 
     const allowedClients = watch('allowed_clients');
 

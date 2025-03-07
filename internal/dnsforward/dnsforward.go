@@ -899,7 +899,7 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 		return false, "", nil
 	}
 
-	if s.access.isBlockedCountry(clentID, info.Country) {
+	if s.access.isBlockedCountry(info.Country) {
 		return true, constants.CountryPrefix + info.Country, info
 	}
 

@@ -130,17 +130,7 @@ func (a *accessManager) isBlockedClientID(id string) (ok bool) {
 }
 
 // isBlockedCountry returns true if the country should be blocked.
-func (a *accessManager) isBlockedCountry(id, country string) (ok bool) {
-	allowlistMode := a.allowlistMode()
-	if id == "" {
-		// In allowlist mode, consider requests without ClientIDs blocked by
-		// default.
-		return allowlistMode
-	}
-
-	if allowlistMode {
-		return !a.allowedClientIDs.Has(id)
-	}
+func (a *accessManager) isBlockedCountry(country string) (ok bool) {
 	return a.BlockedCountriesIDs.Has(strings.ToUpper(country))
 }
 

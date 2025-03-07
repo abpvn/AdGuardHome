@@ -195,7 +195,7 @@ func TestIsBlockedCountry(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			blocked := ctx.isBlockedCountry(tc.clientID, tc.countryCode)
+			blocked := ctx.isBlockedCountry(tc.countryCode)
 			assert.Equal(t, tc.wantBlocked, blocked)
 		})
 	}

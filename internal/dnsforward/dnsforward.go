@@ -19,6 +19,7 @@ import (
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
+	"github.com/AdguardTeam/AdGuardHome/internal/constants" // Import the constants package
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/AdGuardHome/internal/querylog"
 	"github.com/AdguardTeam/AdGuardHome/internal/rdns"
@@ -899,7 +900,7 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 	}
 
 	if s.access.isBlockedCountry(clentID, info.Country) {
-		return true, "COUNTRY:" + info.Country, info
+		return true, constants.CountryPrefix + info.Country, info
 	}
 
 	return false, "", nil

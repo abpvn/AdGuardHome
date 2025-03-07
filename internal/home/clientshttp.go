@@ -8,10 +8,12 @@ import (
 	"net/netip"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
+	"github.com/AdguardTeam/AdGuardHome/internal/constants" // Import the constants package
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering/safesearch"
 	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
@@ -704,7 +706,10 @@ func (clients *clientsContainer) findClient(idStr string) (cj *clientJSON) {
 	}
 
 	cj = clientToJSON(c)
-	disallowed, rule, _ := clients.clientChecker.IsBlockedClient(ip, idStr)
+	disallowed, rule, whois := clients.clientChecker.IsBlockedClient(ip, idStr)
+	if disallowed && strings.Contains(rule, constants.CountryPrefix) {
+		cj.WHOIS = whois
+	}
 	cj.Disallowed, cj.DisallowedRule = &disallowed, &rule
 
 	return cj
@@ -776,7 +781,10 @@ func (clients *clientsContainer) findRuntime(ip netip.Addr, idStr string) (cj *c
 		WHOIS: whoisOrEmpty(rc),
 	}
 
-	disallowed, rule, _ := clients.clientChecker.IsBlockedClient(ip, idStr)
+	disallowed, rule, whois := clients.clientChecker.IsBlockedClient(ip, idStr)
+	if disallowed && strings.Contains(rule, constants.CountryPrefix) {
+		cj.WHOIS = whois
+	}
 	cj.Disallowed, cj.DisallowedRule = &disallowed, &rule
 
 	return cj

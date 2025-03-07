@@ -885,7 +885,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID bool, clentID string, ip netip.Addr) (bool, string, *whois.Info) {
+func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID bool, ip netip.Addr) (bool, string, *whois.Info) {
 	if allowlistMode || blockedByIP || blockedByClientID {
 		return true, "", nil
 	}
@@ -919,7 +919,7 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 
 	allowlistMode := s.access.allowlistMode()
 	blockedByClientID := s.access.isBlockedClientID(clientID)
-	blockedByCountry, countryRule, whois := s.isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID, clientID, ip)
+	blockedByCountry, countryRule, whois := s.isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID, ip)
 
 	// Allow if at least one of the checks allows in allowlist mode, but block
 	// if at least one of the checks blocks in blocklist mode.

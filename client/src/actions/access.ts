@@ -3,6 +3,7 @@ import i18next from 'i18next';
 
 import apiClient from '../api/Api';
 import { addErrorToast, addSuccessToast } from './toasts';
+import { COUNTRY_PREFIX } from '../helpers/constants';
 
 import { splitByNewLine } from '../helpers/helpers';
 
@@ -57,12 +58,12 @@ export const toggleClientBlock = (ip: any, disallowed: any, disallowed_rule: str
         const blocked_hosts = accessList.blocked_hosts ?? [];
         let allowed_clients = accessList.allowed_clients ?? [];
         let disallowed_clients = accessList.disallowed_clients ?? [];
-        let blocked_countries = accessList.blocked_countries	 ?? [];
+        let blocked_countries = accessList.blocked_countries ?? [];
 
         if (disallowed) {
             if (!disallowed_rule) {
                 allowed_clients = allowed_clients.concat(ip);
-            } else if (disallowed_rule.startsWith('COUNTRY:')) {
+            } else if (disallowed_rule.startsWith(COUNTRY_PREFIX)) {
                 const un_blocked_country = disallowed_rule.split(':')[1];
                 blocked_countries = blocked_countries.filter((country: any) => country !== un_blocked_country);
             } else {
@@ -84,7 +85,12 @@ export const toggleClientBlock = (ip: any, disallowed: any, disallowed_rule: str
         dispatch(toggleClientBlockSuccess(values));
 
         if (disallowed) {
-            dispatch(addSuccessToast(i18next.t('client_unblocked', { ip: disallowed_rule || ip })));
+            if (disallowed_rule.startsWith(COUNTRY_PREFIX)) {
+                const un_blocked_country = disallowed_rule.split(':')[1];
+                dispatch(addSuccessToast(i18next.t('client_unblocked_country', { country: un_blocked_country })));
+            } else {
+                dispatch(addSuccessToast(i18next.t('client_unblocked', { ip: disallowed_rule || ip })));
+            }
         } else {
             dispatch(addSuccessToast(i18next.t('client_blocked', { ip })));
         }

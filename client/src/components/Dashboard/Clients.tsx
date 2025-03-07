@@ -16,6 +16,7 @@ import {
     DASHBOARD_TABLES_DEFAULT_PAGE_SIZE,
     STATUS_COLORS,
     TABLES_MIN_ROWS,
+    COUNTRY_PREFIX,
 } from '../../helpers/constants';
 import { toggleClientBlock } from '../../actions/access';
 
@@ -68,7 +69,12 @@ const renderBlockingButton = (ip: any, disallowed: any, disallowed_rule: any) =>
         let confirmMessage;
 
         if (disallowed) {
-            confirmMessage = t('client_confirm_unblock', { ip: disallowed_rule || ip });
+            if (disallowed_rule.startsWith(COUNTRY_PREFIX)) {
+                const country = disallowed_rule.split(':')[1];
+                confirmMessage = t('client_confirm_unblock_country', { country });
+            } else {
+                confirmMessage = t('client_confirm_unblock', { ip: disallowed_rule || ip });
+            }
         } else {
             confirmMessage = `${t('adg_will_drop_dns_queries')} ${t('client_confirm_block', { ip })}`;
             if (allowedClients.length > 0) {

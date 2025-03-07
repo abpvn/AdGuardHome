@@ -524,3 +524,5 @@ export const TIME_UNITS = {
     HOURS: 'hours',
     DAYS: 'days',
 };
+
+export const COUNTRY_PREFIX = 'COUNTRY:';

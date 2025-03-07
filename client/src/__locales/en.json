@@ -755,5 +755,7 @@
     "all_client": "All client",
     "blocked_countries_title": "Blocked countries",
     "blocked_countries_desc": "Block all DNS queries from the selected countries. Use two-character country codes, each country on a new line.",
-    "blocked_countries_placeholder": "Example:\nUS\nGB\nDE"
+    "blocked_countries_placeholder": "Example:\nUS\nGB\nDE",
+    "client_unblocked_country": "Successfully unblocked all clients from \"{{country}}\"",
+    "client_confirm_unblock_country": "Are you sure you want to unblock all clients from \"{{country}}\"?"
 }

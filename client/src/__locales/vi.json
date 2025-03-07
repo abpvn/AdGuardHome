@@ -752,5 +752,7 @@
     "all_client": "Tất cả thiết bị",
     "blocked_countries_title": "Quốc gia bị chặn",
     "blocked_countries_desc": "Chặn truy cập từ các quốc gia cụ thể. Sử dụng mã quốc gia hai ký tự, mỗi mã quốc gia một dòng.",
-    "blocked_countries_placeholder": "Ví dụ:\nUS\nGB\nDE"
+    "blocked_countries_placeholder": "Ví dụ:\nUS\nGB\nDE",
+    "client_unblocked_country": "Đã bỏ chặn tất cả các người dùng từ \"{{country}}\"",
+    "client_confirm_unblock_country": "Bạn có chắc chắn muốn bỏ chặn tất cả các người dùng từ \"{{country}}\" không?"
 }

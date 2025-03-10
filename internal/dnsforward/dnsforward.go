@@ -903,7 +903,7 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 		return true, constants.CountryPrefix + info.Country, info
 	}
 
-	return false, "", nil
+	return false, info.Country, info
 }
 
 // IsBlockedClient returns true if the client is blocked by the current access

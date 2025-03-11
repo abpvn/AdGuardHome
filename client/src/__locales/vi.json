@@ -751,8 +751,10 @@
     "clients_filters_name": "Bộ lọc thiết bị: {{name}}",
     "all_client": "Tất cả thiết bị",
     "blocked_countries_title": "Quốc gia bị chặn",
-    "blocked_countries_desc": "Chặn truy cập từ các quốc gia cụ thể. Sử dụng mã quốc gia hai ký tự, mỗi mã quốc gia một dòng.",
-    "blocked_countries_placeholder": "Ví dụ:\nUS\nGB\nDE",
+    "blocked_countries_desc": "Chặn truy cập từ các quốc gia cụ thể. Sử dụng mã quốc gia hai ký tự, mỗi mã quốc gia một dòng. Danh sách này sẽ bị bỏ qua nếu có mục nhập trong danh sách quốc gia được phép.",
     "client_unblocked_country": "Đã bỏ chặn tất cả các người dùng từ \"{{country}}\"",
-    "client_confirm_unblock_country": "Bạn có chắc chắn muốn bỏ chặn tất cả các người dùng từ \"{{country}}\" không?"
+    "client_confirm_unblock_country": "Bạn có chắc chắn muốn bỏ chặn tất cả các người dùng từ \"{{country}}\" không?",
+    "allowed_countries_title": "Quốc gia được phép",
+    "allowed_countries_desc": "Cho phép truy cập từ các quốc gia cụ thể. Sử dụng mã quốc gia hai ký tự, mỗi mã quốc gia một dòng. Danh sách này có ưu tiên cao hơn danh sách quốc gia bị chặn.",
+    "allowed_countries_placeholder": "Ví dụ:\nUS\nGB\nDE"
 }

@@ -102,6 +102,9 @@ type Config struct {
 	// BlockedCountries is the list of countries that should be blocked.
 	BlockedCountries []string `yaml:"blocked_countries"`
 
+	// AllowedCountries is the list of countries that should be allowed.
+	AllowedCountries []string `yaml:"allowed_countries"`
+
 	// TrustedProxies is the list of CIDR networks with proxy servers addresses
 	// from which the DoH requests should be handled.  The value of nil or an
 	// empty slice for this field makes Proxy not trust any address.

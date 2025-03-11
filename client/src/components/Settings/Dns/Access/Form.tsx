@@ -11,6 +11,7 @@ type FormData = {
     allowed_clients: string;
     disallowed_clients: string;
     blocked_hosts: string;
+    allowed_countries: string;
     blocked_countries: string;
 };
 
@@ -54,6 +55,13 @@ const fields: {
         normalizeOnBlur: removeEmptyLines,
     },
     {
+        id: 'allowed_countries',
+        title: i18next.t('allowed_countries_title'),
+        subtitle: i18next.t('allowed_countries_desc'),
+        placeholder: i18next.t('allowed_countries_placeholder'),
+        normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
+    },
+    {
         id: 'blocked_countries',
         title: i18next.t('blocked_countries_title'),
         subtitle: i18next.t('blocked_countries_desc'),
@@ -67,6 +75,7 @@ type FormProps = {
         allowed_clients?: string;
         disallowed_clients?: string;
         blocked_hosts?: string;
+        allowed_countries?: string;
         blocked_countries?: string;
     };
     onSubmit: (data: FormData) => void;
@@ -88,6 +97,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
             allowed_clients: initialValues?.allowed_clients || '',
             disallowed_clients: initialValues?.disallowed_clients || '',
             blocked_hosts: initialValues?.blocked_hosts || '',
+            allowed_countries: initialValues?.allowed_countries || '',
             blocked_countries: initialValues?.blocked_countries || '',
         },
     });
@@ -99,6 +109,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
     }, [isSubmitSuccessful, reset]);
 
     const allowedClients = watch('allowed_clients');
+    const allowedCountries = watch('allowed_countries');
 
     const renderField = ({
         id,
@@ -113,7 +124,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
         placeholder?: string;
         normalizeOnBlur: (value: string) => string;
     }) => {
-        const disabled = allowedClients && id === 'disallowed_clients';
+        const disabled = (allowedClients && id === 'disallowed_clients') || (allowedCountries && id === 'blocked_countries');
 
         return (
             <div key={id} className="form__group mb-5">

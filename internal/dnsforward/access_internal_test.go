@@ -14,12 +14,12 @@ func TestIsBlockedClientID(t *testing.T) {
 	clientID := "client-1"
 	clients := []string{clientID}
 
-	a, err := newAccessCtx(clients, nil, nil, nil)
+	a, err := newAccessCtx(clients, nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.False(t, a.isBlockedClientID(clientID))
 
-	a, err = newAccessCtx(nil, clients, nil, nil)
+	a, err = newAccessCtx(nil, clients, nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.True(t, a.isBlockedClientID(clientID))
@@ -32,7 +32,7 @@ func TestIsBlockedHost(t *testing.T) {
 		"||host3.com^",
 		"||*^$dnstype=HTTPS",
 		"|.^",
-	}, nil)
+	}, nil, nil)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -115,10 +115,10 @@ func TestIsBlockedIP(t *testing.T) {
 		"5.6.7.8/24",
 	}
 
-	allowCtx, err := newAccessCtx(clients, nil, nil, nil)
+	allowCtx, err := newAccessCtx(clients, nil, nil, nil, nil)
 	require.NoError(t, err)
 
-	blockCtx, err := newAccessCtx(nil, clients, nil, nil)
+	blockCtx, err := newAccessCtx(nil, clients, nil, nil, nil)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -166,9 +166,13 @@ func TestIsBlockedIP(t *testing.T) {
 }
 
 func TestIsBlockedCountry(t *testing.T) {
-	countries := []string{"US", "CN"}
+	blockedCountries := []string{"US", "CN"}
+	allowedCountries := []string{"JP", "DE"}
 
-	ctx, err := newAccessCtx(nil, nil, nil, countries)
+	blockCtx, err := newAccessCtx(nil, nil, nil, nil, blockedCountries)
+	require.NoError(t, err)
+
+	allowCtx, err := newAccessCtx(nil, nil, nil, allowedCountries, nil)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -189,14 +193,30 @@ func TestIsBlockedCountry(t *testing.T) {
 	}, {
 		clientID:    "client-1",
 		countryCode: "JP",
-		name:        "no_match_country_jp",
+		name:        "match_country_jp_allowed",
+		wantBlocked: false,
+	}, {
+		clientID:    "client-1",
+		countryCode: "DE",
+		name:        "no_match_country_de",
 		wantBlocked: false,
 	}}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			blocked := ctx.isBlockedCountry(tc.countryCode)
-			assert.Equal(t, tc.wantBlocked, blocked)
-		})
-	}
+	t.Run("block", func(t *testing.T) {
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				blocked := blockCtx.isBlockedCountry(tc.countryCode)
+				assert.Equal(t, tc.wantBlocked, blocked)
+			})
+		}
+	})
+
+	t.Run("allow", func(t *testing.T) {
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				blocked := allowCtx.isBlockedCountry(tc.countryCode)
+				assert.Equal(t, tc.wantBlocked, blocked)
+			})
+		}
+	})
 }

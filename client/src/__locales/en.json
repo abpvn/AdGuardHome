@@ -754,8 +754,10 @@
     "clients_filters_name": "Clients filters: {{name}}",
     "all_client": "All client",
     "blocked_countries_title": "Blocked countries",
-    "blocked_countries_desc": "Block all DNS queries from the selected countries. Use two-character country codes, each country on a new line.",
-    "blocked_countries_placeholder": "Example:\nUS\nGB\nDE",
+    "blocked_countries_desc": "Block all DNS queries from the selected countries. Use two-character country codes, each country on a new line. This list is ignored if there are entries in the allowed countries list.",
     "client_unblocked_country": "Successfully unblocked all clients from \"{{country}}\"",
-    "client_confirm_unblock_country": "Are you sure you want to unblock all clients from \"{{country}}\"?"
+    "client_confirm_unblock_country": "Are you sure you want to unblock all clients from \"{{country}}\"?",
+    "allowed_countries_title": "Allowed countries",
+    "allowed_countries_desc": "Allow access from specific countries. Use two-character country codes, each country on a new line. This list has higher priority than the blocked countries list.",
+    "allowed_countries_placeholder": "Example:\nUS\nGB\nDE"
 }

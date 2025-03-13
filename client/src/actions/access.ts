@@ -29,13 +29,14 @@ export const setAccessListSuccess = createAction('SET_ACCESS_LIST_SUCCESS');
 export const setAccessList = (config: any) => async (dispatch: any) => {
     dispatch(setAccessListRequest());
     try {
-        const { allowed_clients, disallowed_clients, blocked_hosts, blocked_countries } = config;
+        const { allowed_clients, disallowed_clients, blocked_hosts, blocked_countries, allowed_countries } = config;
 
         const values = {
             allowed_clients: splitByNewLine(allowed_clients),
             disallowed_clients: splitByNewLine(disallowed_clients),
             blocked_hosts: splitByNewLine(blocked_hosts),
             blocked_countries: splitByNewLine(blocked_countries),
+            allowed_countries: splitByNewLine(allowed_countries),
         };
 
         await apiClient.setAccessList(values);
@@ -59,6 +60,7 @@ export const toggleClientBlock = (ip: any, disallowed: any, disallowed_rule: str
         let allowed_clients = accessList.allowed_clients ?? [];
         let disallowed_clients = accessList.disallowed_clients ?? [];
         let blocked_countries = accessList.blocked_countries ?? [];
+        const allowed_countries = accessList.allowed_countries ?? [];
 
         if (disallowed) {
             if (!disallowed_rule) {
@@ -79,6 +81,7 @@ export const toggleClientBlock = (ip: any, disallowed: any, disallowed_rule: str
             blocked_hosts,
             disallowed_clients,
             blocked_countries,
+            allowed_countries,
         };
 
         await apiClient.setAccessList(values);

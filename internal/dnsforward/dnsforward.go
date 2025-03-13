@@ -306,6 +306,7 @@ func (s *Server) WriteDiskConfig(c *Config) {
 	c.AllowedClients = slices.Clone(sc.AllowedClients)
 	c.DisallowedClients = slices.Clone(sc.DisallowedClients)
 	c.BlockedHosts = slices.Clone(sc.BlockedHosts)
+	c.AllowedCountries = slices.Clone(sc.AllowedCountries)
 	c.BlockedCountries = slices.Clone(sc.BlockedCountries)
 	c.TrustedProxies = slices.Clone(sc.TrustedProxies)
 	c.UpstreamDNS = slices.Clone(sc.UpstreamDNS)
@@ -507,6 +508,7 @@ func (s *Server) Prepare(conf *ServerConfig) (err error) {
 		s.conf.AllowedClients,
 		s.conf.DisallowedClients,
 		s.conf.BlockedHosts,
+		s.conf.AllowedCountries,
 		s.conf.BlockedCountries,
 	)
 	if err != nil {
@@ -890,7 +892,7 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 		return true, "", nil
 	}
 
-	if s.access.BlockedCountriesIDs.Len() == 0 {
+	if s.access.BlockedCountriesIDs.Len() == 0 && !s.access.allowlistMode() {
 		return false, "", nil
 	}
 
@@ -921,10 +923,10 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 	blockedByClientID := s.access.isBlockedClientID(clientID)
 	blockedByCountry, countryRule, whois := s.isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID, ip)
 
-	// Allow if at least one of the checks allows in allowlist mode, but block
-	// if at least one of the checks blocks in blocklist mode.
+	// Allow if at least one of the checks allows in allowlist mode,
+	// but block if at least one of the checks blocks in blocklist mode.
 	if allowlistMode && blockedByIP && blockedByClientID && blockedByCountry {
-		log.Debug("dnsforward: client %v (id %q) is not in access allowlist", ip, clientID)
+		log.Debug("dnsforward: client %v (id %q) is not in access allowlist mode", ip, clientID)
 
 		// Return now without substituting the empty rule for the
 		// clientID because the rule can't be empty here.

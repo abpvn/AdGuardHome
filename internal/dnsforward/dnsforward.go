@@ -892,7 +892,7 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 		return true, "", nil
 	}
 
-	if s.access.BlockedCountriesIDs.Len() == 0 && s.access.AllowedCountriesIDs.Len() == 0 {
+	if s.access.BlockedCountriesIDs.Len() == 0 && !s.access.allowlistMode() {
 		return false, "", nil
 	}
 
@@ -920,20 +920,18 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 	}
 
 	allowlistMode := s.access.allowlistMode()
-	allowCountryMode := s.access.allowCountryMode()
 	blockedByClientID := s.access.isBlockedClientID(clientID)
 	blockedByCountry, countryRule, whois := s.isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID, ip)
 
-	// Allow if at least one of the checks allows in allowlist mode or allowCountry mode,
+	// Allow if at least one of the checks allows in allowlist mode,
 	// but block if at least one of the checks blocks in blocklist mode.
-	if (allowlistMode && blockedByIP && blockedByClientID && blockedByCountry) ||
-		(allowCountryMode && blockedByCountry) {
-		log.Debug("dnsforward: client %v (id %q) is not in access allowlist or allowCountry mode", ip, clientID)
+	if allowlistMode && blockedByIP && blockedByClientID && blockedByCountry {
+		log.Debug("dnsforward: client %v (id %q) is not in access allowlist mode", ip, clientID)
 
 		// Return now without substituting the empty rule for the
 		// clientID because the rule can't be empty here.
 		return true, rule, whois
-	} else if !allowlistMode && !allowCountryMode && (blockedByIP || blockedByClientID || blockedByCountry) {
+	} else if !allowlistMode && (blockedByIP || blockedByClientID || blockedByCountry) {
 		log.Debug("dnsforward: client %v (id %q, country %q) is in access blocklist", ip, clientID, countryRule)
 
 		blocked = true

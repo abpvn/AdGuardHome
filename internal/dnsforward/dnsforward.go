@@ -892,7 +892,7 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 		return true, "", nil
 	}
 
-	if s.access.BlockedCountriesIDs.Len() == 0 && !s.access.allowlistMode() {
+	if s.access.BlockedCountriesIDs.Len() == 0 && !s.access.allowCountryMode() {
 		return false, "", nil
 	}
 

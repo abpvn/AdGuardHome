@@ -46,13 +46,15 @@ export const getStats = () => async (dispatch: any) => {
         const normalizedTopClients = normalizeTopStats(stats.top_clients);
 
         const clientsParams = getParamsForClientsSearch(normalizedTopClients, 'name');
-        const clients = await apiClient.searchClients(clientsParams);
-        const topClientsWithInfo = addClientInfo(normalizedTopClients, clients, 'name');
+        const clientsPromise = apiClient.searchClients(clientsParams);
+
+        // Ensure top_clients has empty info to avoid errors
+        const topClientsWithEmptyInfo = addClientInfo(normalizedTopClients, [], 'name');
 
         const normalizedStats = {
             ...stats,
             top_blocked_domains: normalizeTopStats(stats.top_blocked_domains),
-            top_clients: topClientsWithInfo,
+            top_clients: topClientsWithEmptyInfo, // Temporarily set to topClientsWithEmptyInfo
             top_queried_domains: normalizeTopStats(stats.top_queried_domains),
             avg_processing_time: secondsToMilliseconds(stats.avg_processing_time),
             top_upstreams_responses: normalizeTopStats(stats.top_upstreams_responses),
@@ -60,6 +62,14 @@ export const getStats = () => async (dispatch: any) => {
         };
 
         dispatch(getStatsSuccess(normalizedStats));
+
+        // Update topClientsWithInfo later without blocking
+        const clients = await clientsPromise;
+        const topClientsWithInfo = addClientInfo(normalizedTopClients, clients, 'name');
+        dispatch(getStatsSuccess({
+            ...normalizedStats,
+            top_clients: topClientsWithInfo,
+        }));
     } catch (error) {
         dispatch(addErrorToast({ error }));
         dispatch(getStatsFailure());

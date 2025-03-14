@@ -212,7 +212,7 @@ func handleServiceControlAction(
 	chooseSystem()
 
 	action := opts.serviceControlAction
-	log.Info(version.Full())
+	log.Info("%s", version.Full())
 	log.Info("service: control action: %s", action)
 
 	if action == "reload" {
@@ -339,7 +339,7 @@ AdGuard Home is successfully installed and will automatically start on boot.
 There are a few more things that must be configured before you can use it.
 Click on the link below and follow the Installation Wizard steps to finish setup.
 AdGuard Home is now available at the following addresses:`)
-		printHTTPAddresses(urlutil.SchemeHTTP)
+		printHTTPAddresses(urlutil.SchemeHTTP, nil)
 	}
 }
 

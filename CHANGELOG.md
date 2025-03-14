@@ -18,12 +18,28 @@ See also the [v0.107.58 GitHub milestone][ms-v0.107.58].
 NOTE: Add new changes BELOW THIS COMMENT.
 -->
 
+### Security
+
+- Go version has been updated to prevent the possibility of exploiting the Go vulnerabilities fixed in [1.24.1][go-1.24.1].
+
 ### Fixed
 
+- Clearing the DNS cache on the *DNS settings* page now includes both global cache and custom client cache.
+
+- Invalid ICMPv6 Router Advertisement messages ([#7547]).
+
+- Disabled button for autofilled login form.
+
+- Formatting of elapsed times less than one millisecond.
+
 - Changes to global upstream DNS settings not applying to custom client upstream configurations.
+
 - The formatting of large numbers in the clients tables on the *Client settings* page ([#7583]).
 
+[#7547]: https://github.com/AdguardTeam/AdGuardHome/issues/7547
 [#7583]: https://github.com/AdguardTeam/AdGuardHome/issues/7583
+
+[go-1.24.1]: https://groups.google.com/g/golang-announce/c/4t3lzH3I0eI
 
 <!--
 NOTE: Add new changes ABOVE THIS COMMENT.
@@ -48,6 +64,7 @@ See also the [v0.107.57 GitHub milestone][ms-v0.107.57].
 ### Fixed
 
 - The hostnames of DHCP clients not being shown in the *Top clients* table on the dashboard ([#7627]).
+
 - The formatting of large numbers in the upstream table and query log ([#7590]).
 
 [#7590]: https://github.com/AdguardTeam/AdGuardHome/issues/7590

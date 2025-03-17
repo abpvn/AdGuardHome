@@ -167,7 +167,7 @@ func TestIsBlockedIP(t *testing.T) {
 
 func TestIsBlockedCountry(t *testing.T) {
 	blockedCountries := []string{"US", "CN"}
-	allowedCountries := []string{"JP", "DE"}
+	allowedCountries := []string{"JP", "DE", "EU"}
 
 	blockCtx, err := newAccessCtx(nil, nil, nil, nil, blockedCountries)
 	require.NoError(t, err)
@@ -199,6 +199,11 @@ func TestIsBlockedCountry(t *testing.T) {
 		clientID:    "client-1",
 		countryCode: "DE",
 		name:        "no_match_country_de",
+		wantBlocked: false,
+	}, {
+		clientID:    "client-1",
+		countryCode: "EU # Country is really world wide",
+		name:        "no_match_country_eu_longer_than_two_charactor",
 		wantBlocked: false,
 	}}
 

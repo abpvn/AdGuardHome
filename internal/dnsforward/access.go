@@ -144,6 +144,9 @@ func (a *accessManager) isBlockedCountry(country string) (ok bool) {
 		// default.
 		return allowCountryMode
 	}
+	if len(country) > 2 {
+		country = country[:2]
+	}
 
 	if allowCountryMode {
 		return !a.isAllowedCountry(country)

@@ -121,6 +121,26 @@ const stats = handleActions(
             ...defaultStats,
             processingReset: false,
         }),
+
+        [actions.getClientInfoRequest.toString()]: (state: any) => ({
+            ...state,
+            processingClientInfo: true,
+        }),
+        [actions.getClientInfoFailure.toString()]: (state: any) => ({
+            ...state,
+            processingClientInfo: false,
+        }),
+        [actions.getClientInfoSuccess.toString()]: (state, { payload }: any) => {
+            const {
+                top_clients: topClients,
+            } = payload;
+            return ({
+                ...state,
+                topClients,
+                normalizedTopClients: normalizeTopClients(topClients),
+                processingClientInfo: false,
+            })
+        },
     },
     {
         processingGetConfig: false,
@@ -129,6 +149,7 @@ const stats = handleActions(
         processingReset: false,
         interval: DAY,
         customInterval: null,
+        processingClientInfo: false,
         ...defaultStats,
     },
 );

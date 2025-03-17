@@ -1,6 +1,7 @@
 import React from 'react';
-
 import { Link } from 'react-router-dom';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css'
 
 import { normalizeWhois } from './helpers';
 import { WHOIS_ICONS } from './constants';
@@ -32,13 +33,24 @@ const getFormattedWhois = (whois: any) => {
  * @param {object} info.whois_info
  * @param {boolean} [isDetailed]
  * @param {boolean} [isLogs]
+ * @param {boolean} [processingClientInfo]
  * @returns {JSXElement}
  */
-export const renderFormattedClientCell = (value: any, info: any, isDetailed = false, isLogs = false) => {
+export const renderFormattedClientCell = (
+    value: any,
+    info: any,
+    isDetailed = false,
+    isLogs = false,
+    processingClientInfo = false
+) => {
     let whoisContainer = null;
     let nameContainer = value;
 
-    if (info) {
+    if (processingClientInfo) {
+        whoisContainer = <div className="logs__text logs__text--wrap logs__text--whois">
+            <Skeleton height={20} />
+        </div>;
+    } else if (info) {
         const { name, whois_info } = info;
         const whoisAvailable = whois_info && Object.keys(whois_info).length > 0;
 

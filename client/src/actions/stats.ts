@@ -39,6 +39,10 @@ export const getStatsRequest = createAction('GET_STATS_REQUEST');
 export const getStatsFailure = createAction('GET_STATS_FAILURE');
 export const getStatsSuccess = createAction('GET_STATS_SUCCESS');
 
+export const getClientInfoRequest = createAction('GET_CLIENT_INFO_REQUEST');
+export const getClientInfoFailure = createAction('GET_CLIENT_INFO_FAILURE');
+export const getClientInfoSuccess = createAction('GET_CLIENT_INFO_SUCCESS');
+
 export const getStats = () => async (dispatch: any) => {
     dispatch(getStatsRequest());
     try {
@@ -64,12 +68,18 @@ export const getStats = () => async (dispatch: any) => {
         dispatch(getStatsSuccess(normalizedStats));
 
         // Update topClientsWithInfo later without blocking
-        const clients = await clientsPromise;
-        const topClientsWithInfo = addClientInfo(normalizedTopClients, clients, 'name');
-        dispatch(getStatsSuccess({
-            ...normalizedStats,
-            top_clients: topClientsWithInfo,
-        }));
+        dispatch(getClientInfoRequest());
+        try {
+            const clients = await clientsPromise;
+            const topClientsWithInfo = addClientInfo(normalizedTopClients, clients, 'name');
+            dispatch(getClientInfoSuccess({
+                ...normalizedStats,
+                top_clients: topClientsWithInfo,
+            }));
+        } catch (error) {
+            dispatch(addErrorToast({ error }));
+            dispatch(getClientInfoFailure());
+        }
     } catch (error) {
         dispatch(addErrorToast({ error }));
         dispatch(getStatsFailure());

@@ -142,10 +142,14 @@ const ClientCell = (row: any) => {
         },
     } = row;
 
+    const processingClientInfo = useSelector<RootState, RootState['stats']['processingClientInfo']>(
+        (state) => state.stats.processingClientInfo,
+    );
+
     return (
         <>
             <div className="logs__row logs__row--overflow logs__row--column d-flex align-items-center">
-                {renderFormattedClientCell(value, info, true)}
+                {renderFormattedClientCell(value, info, true, false, processingClientInfo)}
                 {renderBlockingButton(value, disallowed, disallowed_rule)}
             </div>
         </>

@@ -213,6 +213,7 @@ export type StatsData = {
     enabled: boolean;
     topUpstreamsAvgTime: { name: string; count: number }[];
     topUpstreamsResponses: { name: string; count: number }[];
+    processingClientInfo: boolean;
 };
 
 export type ClientsData = {
@@ -617,6 +618,7 @@ export const initialState: RootState = {
         enabled: true,
         topUpstreamsAvgTime: [],
         topUpstreamsResponses: [],
+        processingClientInfo: false,
     },
     toasts: { notices: [] },
     loadingBar: {},

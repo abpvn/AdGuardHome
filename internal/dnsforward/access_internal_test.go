@@ -203,7 +203,7 @@ func TestIsBlockedCountry(t *testing.T) {
 	}, {
 		clientID:    "client-1",
 		countryCode: "EU # Country is really world wide",
-		name:        "no_match_country_eu_longer_than_two_charactor",
+		name:        "no_match_country_eu_longer_than_two_character",
 		wantBlocked: false,
 	}}
 

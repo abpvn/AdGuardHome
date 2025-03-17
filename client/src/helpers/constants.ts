@@ -525,4 +525,13 @@ export const TIME_UNITS = {
     DAYS: 'days',
 };
 
+export const DNS_RECORD_TYPES = [
+    "A", "AAAA", "AFSDB", "APL", "CAA", "CDNSKEY", "CDS", "CERT", "CNAME",
+    "CSYNC", "DHCID", "DLV", "DNAME", "DNSKEY", "DS", "EUI48", "EUI64",
+    "HINFO", "HIP", "HTTPS", "IPSECKEY", "KEY", "KX", "LOC", "MX", "NAPTR",
+    "NS", "NSEC", "NSEC3", "NSEC3PARAM", "OPENPGPKEY", "PTR", "RP", "RRSIG",
+    "SIG", "SMIMEA", "SOA", "SRV", "SSHFP", "SVCB", "TA", "TKEY",
+    "TLSA", "TSIG", "TXT", "URI", "ZONEMD"
+];
+
 export const COUNTRY_PREFIX = 'COUNTRY:';

@@ -40,6 +40,8 @@ type ServiceEntry struct {
 }
 
 // Settings are custom filtering settings for a client.
+//
+// TODO(s.chzhen):  Move to the client package.
 type Settings struct {
 	ClientName             string
 	ClientIP               netip.Addr
@@ -49,6 +51,10 @@ type Settings struct {
 	UserRules              []string
 
 	ServicesRules []ServiceEntry
+
+	// BlockedServices is the configuration of blocked services of a client.  It
+	// is nil if the client does not have any blocked services.
+	BlockedServices *BlockedServices
 
 	ProtectionEnabled   bool
 	FilteringEnabled    bool
@@ -82,6 +88,11 @@ type Config struct {
 	ParentalControlChecker Checker `yaml:"-"`
 
 	SafeSearch SafeSearch `yaml:"-"`
+
+	// ApplyClientFiltering retrieves persistent client information using the
+	// ClientID or client IP address, and applies it to the filtering settings.
+	// It must not be nil.
+	ApplyClientFiltering func(clientID string, cliAddr netip.Addr, setts *Settings) `yaml:"-"`
 
 	// BlockedServices is the configuration of blocked services.
 	// Per-client settings can override this configuration.
@@ -259,6 +270,13 @@ type DNSFilter struct {
 
 	// parentalControl is the parental control hash-prefix checker.
 	parentalControlChecker Checker
+
+	// applyClientFiltering retrieves persistent client information using the
+	// ClientID or client IP address, and applies it to the filtering settings.
+	//
+	// TODO(s.chzhen):  Consider finding a better approach while taking an
+	// import cycle into account.
+	applyClientFiltering func(clientID string, cliAddr netip.Addr, setts *Settings)
 
 	engineLock sync.RWMutex
 
@@ -1050,6 +1068,7 @@ func New(c *Config, blockFilters []Filter) (d *DNSFilter, err error) {
 		safeSearch:                  c.SafeSearch,
 		safeBrowsingChecker:         c.SafeBrowsingChecker,
 		parentalControlChecker:      c.ParentalControlChecker,
+		applyClientFiltering:        c.ApplyClientFiltering,
 		refreshLock:                 &sync.Mutex{},
 		confMu:                      &sync.RWMutex{},
 		ClientsRulesStorage:         make(map[string]*filterlist.RuleStorage),

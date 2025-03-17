@@ -12,6 +12,7 @@ import (
 
 	"github.com/AdguardTeam/AdGuardHome/internal/arpdb"
 	"github.com/AdguardTeam/AdGuardHome/internal/dhcpsvc"
+	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/AdGuardHome/internal/whois"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/golibs/errors"
@@ -670,4 +671,45 @@ func (s *Storage) ClearUpstreamCache() {
 	defer s.mu.Unlock()
 
 	s.upstreamManager.clearUpstreamCache()
+}
+
+// ApplyClientFiltering retrieves persistent client information using the
+// ClientID or client IP address, and applies it to the filtering settings.
+func (s *Storage) ApplyClientFiltering(id string, addr netip.Addr, setts *filtering.Settings) {
+	c, ok := s.index.findByClientID(id)
+	if !ok {
+		c, ok = s.index.findByIP(addr)
+	}
+
+	if !ok {
+		s.logger.Debug("no client filtering settings found", "clientid", id, "addr", addr)
+
+		return
+	}
+
+	s.logger.Debug("applying custom client filtering settings", "client_name", c.Name)
+
+	setts.ClientIP = addr
+
+	if c.UseOwnBlockedServices {
+		setts.BlockedServices = c.BlockedServices.Clone()
+	}
+
+	setts.ClientName = c.Name
+	setts.ClientTags = slices.Clone(c.Tags)
+	setts.UseGlobalFilters = c.UseGlobalFilters
+	if !c.UseGlobalFilters {
+		setts.ClientFilters = c.Filters
+		setts.ClientWhiteListFilters = c.WhitelistFilters
+		setts.UserRules = c.UserRules
+	}
+	if !c.UseOwnSettings {
+		return
+	}
+
+	setts.FilteringEnabled = c.FilteringEnabled
+	setts.SafeSearchEnabled = c.SafeSearchConf.Enabled
+	setts.ClientSafeSearch = c.SafeSearch
+	setts.SafeBrowsingEnabled = c.SafeBrowsingEnabled
+	setts.ParentalEnabled = c.ParentalEnabled
 }

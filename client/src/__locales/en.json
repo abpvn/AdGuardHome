@@ -763,5 +763,5 @@
     "client_confirm_unblock_country": "Are you sure you want to unblock all clients from \"{{country}}\"?",
     "allowed_countries_title": "Allowed countries",
     "allowed_countries_desc": "Allow access from specific countries. Use two-character country codes, each country on a new line. This list has higher priority than the blocked countries list.",
-    "allowed_countries_placeholder": "Example:\nUS\nGB\nDE"
+    "example_countries_placeholder": "Example:\nUS\nGB\nDE"
 }

@@ -58,14 +58,14 @@ const fields: {
         id: 'allowed_countries',
         title: i18next.t('allowed_countries_title'),
         subtitle: i18next.t('allowed_countries_desc'),
-        placeholder: i18next.t('allowed_countries_placeholder'),
+        placeholder: i18next.t('example_countries_placeholder'),
         normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
     },
     {
         id: 'blocked_countries',
         title: i18next.t('blocked_countries_title'),
         subtitle: i18next.t('blocked_countries_desc'),
-        placeholder: i18next.t('blocked_countries_placeholder'),
+        placeholder: i18next.t('example_countries_placeholder'),
         normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
     },
 ];

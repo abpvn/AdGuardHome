@@ -756,5 +756,5 @@
     "client_confirm_unblock_country": "Bạn có chắc chắn muốn bỏ chặn tất cả các người dùng từ \"{{country}}\" không?",
     "allowed_countries_title": "Quốc gia được phép",
     "allowed_countries_desc": "Cho phép truy cập từ các quốc gia cụ thể. Sử dụng mã quốc gia hai ký tự, mỗi mã quốc gia một dòng. Danh sách này có ưu tiên cao hơn danh sách quốc gia bị chặn.",
-    "allowed_countries_placeholder": "Ví dụ:\nUS\nGB\nDE"
+    "example_countries_placeholder": "Ví dụ:\nUS\nGB\nDE"
 }

@@ -18,6 +18,15 @@ See also the [v0.107.59 GitHub milestone][ms-v0.107.59].
 NOTE: Add new changes BELOW THIS COMMENT.
 -->
 
+### Fixed
+
+- Rules with the `client` modifier not working ([#7708]).
+
+- The search form not working in the query log ([#7704]).
+
+[#7704]: https://github.com/AdguardTeam/AdGuardHome/issues/7704
+[#7708]: https://github.com/AdguardTeam/AdGuardHome/issues/7708
+
 <!--
 NOTE: Add new changes ABOVE THIS COMMENT.
 -->

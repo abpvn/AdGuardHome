@@ -36,7 +36,7 @@ const config = {
     },
     output: {
         path: PUBLIC_PATH,
-        filename: '[name].[chunkhash].js',
+        filename: '[name].[fullhash].js',
     },
     resolve: {
         modules: ['node_modules'],
@@ -102,8 +102,8 @@ const config = {
             template: HTML_LOGIN_PATH,
         }),
         new MiniCssExtractPlugin({
-            filename: isDev ? '[name].css' : '[name].[hash].css',
-            chunkFilename: isDev ? '[id].css' : '[id].[hash].css',
+            filename: isDev ? '[name].css' : '[name].[fullhash].css',
+            chunkFilename: isDev ? '[id].css' : '[id].[fullhash].css',
         }),
         new CopyPlugin({
             patterns: [

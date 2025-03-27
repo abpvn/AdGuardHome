@@ -8,11 +8,12 @@ type Props = ComponentProps<'input'> & {
     rightAddon?: ReactNode;
     error?: string;
     trimOnBlur?: boolean;
+    full?: boolean;
 };
 
 export const Input = forwardRef<HTMLInputElement, Props>(
-    ({ name, label, desc, className, leftAddon, rightAddon, error, trimOnBlur, onBlur, ...rest }, ref) => (
-        <div className={clsx('form-group', { 'has-error': !!error })}>
+    ({ name, label, desc, className, leftAddon, rightAddon, error, trimOnBlur, full, onBlur, ...rest }, ref) => (
+        <div className={clsx('form-group', { 'has-error': !!error }, { 'form-group--full': full })}>
             {label && (
                 <label className={clsx('form__label', { 'form__label--with-desc': !!desc })} htmlFor={name}>
                     {label}

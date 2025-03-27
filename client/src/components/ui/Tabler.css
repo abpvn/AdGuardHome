@@ -14349,6 +14349,10 @@ textarea[cols] {
     display: block;
 }
 
+.form-group--full {
+    width: 100%;
+}
+
 .form-label {
     display: block;
     margin-bottom: 0.375rem;

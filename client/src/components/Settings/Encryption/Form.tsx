@@ -148,6 +148,7 @@ export const Form = ({
         setValue,
         setError,
         getValues,
+        trigger,
         formState: { isSubmitting, isValid },
     } = useForm<EncryptionFormValues>({
         defaultValues: {
@@ -270,29 +271,43 @@ export const Form = ({
                                     name={`server_names.${index}`}
                                     control={control}
                                     rules={{
-                                        validate: { validateServerName },
+                                        validate: validateServerName,
+                                        required: { value: isEnabled, message: t('form_error_required') },
                                     }}
-                                    render={({ field }) => (
-                                        <input
+                                    render={({ field, fieldState }) => (
+                                        <Input
                                             {...field}
+                                            full
                                             type="text"
                                             required={isEnabled}
-                                            className="form-control"
                                             disabled={!isEnabled}
+                                            error={fieldState.error?.message}
+                                            placeholder={t('encryption_server_enter')}
+                                            onBlur={() => {
+                                                field.onBlur();
+                                                handleBlur();
+                                            }}
+                                            rightAddon={
+                                                index > 0 &&
+                                                isEnabled && (
+                                                    <button
+                                                        className="btn btn-secondary btn-standart"
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newServerNames = serverNames.filter(
+                                                                (_, i) => i !== index,
+                                                            );
+                                                            setValue('server_names', newServerNames);
+                                                            trigger('server_names');
+                                                            handleBlur();
+                                                        }}>
+                                                        -
+                                                    </button>
+                                                )
+                                            }
                                         />
                                     )}
                                 />
-                                {index > 0 && isEnabled && (
-                                    <button
-                                        className="btn btn-secondary btn-standart"
-                                        type="button"
-                                        onClick={() => {
-                                            const newServerNames = serverNames.filter((_, i) => i !== index);
-                                            setValue('server_names', newServerNames);
-                                        }}>
-                                        -
-                                    </button>
-                                )}
                             </div>
                         ))}
                         {isEnabled && (

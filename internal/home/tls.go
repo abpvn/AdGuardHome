@@ -340,6 +340,8 @@ func loadPrivateKeyData(tlsConf *tlsConfigSettings, status *tlsConfigStatus) (er
 		}
 
 		status.ValidKey = true
+	} else if tlsConf.PrivateKey == "" {
+		return errors.Error("private key is empty")
 	}
 
 	return nil

@@ -23,6 +23,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, Props>(
             <textarea
                 className={clsx(
                     'form-control form-control--textarea form-control--textarea-small font-monospace',
+                    { 'is-invalid': !!error },
                     className,
                 )}
                 ref={ref}

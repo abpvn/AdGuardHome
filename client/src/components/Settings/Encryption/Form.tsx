@@ -171,7 +171,8 @@ export const Form = ({
         server_names: serverNames,
     } = watch();
 
-    const handleBlur = () => {
+    const handleBlur = (onBlur?: () => void) => () => {
+        onBlur?.();
         debouncedConfigValidation(getValues());
     };
 
@@ -230,7 +231,7 @@ export const Form = ({
                             name="enabled"
                             control={control}
                             render={({ field }) => (
-                                <Checkbox {...field} title={t('encryption_enable')} onBlur={handleBlur} />
+                                <Checkbox {...field} title={t('encryption_enable')} onBlur={handleBlur(field.onBlur)} />
                             )}
                         />
                     </div>
@@ -283,10 +284,7 @@ export const Form = ({
                                             disabled={!isEnabled}
                                             error={fieldState.error?.message}
                                             placeholder={t('encryption_server_enter')}
-                                            onBlur={() => {
-                                                field.onBlur();
-                                                handleBlur();
-                                            }}
+                                            onBlur={handleBlur(field.onBlur)}
                                             rightAddon={
                                                 index > 0 &&
                                                 isEnabled && (
@@ -299,7 +297,7 @@ export const Form = ({
                                                             );
                                                             setValue('server_names', newServerNames);
                                                             trigger('server_names');
-                                                            handleBlur();
+                                                            handleBlur()();
                                                         }}>
                                                         -
                                                     </button>
@@ -366,7 +364,7 @@ export const Form = ({
                                         const { value } = e.target;
                                         field.onChange(toNumber(value));
                                     }}
-                                    onBlur={handleBlur}
+                                    onBlur={handleBlur(field.onBlur)}
                                 />
                             )}
                         />
@@ -398,7 +396,7 @@ export const Form = ({
                                         const { value } = e.target;
                                         field.onChange(toNumber(value));
                                     }}
-                                    onBlur={handleBlur}
+                                    onBlur={handleBlur(field.onBlur)}
                                 />
                             )}
                         />
@@ -430,7 +428,7 @@ export const Form = ({
                                         const { value } = e.target;
                                         field.onChange(toNumber(value));
                                     }}
-                                    onBlur={handleBlur}
+                                    onBlur={handleBlur(field.onBlur)}
                                 />
                             )}
                         />
@@ -489,7 +487,7 @@ export const Form = ({
                                         placeholder={t('encryption_certificates_input')}
                                         disabled={!isEnabled}
                                         error={fieldState.error?.message}
-                                        onBlur={handleBlur}
+                                        onBlur={handleBlur(field.onBlur)}
                                     />
                                 )}
                             />
@@ -504,7 +502,7 @@ export const Form = ({
                                         placeholder={t('encryption_certificate_path')}
                                         error={fieldState.error?.message}
                                         disabled={!isEnabled}
-                                        onBlur={handleBlur}
+                                        onBlur={handleBlur(field.onBlur)}
                                     />
                                 )}
                             />
@@ -561,7 +559,10 @@ export const Form = ({
                                                 }
                                                 field.onChange(checked);
                                             }}
-                                            onBlur={handleBlur}
+                                            onBlur={() => {
+                                                handleBlur(field.onBlur)();
+                                                trigger('private_key');
+                                            }}
                                         />
                                     )}
                                 />
@@ -569,13 +570,16 @@ export const Form = ({
                                 <Controller
                                     name="private_key"
                                     control={control}
+                                    rules={{
+                                        required: { value: isEnabled && !privateKeySaved, message: t('form_error_required') },
+                                    }}
                                     render={({ field, fieldState }) => (
                                         <Textarea
                                             {...field}
                                             placeholder={t('encryption_key_input')}
                                             disabled={!isEnabled || privateKeySaved}
                                             error={fieldState.error?.message}
-                                            onBlur={handleBlur}
+                                            onBlur={handleBlur(field.onBlur)}
                                         />
                                     )}
                                 />
@@ -584,6 +588,9 @@ export const Form = ({
                             <Controller
                                 name="private_key_path"
                                 control={control}
+                                rules={{
+                                    required: { value: isEnabled, message: t('form_error_required') },
+                                }}
                                 render={({ field, fieldState }) => (
                                     <Input
                                         {...field}
@@ -591,7 +598,7 @@ export const Form = ({
                                         placeholder={t('encryption_private_key_path')}
                                         error={fieldState.error?.message}
                                         disabled={!isEnabled}
-                                        onBlur={handleBlur}
+                                        onBlur={handleBlur(field.onBlur)}
                                     />
                                 )}
                             />

@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Skeleton from 'react-loading-skeleton';
+import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css'
 
+import { useSelector } from 'react-redux';
 import { normalizeWhois } from './helpers';
-import { WHOIS_ICONS } from './constants';
+import { THEMES, WHOIS_ICONS } from './constants';
+import { RootState } from '../initialState';
 
 const getFormattedWhois = (whois: any) => {
     const whoisInfo = normalizeWhois(whois);
@@ -26,6 +28,29 @@ const getFormattedWhois = (whois: any) => {
     });
 };
 
+// New custom hook for dark mode detection
+function useDarkMode(currentTheme: string): boolean {
+    const [isDarkModeQuery, setIsDarkModeQuery] = React.useState(
+        window.matchMedia('(prefers-color-scheme: dark)').matches,
+    );
+
+    React.useEffect(() => {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleModeChange = (event: MediaQueryListEvent) => {
+            setIsDarkModeQuery(event.matches);
+        };
+        mediaQuery.addEventListener('change', handleModeChange);
+        return () => mediaQuery.removeEventListener('change', handleModeChange);
+    }, []);
+
+    return React.useMemo(() => {
+        if (currentTheme === THEMES.auto) {
+            return isDarkModeQuery;
+        }
+        return currentTheme === THEMES.dark;
+    }, [currentTheme, isDarkModeQuery]);
+}
+
 /**
  * @param {string} value
  * @param {object} info
@@ -46,10 +71,23 @@ export const renderFormattedClientCell = (
     let whoisContainer = null;
     let nameContainer = value;
 
+    const currentTheme = useSelector((state: RootState) => (state.dashboard ? state.dashboard.theme : THEMES.auto));
+
+    // Refactored dark mode logic using the custom hook
+    const isDarkMode = useDarkMode(currentTheme);
+
     if (processingClientInfo) {
-        whoisContainer = <div className="logs__text logs__text--wrap logs__text--whois">
-            <Skeleton height={20} />
-        </div>;
+        whoisContainer = (
+            <div className="logs__text logs__text--wrap logs__text--whois">
+                {isDarkMode ? (
+                    <SkeletonTheme baseColor="#202020" highlightColor="#444">
+                        <Skeleton height={20} />
+                    </SkeletonTheme>
+                ) : (
+                    <Skeleton height={20} />
+                )}
+            </div>
+        );
     } else if (info) {
         const { name, whois_info } = info;
         const whoisAvailable = whois_info && Object.keys(whois_info).length > 0;

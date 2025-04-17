@@ -74,7 +74,7 @@ func (s *Server) clientIDFromDNSContext(pctx *proxy.DNSContext) (clientID string
 		return "", nil
 	}
 
-	hostSrvNames := s.conf.ServerNames
+	hostSrvNames := s.conf.TLSConf.ServerNames
 	if len(hostSrvNames) == 0 {
 		return "", nil
 	}
@@ -87,7 +87,7 @@ func (s *Server) clientIDFromDNSContext(pctx *proxy.DNSContext) (clientID string
 	clientID, err = clientIDFromClientServerName(
 		hostSrvNames,
 		cliSrvName,
-		s.conf.StrictSNICheck,
+		s.conf.TLSConf.StrictSNICheck,
 	)
 	if err != nil {
 		return "", fmt.Errorf("clientid check: %w", err)

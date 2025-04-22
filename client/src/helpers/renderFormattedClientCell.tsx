@@ -117,7 +117,10 @@ export const renderFormattedClientCell = (
 
     return (
         <div className="logs__text logs__text--client mw-100" title={value}>
-            <Link to={`logs?search="${encodeURIComponent(value)}"`}>{nameContainer}</Link>
+            <Link
+                to={`logs?${info?.name === value ? `client=${encodeURIComponent(value)}` : `search="${encodeURIComponent(value)}"`}`}>
+                {nameContainer}
+            </Link>
             {whoisContainer}
         </div>
     );

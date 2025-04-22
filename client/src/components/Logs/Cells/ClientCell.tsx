@@ -222,7 +222,7 @@ const ClientCell = ({ client, client_id, client_info, domain, reason }: ClientCe
                 {isDetailed && clientName && !whoisAvailable && (
                     <Link
                         className="detailed-info d-none d-sm-block logs__text logs__text--link logs__text--client"
-                        to={`logs?client="${encodeURIComponent(clientName)}"`}
+                        to={`logs?client=${encodeURIComponent(clientName)}`}
                         title={clientName}>
                         {clientName}
                     </Link>

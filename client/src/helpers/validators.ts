@@ -416,3 +416,18 @@ export const validatePlainDns = (value: any, allValues: any) => {
 
     return undefined;
 };
+
+/**
+ * @returns {undefined|string}
+ * @param value
+ * @param allValues
+ */
+export const validateAllowUnencryptedDoh = (value: any, allValues: any) => {
+    const { enabled } = allValues;
+
+    if (!enabled && !value) {
+        return i18next.t('allow_unencrypted_doh_error');
+    }
+
+    return undefined;
+};

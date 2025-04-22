@@ -431,6 +431,8 @@
     "encryption_plain_dns_enable": "Kích hoạt DNS đơn giản",
     "encryption_plain_dns_desc": "DNS đơn giản được bật theo mặc định. Bạn có thể vô hiệu hóa nó để buộc tất cả các thiết bị sử dụng DNS được mã hóa. Để thực hiện việc này, bạn phải kích hoạt ít nhất một giao thức DNS được mã hóa",
     "encryption_plain_dns_error": "Để tắt DNS đơn giản, hãy bật ít nhất một giao thức DNS được mã hóa",
+    "encryption_allow_unencrypted_doh_enable": "Bật DNS-over-HTTPS không mã hoá",
+    "allow_unencrypted_doh_desc": "Nếu được chọn, DNS-over-HTTPS không mã hoá sẽ được sử dụng theo mặc định. Các giao thức DNS mã hoá sẽ không hoạt động.",
     "topline_expiring_certificate": "Chứng chỉ SSL của bạn sắp hết hạn. Cập nhật <0>Cài đặt mã hóa</0>.",
     "topline_expired_certificate": "Chứng chỉ SSL của bạn đã hết hạn. Cập nhật <0>Cài đặt mã hóa</0>.",
     "form_error_port_range": "Nhập giá trị cổng trong phạm vi 80-65535",
@@ -760,5 +762,6 @@
     "check_hostname": "Tên máy chủ",
     "check_client_id": "ID khách hàng",
     "check_enter_client_id": "Nhập ID khách hàng",
-    "check_dns_record": "Chọn loại bản ghi DNS"
+    "check_dns_record": "Chọn loại bản ghi DNS",
+    "allow_unencrypted_doh_error": "DNS-over-HTTPS không mã hoá phải được bật khi mã hoá bị tắt"
 }

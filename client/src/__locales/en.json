@@ -434,6 +434,8 @@
     "encryption_plain_dns_enable": "Enable plain DNS",
     "encryption_plain_dns_desc": "Plain DNS is enabled by default. You can disable it to force all devices to use encrypted DNS. To do this, you must enable at least one encrypted DNS protocol",
     "encryption_plain_dns_error": "To disable plain DNS, enable at least one encrypted DNS protocol",
+    "encryption_allow_unencrypted_doh_enable": "Enable unencrypted DNS-over-HTTPS",
+    "allow_unencrypted_doh_desc": "If enabled, unencrypted DNS-over-HTTPS will be used by default. Encrypted DNS protocols will not work.",
     "topline_expiring_certificate": "Your SSL certificate is about to expire. Update <0>Encryption settings</0>.",
     "topline_expired_certificate": "Your SSL certificate is expired. Update <0>Encryption settings</0>.",
     "form_error_port_range": "Enter port number in the range of 80-65535",
@@ -763,5 +765,6 @@
     "client_confirm_unblock_country": "Are you sure you want to unblock all clients from \"{{country}}\"?",
     "allowed_countries_title": "Allowed countries",
     "allowed_countries_desc": "Allow access from specific countries. Use two-character country codes, each country on a new line. This list has higher priority than the blocked countries list.",
-    "example_countries_placeholder": "Example:\nUS\nGB\nDE"
+    "example_countries_placeholder": "Example:\nUS\nGB\nDE",
+    "allow_unencrypted_doh_error": "Unencrypted DNS-over-HTTPS must be enabled when encryption is disabled"
 }

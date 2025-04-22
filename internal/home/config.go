@@ -382,9 +382,6 @@ func (c *tlsConfigSettings) clone() (clone *tlsConfigSettings) {
 func (c *tlsConfigSettings) setPrivateFieldsAndCompare(conf *tlsConfigSettings) (equal bool) {
 	conf.OverrideTLSCiphers = slices.Clone(c.OverrideTLSCiphers)
 
-	// TODO(s.chzhen):  Remove this once the frontend supports it.
-	conf.AllowUnencryptedDoH = c.AllowUnencryptedDoH
-
 	conf.DNSCryptConfigFile = c.DNSCryptConfigFile
 	conf.PortDNSCrypt = c.PortDNSCrypt
 

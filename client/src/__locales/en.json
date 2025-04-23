@@ -435,7 +435,7 @@
     "encryption_plain_dns_desc": "Plain DNS is enabled by default. You can disable it to force all devices to use encrypted DNS. To do this, you must enable at least one encrypted DNS protocol",
     "encryption_plain_dns_error": "To disable plain DNS, enable at least one encrypted DNS protocol",
     "encryption_allow_unencrypted_doh_enable": "Enable unencrypted DNS-over-HTTPS",
-    "allow_unencrypted_doh_desc": "If enabled, unencrypted DNS-over-HTTPS will be used by default. Encrypted DNS protocols will not work.",
+    "allow_unencrypted_doh_desc": "If enabled, unencrypted DNS-over-HTTPS will be used when the client does not support encrypted DNS. This is not recommended, as it may leak your DNS queries to third parties.",
     "topline_expiring_certificate": "Your SSL certificate is about to expire. Update <0>Encryption settings</0>.",
     "topline_expired_certificate": "Your SSL certificate is expired. Update <0>Encryption settings</0>.",
     "form_error_port_range": "Enter port number in the range of 80-65535",

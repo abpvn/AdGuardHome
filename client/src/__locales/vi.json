@@ -432,7 +432,7 @@
     "encryption_plain_dns_desc": "DNS đơn giản được bật theo mặc định. Bạn có thể vô hiệu hóa nó để buộc tất cả các thiết bị sử dụng DNS được mã hóa. Để thực hiện việc này, bạn phải kích hoạt ít nhất một giao thức DNS được mã hóa",
     "encryption_plain_dns_error": "Để tắt DNS đơn giản, hãy bật ít nhất một giao thức DNS được mã hóa",
     "encryption_allow_unencrypted_doh_enable": "Bật DNS-over-HTTPS không mã hoá",
-    "allow_unencrypted_doh_desc": "Nếu được chọn, DNS-over-HTTPS không mã hoá sẽ được sử dụng theo mặc định. Các giao thức DNS mã hoá sẽ không hoạt động.",
+    "allow_unencrypted_doh_desc": "Nếu được chọn, DNS-over-HTTPS không mã hoá sẽ được sử dụng khi máy khách không hỗ trợ mã hóa, nhưng không được khuyến nghị vì lý do bảo mật vì có thể bị lộ truy vấn DNS cho bên thứ ba.",
     "topline_expiring_certificate": "Chứng chỉ SSL của bạn sắp hết hạn. Cập nhật <0>Cài đặt mã hóa</0>.",
     "topline_expired_certificate": "Chứng chỉ SSL của bạn đã hết hạn. Cập nhật <0>Cài đặt mã hóa</0>.",
     "form_error_port_range": "Nhập giá trị cổng trong phạm vi 80-65535",

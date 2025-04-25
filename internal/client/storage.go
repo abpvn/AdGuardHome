@@ -442,6 +442,19 @@ func (s *Storage) Add(ctx context.Context, p *Persistent) (err error) {
 	return nil
 }
 
+// FindByName finds persistent client by name.  And returns its shallow copy.
+func (s *Storage) FindByName(name string) (p *Persistent, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	p, ok = s.index.findByName(name)
+	if ok {
+		return p.ShallowClone(), ok
+	}
+
+	return nil, false
+}
+
 // FindParams represents the parameters for searching a client.  At least one
 // field must be non-empty.
 type FindParams struct {

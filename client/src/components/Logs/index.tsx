@@ -117,6 +117,17 @@ const Logs = () => {
 
     const closeModal = () => setModalOpened(false);
 
+    // Add effect to sync client_url_param changes to formMethods
+    useEffect(() => {
+        const { client: newClient } = queryString.parse(history.location.search);
+        const currentClient = formMethods.getValues('client');
+        if (newClient && newClient !== currentClient) {
+            formMethods.setValue('client', newClient as string);
+        } else if (!newClient && currentClient !== DEFAULT_LOGS_FILTER.client) {
+            formMethods.setValue('client', DEFAULT_LOGS_FILTER.client);
+        }
+    }, [history.location.search]);
+
     useEffect(() => {
         (async () => {
             setIsLoading(true);

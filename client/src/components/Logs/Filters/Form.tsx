@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -39,6 +39,7 @@ export const Form = ({ className, setIsLoading }: Props) => {
     const searchValue = watch('search');
     const responseStatusValue = watch('response_status');
     const client = watch('client');
+    const clientRef = useRef<string | undefined>(client);
 
     const [debouncedSearch, setDebouncedSearch] = useDebounce(searchValue.trim(), DEBOUNCE_FILTER_TIMEOUT);
 
@@ -53,6 +54,15 @@ export const Form = ({ className, setIsLoading }: Props) => {
 
         history.replace(`${getLogsUrlParams(debouncedSearch, responseStatusValue, client)}`);
     }, [responseStatusValue, debouncedSearch, client]);
+
+    useEffect(() => {
+        if (clients.length === 0 && client) {
+            clientRef.current = client;
+        } else if (clients.length > 0 && clientRef.current) {
+            setValue('client', clientRef.current);
+            clientRef.current = undefined;
+        }
+    }, [clients, client])
 
     useEffect(() => {
         if (responseStatusValue && !(responseStatusValue in RESPONSE_FILTER_QUERIES)) {

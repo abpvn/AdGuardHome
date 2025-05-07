@@ -342,6 +342,42 @@ func (s *StatsCtx) TopClientsIP(maxCount uint) (ips []netip.Addr) {
 	return ips
 }
 
+// GetStatsByIDs aggregates stats for the given client IDs over the available units.
+func (s *StatsCtx) GetStatsByIDs(ids []string) (map[string]uint64, error) {
+	s.confMu.RLock()
+	defer s.confMu.RUnlock()
+
+	limit := uint32(s.limit.Hours())
+	if !s.enabled || limit == 0 {
+		return nil, fmt.Errorf("statistics are disabled or limit is zero")
+	}
+
+	units, _ := s.loadUnits(limit)
+	if units == nil {
+		return nil, fmt.Errorf("could not get statistics data")
+	}
+
+	result := make(map[string]uint64)
+	for _, u := range units {
+		for _, cp := range u.Clients {
+			for _, id := range ids {
+				if cp.Name == id {
+					result[id] += cp.Count
+				}
+			}
+		}
+	}
+
+	// Ensure all ids are present in the result
+	for _, id := range ids {
+		if _, ok := result[id]; !ok {
+			result[id] = 0
+		}
+	}
+
+	return result, nil
+}
+
 // deleteOldUnits walks the buckets available to tx and deletes old units.  It
 // returns the number of deletions performed.
 func (s *StatsCtx) deleteOldUnits(tx *bbolt.Tx, firstID uint32) (deleted int) {

@@ -275,3 +275,67 @@ func TestShouldCount(t *testing.T) {
 		})
 	}
 }
+
+func TestGetStatsByIDs(t *testing.T) {
+	conf := stats.Config{
+		Logger:            slogutil.NewDiscardLogger(),
+		ShouldCountClient: func([]string) bool { return true },
+		Filename:          filepath.Join(t.TempDir(), "stats.db"),
+		Limit:             timeutil.Day,
+		Enabled:           true,
+	}
+
+	s, err := stats.New(conf)
+	require.NoError(t, err)
+
+	s.Start()
+	testutil.CleanupAndRequireSuccess(t, s.Close)
+
+	entries := []*stats.Entry{
+		{Domain: "a.com", Client: "id1", Result: stats.RNotFiltered, ProcessingTime: 1},
+		{Domain: "b.com", Client: "id2", Result: stats.RNotFiltered, ProcessingTime: 2},
+		{Domain: "a.com", Client: "id1", Result: stats.RFiltered, ProcessingTime: 3},
+		{Domain: "c.com", Client: "id3", Result: stats.RNotFiltered, ProcessingTime: 4},
+		{Domain: "b.com", Client: "id2", Result: stats.RFiltered, ProcessingTime: 5},
+	}
+	for _, e := range entries {
+		s.Update(e)
+	}
+
+	ids := []string{"id1", "id2", "id3", "id4"}
+	got, err := s.GetStatsByIDs(ids)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]uint64{"id1": 2, "id2": 2, "id3": 1, "id4": 0}, got)
+}
+
+func TestGetStatsByIDs_WithIPs(t *testing.T) {
+	conf := stats.Config{
+		Logger:            slogutil.NewDiscardLogger(),
+		ShouldCountClient: func([]string) bool { return true },
+		Filename:          filepath.Join(t.TempDir(), "stats.db"),
+		Limit:             timeutil.Day,
+		Enabled:           true,
+	}
+
+	s, err := stats.New(conf)
+	require.NoError(t, err)
+
+	s.Start()
+	testutil.CleanupAndRequireSuccess(t, s.Close)
+
+	entries := []*stats.Entry{
+		{Domain: "a.com", Client: "id1", Result: stats.RNotFiltered, ProcessingTime: 1},
+		{Domain: "b.com", Client: "192.168.1.1", Result: stats.RNotFiltered, ProcessingTime: 2},
+		{Domain: "a.com", Client: "id1", Result: stats.RFiltered, ProcessingTime: 3},
+		{Domain: "c.com", Client: "10.0.0.2", Result: stats.RNotFiltered, ProcessingTime: 4},
+		{Domain: "b.com", Client: "192.168.1.1", Result: stats.RFiltered, ProcessingTime: 5},
+	}
+	for _, e := range entries {
+		s.Update(e)
+	}
+
+	ids := []string{"id1", "192.168.1.1", "10.0.0.2", "id4"}
+	got, err := s.GetStatsByIDs(ids)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]uint64{"id1": 2, "192.168.1.1": 2, "10.0.0.2": 1, "id4": 0}, got)
+}

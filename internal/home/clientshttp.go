@@ -15,6 +15,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering/safesearch"
 	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
+	"github.com/AdguardTeam/AdGuardHome/internal/stats"
 	"github.com/AdguardTeam/AdGuardHome/internal/whois"
 	"github.com/AdguardTeam/golibs/log"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
@@ -154,6 +155,40 @@ func (clients *clientsContainer) handleGetClient(w http.ResponseWriter, r *http.
 	}
 
 	aghhttp.WriteJSONResponseOK(w, r, data)
+}
+
+// handleGetClientStats is the handler for GET /control/clients/stats HTTP API.
+func (clients *clientsContainer) handleGetClientStats(w http.ResponseWriter, r *http.Request) {
+	clientName := r.URL.Query().Get("name")
+	if clientName == "" {
+		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("missing required parameter name"))
+		return
+	}
+
+	clients.lock.Lock()
+	clientObj, ok := clients.storage.FindByName(clientName)
+	clients.lock.Unlock()
+	if !ok {
+		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("client %s not found", clientName))
+		return
+	}
+
+	ids := clientObj.Identifiers()
+
+	// Use the new GetStatsByIDs method from stats.StatsCtx
+	statsCtx := globalContext.stats.(*stats.StatsCtx)
+	if !ok || statsCtx == nil {
+		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("stats module is not available"))
+		return
+	}
+
+	result, err := statsCtx.GetStatsByIDs(ids)
+	if err != nil {
+		aghhttp.WriteJSONResponseError(w, r, err)
+		return
+	}
+
+	aghhttp.WriteJSONResponseOK(w, r, result)
 }
 
 // initPrev initializes the persistent client with the default or previous
@@ -822,6 +857,7 @@ func (clients *clientsContainer) findRuntime(
 func (clients *clientsContainer) registerWebHandlers() {
 	httpRegister(http.MethodGet, "/control/clients", clients.handleGetClients)
 	httpRegister(http.MethodGet, "/control/clients/detail", clients.handleGetClient)
+	httpRegister(http.MethodGet, "/control/clients/stats", clients.handleGetClientStats)
 	httpRegister(http.MethodPost, "/control/clients/add", clients.handleAddClient)
 	httpRegister(http.MethodPost, "/control/clients/delete", clients.handleDelClient)
 	httpRegister(http.MethodPost, "/control/clients/update", clients.handleUpdateClient)

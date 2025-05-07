@@ -1018,6 +1018,33 @@
             'application/json':
               'schema':
                 '$ref': '#/components/schemas/ClientsFindResponse'
+  '/clients/stats':
+    'get':
+      'tags':
+      - 'clients'
+      'operationId': 'clientsStats'
+      'summary': 'Get DNS query statistics for a specific client'
+      'parameters':
+      - 'name': 'name'
+        'in': 'query'
+        'description': 'Name of the client to get statistics for'
+        'required': true
+        'schema':
+          'type': 'string'
+      'responses':
+        '200':
+          'description': 'Per-identifier DNS query statistics for the client'
+          'content':
+            'application/json':
+              'schema':
+                'type': 'object'
+                'additionalProperties':
+                  'type': 'integer'
+                  'description': 'Number of DNS queries for the identifier'
+        '400':
+          'description': 'Missing or invalid client name, or client not found'
+        '500':
+          'description': 'Stats module is not available or internal error'
   '/access/list':
     'get':
       'operationId': 'accessList'

@@ -342,7 +342,32 @@ func (s *StatsCtx) TopClientsIP(maxCount uint) (ips []netip.Addr) {
 	return ips
 }
 
-// GetStatsByIDs aggregates stats for the given client IDs over the available units.
+// aggregateStatsByIDs aggregates stats for the given ids from the provided units.
+func aggregateStatsByIDs(units []*unitDB, ids []string) map[string]uint64 {
+	result := make(map[string]uint64)
+	idSet := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		idSet[id] = struct{}{}
+	}
+	for _, u := range units {
+		for _, cp := range u.Clients {
+			if _, ok := idSet[cp.Name]; ok {
+				result[cp.Name] += cp.Count
+			}
+		}
+	}
+	return result
+}
+
+// ensureAllIDsPresent ensures all ids are present in the result map.
+func ensureAllIDsPresent(result map[string]uint64, ids []string) {
+	for _, id := range ids {
+		if _, ok := result[id]; !ok {
+			result[id] = 0
+		}
+	}
+}
+
 func (s *StatsCtx) GetStatsByIDs(ids []string) (map[string]uint64, error) {
 	s.confMu.RLock()
 	defer s.confMu.RUnlock()
@@ -357,24 +382,8 @@ func (s *StatsCtx) GetStatsByIDs(ids []string) (map[string]uint64, error) {
 		return nil, fmt.Errorf("could not get statistics data")
 	}
 
-	result := make(map[string]uint64)
-	for _, u := range units {
-		for _, cp := range u.Clients {
-			for _, id := range ids {
-				if cp.Name == id {
-					result[id] += cp.Count
-				}
-			}
-		}
-	}
-
-	// Ensure all ids are present in the result
-	for _, id := range ids {
-		if _, ok := result[id]; !ok {
-			result[id] = 0
-		}
-	}
-
+	result := aggregateStatsByIDs(units, ids)
+	ensureAllIDsPresent(result, ids)
 	return result, nil
 }
 

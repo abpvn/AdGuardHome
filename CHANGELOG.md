@@ -9,17 +9,45 @@ The format is based on [*Keep a Changelog*](https://keepachangelog.com/en/1.0.0/
 <!--
 ## [v0.108.0] – TBA
 
-## [v0.107.61] - 2025-04-22 (APPROX.)
+## [v0.107.62] - 2025-04-30 (APPROX.)
 
-See also the [v0.107.61 GitHub milestone][ms-v0.107.61].
+See also the [v0.107.62 GitHub milestone][ms-v0.107.62].
 
-[ms-v0.107.61]: https://github.com/AdguardTeam/AdGuardHome/milestone/96?closed=1
+[ms-v0.107.62]: https://github.com/AdguardTeam/AdGuardHome/milestone/97?closed=1
 
 NOTE: Add new changes BELOW THIS COMMENT.
 -->
+
+### Fixed
+
+- Command line option `--update` when the `dns.serve_plain_dns` configuration property was disabled ([7801]).
+
+- DNS cache not working for custom upstream configurations.
+
+- Validation process for the DNS-over-TLS, DNS-over-QUIC, and HTTPS ports on the *Encryption Settings* page.
+
+[#7801]: https://github.com/AdguardTeam/AdGuardHome/issues/7801
+
 <!--
 NOTE: Add new changes ABOVE THIS COMMENT.
 -->
+
+## [v0.107.61] - 2025-04-22
+
+See also the [v0.107.61 GitHub milestone][ms-v0.107.61].
+
+### Security
+
+- Any simultaneous requests that are considered duplicates will now only result in a single request to upstreams, reducing the chance of a cache poisoning attack succeeding.  This is controlled by the new configuration object `pending_requests`, which has a single `enabled` property, set to `true` by default.
+
+    **NOTE:** We thank [Xiang Li][mr-xiang-li] for reporting this security issue.  It's strongly recommended to leave it enabled, otherwise AdGuard Home will be vulnerable to untrusted clients.
+
+### Fixed
+
+- Searching for persistent clients using an exact match for CIDR in the `POST /clients/search HTTP API`.
+
+[mr-xiang-li]:  https://lixiang521.com/
+[ms-v0.107.61]: https://github.com/AdguardTeam/AdGuardHome/milestone/96?closed=1
 
 ## [v0.107.60] - 2025-04-14
 
@@ -55,16 +83,12 @@ See also the [v0.107.60 GitHub milestone][ms-v0.107.60].
 [#7729]: https://github.com/AdguardTeam/AdGuardHome/issues/7729
 [#7734]: https://github.com/AdguardTeam/AdGuardHome/issues/7734
 
-[go-1.24.2]: https://groups.google.com/g/golang-announce/c/Y2uBTVKjBQk
+[go-1.24.2]:    https://groups.google.com/g/golang-announce/c/Y2uBTVKjBQk
 [ms-v0.107.60]: https://github.com/AdguardTeam/AdGuardHome/milestone/95?closed=1
 
 ## [v0.107.59] - 2025-03-21
 
 See also the [v0.107.59 GitHub milestone][ms-v0.107.59].
-
-### Fixed
-
-- Validation process for the DNS-over-TLS, DNS-over-QUIC, and HTTPS ports on the *Encryption Settings* page.
 
 - Rules with the `client` modifier not working ([#7708]).
 
@@ -3106,11 +3130,12 @@ See also the [v0.104.2 GitHub milestone][ms-v0.104.2].
 [ms-v0.104.2]: https://github.com/AdguardTeam/AdGuardHome/milestone/28?closed=1
 
 <!--
-[Unreleased]: https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.61...HEAD
-[v0.107.61]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.60...v0.107.61
+[Unreleased]: https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.62...HEAD
+[v0.107.62]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.61...v0.107.62
 -->
 
-[Unreleased]: https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.60...HEAD
+[Unreleased]: https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.61...HEAD
+[v0.107.61]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.60...v0.107.61
 [v0.107.60]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.59...v0.107.60
 [v0.107.59]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.58...v0.107.59
 [v0.107.58]:  https://github.com/AdguardTeam/AdGuardHome/compare/v0.107.57...v0.107.58

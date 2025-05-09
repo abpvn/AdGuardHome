@@ -119,16 +119,15 @@ func initDNS(
 		globalContext.dhcpServer,
 		anonymizer,
 		httpRegister,
-		tlsMgr.config(),
 		tlsMgr,
 		baseLogger,
 	)
 }
 
 // initDNSServer initializes the [context.dnsServer].  To only use the internal
-// proxy, none of the arguments are required, but tlsConf, tlsMgr and l still
-// must not be nil, in other cases all the arguments also must not be nil.  It
-// also must not be called unless [config] and [globalContext] are initialized.
+// proxy, none of the arguments are required, but tlsMgr and l still must not be
+// nil, in other cases all the arguments also must not be nil.  It also must not
+// be called unless [config] and [globalContext] are initialized.
 //
 // TODO(e.burkov): Use [dnsforward.DNSCreateParams] as a parameter.
 func initDNSServer(
@@ -138,7 +137,6 @@ func initDNSServer(
 	dhcpSrv dnsforward.DHCP,
 	anonymizer *aghnet.IPMut,
 	httpReg aghhttp.RegisterFunc,
-	tlsConf *tlsConfigSettings,
 	tlsMgr *tlsManager,
 	l *slog.Logger,
 ) (err error) {
@@ -167,7 +165,7 @@ func initDNSServer(
 	dnsConf, err := newServerConfig(
 		&config.DNS,
 		config.Clients.Sources,
-		tlsConf,
+		tlsMgr.config(),
 		tlsMgr,
 		httpReg,
 		globalContext.clients.storage,
@@ -275,6 +273,7 @@ func newServerConfig(
 		ServeHTTP3:             dnsConf.ServeHTTP3,
 		UseHTTP3Upstreams:      dnsConf.UseHTTP3Upstreams,
 		ServePlainDNS:          dnsConf.ServePlainDNS,
+		PendingRequestsEnabled: dnsConf.PendingRequests.Enabled,
 	}
 
 	var initialAddresses []netip.Addr
@@ -316,13 +315,7 @@ func newDNSTLSConfig(
 		return &dnsforward.TLSConfig{}, nil
 	}
 
-	cert, err := tls.X509KeyPair(conf.CertificateChainData, conf.PrivateKeyData)
-	if err != nil {
-		return nil, fmt.Errorf("parsing tls key pair: %w", err)
-	}
-
 	dnsConf = &dnsforward.TLSConfig{
-		Cert:           &cert,
 		ServerName:     conf.ServerName,
 		StrictSNICheck: conf.StrictSNICheck,
 	}
@@ -338,6 +331,21 @@ func newDNSTLSConfig(
 	if conf.PortDNSOverQUIC != 0 {
 		dnsConf.QUICListenAddrs = ipsToUDPAddrs(addrs, conf.PortDNSOverQUIC)
 	}
+
+	cert, err := tls.X509KeyPair(conf.CertificateChainData, conf.PrivateKeyData)
+	if err != nil {
+		const format = "parsing tls key pair: %w"
+		if conf.AllowUnencryptedDoH {
+			// TODO(s.chzhen):  Use [slog.Logger].
+			log.Info("warning: %s: %s", format, err)
+
+			return dnsConf, nil
+		}
+
+		return nil, fmt.Errorf(format, err)
+	}
+
+	dnsConf.Cert = &cert
 
 	return dnsConf, nil
 }

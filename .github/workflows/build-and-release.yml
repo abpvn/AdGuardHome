@@ -26,10 +26,8 @@ jobs:
   build_and_release:
     runs-on: 'ubuntu-latest'
     permissions:
-      contents: read
+      contents: write
       packages: write
-      attestations: write
-      id-token: write
     env:
       GO111MODULE': 'on'
       GOPROXY: 'https://goproxy.cn'

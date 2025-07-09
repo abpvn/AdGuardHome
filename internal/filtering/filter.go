@@ -1,6 +1,7 @@
 package filtering
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,7 +19,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering/rulelist"
 	"github.com/AdguardTeam/golibs/container"
 	"github.com/AdguardTeam/golibs/errors"
-	"github.com/AdguardTeam/golibs/log"
+	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/urlfilter"
 )
 
@@ -140,12 +141,13 @@ func (d *DNSFilter) filterSetProperties(
 	}
 
 	flt := &filters[i]
-	log.Debug(
-		"filtering: set name to %q, url to %s, enabled to %t for filter %s",
-		newList.Name,
-		newList.URL,
-		newList.Enabled,
-		flt.URL,
+	d.logger.DebugContext(
+		context.TODO(),
+		"updating filter",
+		"name", newList.Name,
+		"url", newList.URL,
+		"enabled", newList.Enabled,
+		"filter_url", flt.URL,
 	)
 
 	defer func(oldURL, oldName string, oldEnabled bool, oldUpdated time.Time, oldRulesCount int) {
@@ -248,12 +250,12 @@ func (d *DNSFilter) filterAdd(flt FilterYAML) (err error) {
 
 // LoadFilters Load filters from the disk
 // And if any filter has zero ID, assign a new one
-func (d *DNSFilter) LoadFilters(array []FilterYAML) {
+func (d *DNSFilter) LoadFilters(ctx context.Context, array []FilterYAML) {
 	for i := range array {
 		filter := &array[i] // otherwise we're operating on a copy
 		if filter.ID == 0 {
 			newID := d.idGen.next()
-			log.Info("filtering: warning: filter at index %d has no id; assigning to %d", i, newID)
+			d.logger.WarnContext(ctx, "filter has no id", "idx", i, "new_id", newID)
 
 			filter.ID = newID
 		}
@@ -263,9 +265,9 @@ func (d *DNSFilter) LoadFilters(array []FilterYAML) {
 			continue
 		}
 
-		err := d.load(filter)
+		err := d.load(ctx, filter)
 		if err != nil {
-			log.Error("filtering: loading filter %d: %s", filter.ID, err)
+			d.logger.ErrorContext(ctx, "loading filter", "id", filter.ID, slogutil.KeyError, err)
 		}
 	}
 }
@@ -273,11 +275,12 @@ func (d *DNSFilter) LoadFilters(array []FilterYAML) {
 // LoadClientFilters Load client filters from the disk
 // And if any filter has zero ID, assign a new one
 func (d *DNSFilter) LoadClientFilters(array []ClientFilterYAML) {
+	ctx := context.TODO()
 	for i := range array {
 		filter := &array[i] // otherwise we're operating on a copy
 		if filter.ID == 0 {
 			newID := d.idGen.next()
-			log.Info("filtering: warning: filter at index %d has no id; assigning to %d", i, newID)
+			d.logger.InfoContext(ctx, "filtering: warning: filter has no id", "index", i, "new_id", newID)
 
 			filter.ID = newID
 		}
@@ -289,7 +292,7 @@ func (d *DNSFilter) LoadClientFilters(array []ClientFilterYAML) {
 
 		err := d.loadClientFilter(filter)
 		if err != nil {
-			log.Error("filtering: loading filter %d: %s", filter.ID, err)
+			d.logger.ErrorContext(ctx, "filtering: loading filter", "id", filter.ID, slogutil.KeyError, err)
 		}
 	}
 }
@@ -299,12 +302,13 @@ func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters [
 	defer d.clientEngineLock.Unlock()
 	_, ok := d.ClientsFilteringEngine[clientName]
 	if ok {
-		log.Info("filtering: client filtering of client: %s already initiated", clientName)
+		d.logger.InfoContext(context.TODO(), "filtering: client filtering of client already initiated", "client", clientName)
 		return
 	}
-	log.Info("filtering: start init client filtering for client: %s", clientName)
-	d.LoadFilters(whiteListFilters)
-	d.LoadFilters(filters)
+	ctx := context.TODO()
+	d.logger.InfoContext(ctx, "filtering: start init client filtering for client", "client", clientName)
+	d.LoadFilters(ctx, whiteListFilters)
+	d.LoadFilters(ctx, filters)
 	allowFilters := []Filter{}
 	for _, whitelistFilter := range whiteListFilters {
 		if !whitelistFilter.Enabled {
@@ -337,13 +341,13 @@ func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters [
 
 	rulesStorage, err := newRuleStorage(blockFilters)
 	if err != nil {
-		log.Error("filtering: init filter for client error %s by rulesStorage", err)
+		d.logger.ErrorContext(ctx, "filtering: init filter for client error by rulesStorage", slogutil.KeyError, err)
 		return
 	}
 
 	rulesStorageAllow, err := newRuleStorage(allowFilters)
 	if err != nil {
-		log.Error("filtering: init filter for client error %s by rulesStorageAllow", err)
+		d.logger.ErrorContext(ctx, "filtering: init filter for client error by rulesStorageAllow", slogutil.KeyError, err)
 		return
 	}
 
@@ -357,7 +361,7 @@ func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters [
 	// Make sure that the OS reclaims memory as soon as possible.
 	debug.FreeOSMemory()
 
-	log.Info("filtering: finish init client filtering for client: %s", clientName)
+	d.logger.InfoContext(ctx, "filtering: finish init client filtering for client", "client", clientName)
 }
 
 func deduplicateFilters(filters []FilterYAML) (deduplicated []FilterYAML) {
@@ -440,10 +444,15 @@ func (d *DNSFilter) listsToUpdate(filters *[]FilterYAML, force bool) (toUpd []Fi
 	return toUpd
 }
 
-func (d *DNSFilter) refreshFiltersArray(filters *[]FilterYAML, force bool) (int, []FilterYAML, []bool, bool) {
-	var updateFlags []bool // 'true' if filter data has changed
-
-	updateFilters := d.listsToUpdate(filters, force)
+// refreshFiltersArray updates the filters array and returns the number of
+// filters that have been refreshed.  updateFlags is true if filter data has
+// changed.
+func (d *DNSFilter) refreshFiltersArray(
+	ctx context.Context,
+	filters *[]FilterYAML,
+	force bool,
+) (updateCount int, updateFilters []FilterYAML, updateFlags []bool, isNetErr bool) {
+	updateFilters = d.listsToUpdate(filters, force)
 	if len(updateFilters) == 0 {
 		return 0, nil, nil, false
 	}
@@ -455,7 +464,7 @@ func (d *DNSFilter) refreshFiltersArray(filters *[]FilterYAML, force bool) (int,
 		updateFlags = append(updateFlags, updated)
 		if err != nil {
 			failNum++
-			log.Error("filtering: updating filter from url %q: %s\n", uf.URL, err)
+			d.logger.ErrorContext(ctx, "updating filter", "url", uf.URL, slogutil.KeyError, err)
 
 			continue
 		}
@@ -464,8 +473,6 @@ func (d *DNSFilter) refreshFiltersArray(filters *[]FilterYAML, force bool) (int,
 	if failNum == len(updateFilters) {
 		return 0, nil, nil, true
 	}
-
-	updateCount := 0
 
 	d.conf.filtersMu.Lock()
 	defer d.conf.filtersMu.Unlock()
@@ -485,11 +492,12 @@ func (d *DNSFilter) refreshFiltersArray(filters *[]FilterYAML, force bool) (int,
 				continue
 			}
 
-			log.Info(
-				"filtering: updated filter %d; rule count: %d (was %d)",
-				f.ID,
-				uf.RulesCount,
-				f.RulesCount,
+			d.logger.InfoContext(
+				ctx,
+				"updated filter",
+				"id", f.ID,
+				"rules_count", uf.RulesCount,
+				"prev_rules_count", f.RulesCount,
 			)
 
 			f.Name = uf.Name
@@ -507,7 +515,7 @@ func (d *DNSFilter) refreshClientFilterIntl(client *string, force bool, updNum *
 	if client != nil {
 		clientFilters := ToFilterYAML(d.conf.ClientsFilters, *client)
 		if len(clientFilters) > 0 {
-			updNumC, listsC, toUpdC, isNetErrC := d.refreshFiltersArray(&clientFilters, force)
+			updNumC, listsC, toUpdC, isNetErrC := d.refreshFiltersArray(context.TODO(), &clientFilters, force)
 			*updNum += updNumC
 			*lists = append(*lists, listsC...)
 			*toUpd = append(*toUpd, toUpdC...)
@@ -525,7 +533,13 @@ func (d *DNSFilter) cleanClientFilteringEngine(updatedClientFilters []FilterYAML
 		for _, updatedFtl := range updatedClientFilters {
 			if clientFtl.ID == updatedFtl.ID {
 				for clientName, clientFltName := range clientFtl.Names {
-					log.Info("filtering: clean client filtering engine for client: %s after update filter: %s (%d)", clientName, clientFltName, clientFtl.ID)
+					d.logger.InfoContext(
+						context.TODO(),
+						"filtering: clean client filtering engine for client after update filter",
+						"client", clientName,
+						"filter_name", clientFltName,
+						"filter_id", clientFtl.ID,
+					)
 					d.DeleteClientFtlEngine(clientName)
 				}
 			}
@@ -553,19 +567,26 @@ func (d *DNSFilter) cleanClientFilteringEngine(updatedClientFilters []FilterYAML
 //
 // TODO(a.garipov, e.burkov): What the hell?
 func (d *DNSFilter) refreshFiltersIntl(block, allow, force bool, client *string) (int, bool) {
+	ctx := context.TODO()
 	updNum := 0
-	log.Debug("filtering: starting updating")
-	defer func() { log.Debug("filtering: finished updating, %d updated", updNum) }()
+	d.logger.DebugContext(ctx, "starting update")
+	defer func() {
+		d.logger.DebugContext(ctx, "finished update", "updated", updNum)
+	}()
 
 	var lists []FilterYAML
 	var toUpd []bool
 	isNetErr := false
 
 	if block {
-		updNum, lists, toUpd, isNetErr = d.refreshFiltersArray(&d.conf.Filters, force)
+		updNum, lists, toUpd, isNetErr = d.refreshFiltersArray(ctx, &d.conf.Filters, force)
 	}
 	if allow {
-		updNumAl, listsAl, toUpdAl, isNetErrAl := d.refreshFiltersArray(&d.conf.WhitelistFilters, force)
+		updNumAl, listsAl, toUpdAl, isNetErrAl := d.refreshFiltersArray(
+			ctx,
+			&d.conf.WhitelistFilters,
+			force,
+		)
 
 		updNum += updNumAl
 		lists = append(lists, listsAl...)
@@ -591,7 +612,7 @@ func (d *DNSFilter) refreshFiltersIntl(block, allow, force bool, client *string)
 			p := uf.Path(d.conf.DataDir)
 			err := os.Remove(p + ".old")
 			if err != nil {
-				log.Debug("filtering: removing old filter file %q: %s", p, err)
+				d.logger.ErrorContext(ctx, "removing old filter", "path", p, slogutil.KeyError, err)
 			}
 		}
 	}
@@ -599,9 +620,11 @@ func (d *DNSFilter) refreshFiltersIntl(block, allow, force bool, client *string)
 	return updNum, false
 }
 
-// Update refreshes filter's content and a/mtimes of it's file.
+// update refreshes filter's content and a/mtimes of it's file.
 func (d *DNSFilter) Update(filter *FilterYAML) (b bool, err error) {
-	b, err = d.updateIntl(filter)
+	ctx := context.TODO()
+
+	b, err = d.updateIntl(ctx, filter)
 	filter.LastUpdated = time.Now()
 	if !b {
 		chErr := os.Chtimes(
@@ -610,7 +633,7 @@ func (d *DNSFilter) Update(filter *FilterYAML) (b bool, err error) {
 			filter.LastUpdated,
 		)
 		if chErr != nil {
-			log.Error("filtering: os.Chtimes(): %s", chErr)
+			d.logger.ErrorContext(ctx, "changing last modified time", slogutil.KeyError, chErr)
 		}
 	}
 
@@ -619,8 +642,8 @@ func (d *DNSFilter) Update(filter *FilterYAML) (b bool, err error) {
 
 // updateIntl updates the flt rewriting it's actual file.  It returns true if
 // the actual update has been performed.
-func (d *DNSFilter) updateIntl(flt *FilterYAML) (ok bool, err error) {
-	log.Debug("filtering: downloading update for filter %d from %q", flt.ID, flt.URL)
+func (d *DNSFilter) updateIntl(ctx context.Context, flt *FilterYAML) (ok bool, err error) {
+	d.logger.DebugContext(ctx, "downloading update for filter", "id", flt.ID, "url", flt.URL)
 
 	var res *rulelist.ParseResult
 
@@ -628,7 +651,7 @@ func (d *DNSFilter) updateIntl(flt *FilterYAML) (ok bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	defer func() { err = d.finalizeUpdate(tmpFile, flt, res, err, ok) }()
+	defer func() { err = d.finalizeUpdate(ctx, tmpFile, flt, res, err, ok) }()
 
 	r, err := d.reader(flt.URL)
 	if err != nil {
@@ -650,6 +673,7 @@ func (d *DNSFilter) updateIntl(flt *FilterYAML) (ok bool, err error) {
 // according to updated.  It also saves new values of flt's name, rules number
 // and checksum if succeeded.
 func (d *DNSFilter) finalizeUpdate(
+	ctx context.Context,
 	file aghrenameio.PendingFile,
 	flt *FilterYAML,
 	res *rulelist.ParseResult,
@@ -659,13 +683,13 @@ func (d *DNSFilter) finalizeUpdate(
 	id := flt.ID
 	if !updated {
 		if returned == nil {
-			log.Debug("filtering: filter %d from url %q has no changes, skipping", id, flt.URL)
+			d.logger.DebugContext(ctx, "skipping filter with no changes", "id", id, "url", flt.URL)
 		}
 
 		return errors.WithDeferred(returned, file.Cleanup())
 	}
 
-	log.Info("filtering: saving contents of filter %d into %q", id, flt.Path(d.conf.DataDir))
+	d.logger.InfoContext(ctx, "saving contents", "id", id, "path", flt.Path(d.conf.DataDir))
 
 	err = file.CloseReplace()
 	if err != nil {
@@ -673,7 +697,13 @@ func (d *DNSFilter) finalizeUpdate(
 	}
 
 	rulesCount := res.RulesCount
-	log.Info("filtering: updated filter %d: %d bytes, %d rules", id, res.BytesWritten, rulesCount)
+	d.logger.InfoContext(
+		ctx,
+		"filter updated",
+		"id", id,
+		"bytes_written", res.BytesWritten,
+		"rules_count", rulesCount,
+	)
 
 	flt.ensureName(res.Title)
 	flt.checksum = res.Checksum
@@ -724,10 +754,10 @@ func (d *DNSFilter) readerFromURL(fltURL string) (r io.ReadCloser, err error) {
 }
 
 // loads filter contents from the file in dataDir
-func (d *DNSFilter) load(flt *FilterYAML) (err error) {
+func (d *DNSFilter) load(ctx context.Context, flt *FilterYAML) (err error) {
 	fileName := flt.Path(d.conf.DataDir)
 
-	log.Debug("filtering: loading filter %d from %q", flt.ID, fileName)
+	d.logger.DebugContext(ctx, "loading filter", "id", flt.ID, "path", fileName)
 
 	file, err := os.Open(fileName)
 	if errors.Is(err, os.ErrNotExist) {
@@ -743,7 +773,7 @@ func (d *DNSFilter) load(flt *FilterYAML) (err error) {
 		return fmt.Errorf("getting filter file stat: %w", err)
 	}
 
-	log.Debug("filtering: file %q, id %d, length %d", fileName, flt.ID, st.Size())
+	d.logger.DebugContext(ctx, "filter file", "id", flt.ID, "path", fileName, "len", st.Size())
 
 	bufPtr := d.bufPool.Get()
 	defer d.bufPool.Put(bufPtr)
@@ -763,8 +793,8 @@ func (d *DNSFilter) load(flt *FilterYAML) (err error) {
 // loads filter contents from the file in dataDir
 func (d *DNSFilter) loadClientFilter(flt *ClientFilterYAML) (err error) {
 	fileName := flt.Path(d.conf.DataDir)
-
-	log.Debug("filtering: loading filter %d from %q", flt.ID, fileName)
+	ctx := context.TODO()
+	d.logger.DebugContext(ctx, "filtering: loading filter", "id", flt.ID, "file", fileName)
 
 	file, err := os.Open(fileName)
 	if errors.Is(err, os.ErrNotExist) {
@@ -780,7 +810,7 @@ func (d *DNSFilter) loadClientFilter(flt *ClientFilterYAML) (err error) {
 		return fmt.Errorf("getting filter file stat: %w", err)
 	}
 
-	log.Debug("filtering: file %q, id %d, length %d", fileName, flt.ID, st.Size())
+	d.logger.DebugContext(ctx, "filtering: file info", "file", fileName, "id", flt.ID, "length", st.Size())
 
 	bufPtr := d.bufPool.Get()
 	defer d.bufPool.Put(bufPtr)
@@ -797,14 +827,16 @@ func (d *DNSFilter) loadClientFilter(flt *ClientFilterYAML) (err error) {
 	return nil
 }
 
+// EnableFilters enables filters.
 func (d *DNSFilter) EnableFilters(async bool) {
 	d.conf.filtersMu.RLock()
 	defer d.conf.filtersMu.RUnlock()
 
-	d.enableFiltersLocked(async)
+	d.enableFiltersLocked(context.TODO(), async)
 }
 
-func (d *DNSFilter) enableFiltersLocked(async bool) {
+// enableFiltersLocked enables filters under the conf.filtersMu lock.
+func (d *DNSFilter) enableFiltersLocked(ctx context.Context, async bool) {
 	filters := make([]Filter, 1, len(d.conf.Filters)+len(d.conf.WhitelistFilters)+1)
 	filters[0] = Filter{
 		ID:   rulelist.URLFilterIDCustom,
@@ -834,9 +866,9 @@ func (d *DNSFilter) enableFiltersLocked(async bool) {
 		})
 	}
 
-	err := d.setFilters(filters, allowFilters, async)
+	err := d.setFilters(ctx, filters, allowFilters, async)
 	if err != nil {
-		log.Error("filtering: enabling filters: %s", err)
+		d.logger.ErrorContext(ctx, "enabling filters", slogutil.KeyError, err)
 	}
 
 	d.SetEnabled(d.conf.FilteringEnabled)

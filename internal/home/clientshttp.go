@@ -367,12 +367,13 @@ func copyBlockedServices(
 func clientToJSON(c *client.Persistent) (cj *clientJSON) {
 	// TODO(d.kolyshev): Remove after cleaning the deprecated
 	// [clientJSON.SafeSearchEnabled] field.
+	ctx := context.TODO()
 	cloneVal := c.SafeSearchConf
 	safeSearchConf := &cloneVal
 	allowfiltersJSON := []filtering.FilterJSON{}
 	blockedfiltersJSON := []filtering.FilterJSON{}
-	globalContext.filters.LoadFilters(c.WhitelistFilters)
-	globalContext.filters.LoadFilters(c.Filters)
+	globalContext.filters.LoadFilters(ctx, c.WhitelistFilters)
+	globalContext.filters.LoadFilters(ctx, c.Filters)
 	for _, filter := range c.WhitelistFilters {
 		allowfiltersJSON = append(allowfiltersJSON, filtering.FilterToJSON(filter))
 	}
@@ -555,7 +556,7 @@ func (clients *clientsContainer) checkAddedFilters(
 			return fy1.ID == fy2.ID && fy1.Enabled == fy2.Enabled
 		})
 	}
-	globalContext.filters.LoadFilters(validFilters)
+	globalContext.filters.LoadFilters(context.TODO(), validFilters)
 	return validFilters, addedFiltersIndexs, hasFilterChange
 }
 

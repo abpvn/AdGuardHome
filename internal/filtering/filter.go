@@ -620,7 +620,7 @@ func (d *DNSFilter) refreshFiltersIntl(block, allow, force bool, client *string)
 	return updNum, false
 }
 
-// update refreshes filter's content and a/mtimes of it's file.
+// Update refreshes filter's content and a/mtimes of it's file.
 func (d *DNSFilter) Update(filter *FilterYAML) (b bool, err error) {
 	ctx := context.TODO()
 

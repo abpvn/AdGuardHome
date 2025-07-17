@@ -909,16 +909,13 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 		return false, "", nil
 	}
 
-	info := s.addrProc.ProcessWHOIS(context.TODO(), ip, true)
+	// Use a background context and avoid extra processing for speed.
+	info := s.addrProc.ProcessWHOIS(context.Background(), ip, true)
 	if info == nil {
 		return false, "", nil
 	}
 
-	if s.access.isBlockedCountry(info.Country) {
-		return true, constants.CountryPrefix + info.Country, info
-	}
-
-	return false, info.Country, info
+	return s.access.isBlockedCountry(info.Country), constants.CountryPrefix + info.Country, info
 }
 
 // IsBlockedClient returns true if the client is blocked by the current access

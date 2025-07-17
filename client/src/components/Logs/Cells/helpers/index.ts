@@ -15,7 +15,7 @@ export const getBlockClientInfo = (ip: any, disallowed: any, disallowed_rule: an
     }
 
     const buttonKey = i18next.t(disallowed ? 'allow_this_client' : 'disallow_this_client');
-    const lastRuleInAllowlist = !disallowed && allowedClients === disallowed_rule;
+    const lastRuleInAllowlist = !disallowed && disallowed_rule !== '' && allowedClients === disallowed_rule;
 
     return {
         confirmMessage,

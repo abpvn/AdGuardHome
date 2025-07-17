@@ -95,7 +95,7 @@ const renderBlockingButton = (ip: any, disallowed: any, disallowed_rule: any) =>
 
     const text = disallowed ? BLOCK_ACTIONS.UNBLOCK : BLOCK_ACTIONS.BLOCK;
 
-    const lastRuleInAllowlist = !disallowed && allowedClients === disallowed_rule;
+    const lastRuleInAllowlist = !disallowed && disallowed_rule !== '' && allowedClients === disallowed_rule;
     const disabled = processingSet || lastRuleInAllowlist;
     return (
         <div className="table__action">

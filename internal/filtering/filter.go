@@ -21,6 +21,7 @@ import (
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/urlfilter"
+	"github.com/AdguardTeam/urlfilter/filterlist"
 )
 
 // filterDir is the subdirectory of a data directory to store downloaded
@@ -298,6 +299,21 @@ func (d *DNSFilter) LoadClientFilters(array []ClientFilterYAML) {
 	}
 }
 
+func (d *DNSFilter) loadRuleStorage(ctx context.Context, blockFilters, allowFilters []Filter) (
+	rulesStorage, rulesStorageAllow *filterlist.RuleStorage, isError bool,
+) {
+	rulesStorage, errBlock := newRuleStorage(blockFilters)
+	if errBlock != nil {
+		d.logger.ErrorContext(ctx, "filtering: init filter for client error by rulesStorage", slogutil.KeyError, errBlock)
+	}
+
+	rulesStorageAllow, errAllow := newRuleStorage(allowFilters)
+	if errAllow != nil {
+		d.logger.ErrorContext(ctx, "filtering: init filter for client error by rulesStorageAllow", slogutil.KeyError, errAllow)
+	}
+	return rulesStorage, rulesStorageAllow, errBlock != nil || errAllow != nil
+}
+
 func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters []FilterYAML, userRules []string) {
 	d.clientEngineLock.Lock()
 	defer d.clientEngineLock.Unlock()
@@ -340,15 +356,8 @@ func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters [
 		blockFilters = append(blockFilters, filter.Filter)
 	}
 
-	rulesStorage, err := newRuleStorage(blockFilters)
-	if err != nil {
-		d.logger.ErrorContext(ctx, "filtering: init filter for client error by rulesStorage", slogutil.KeyError, err)
-		return
-	}
-
-	rulesStorageAllow, err := newRuleStorage(allowFilters)
-	if err != nil {
-		d.logger.ErrorContext(ctx, "filtering: init filter for client error by rulesStorageAllow", slogutil.KeyError, err)
+	rulesStorage, rulesStorageAllow, hasRuleError := d.loadRuleStorage(ctx, blockFilters, allowFilters)
+	if hasRuleError {
 		return
 	}
 

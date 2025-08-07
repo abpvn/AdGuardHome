@@ -431,6 +431,8 @@ func appendClientFilter(addedFiltersIndexs []int, filtersYAML []filtering.Filter
 
 // handleAddClient is the handler for POST /control/clients/add HTTP API.
 func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	cj := clientJSON{}
 	err := json.NewDecoder(r.Body).Decode(&cj)
 	if err != nil {
@@ -439,7 +441,7 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 		return
 	}
 
-	c, err := clients.jsonToClient(r.Context(), cj, nil)
+	c, err := clients.jsonToClient(ctx, cj, nil)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
 
@@ -453,20 +455,20 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
 	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
-	err = clients.storage.Add(r.Context(), c)
+	err = clients.storage.Add(ctx, c)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
 
 		return
 	}
 
-	if !clients.testing {
-		onConfigModified()
-	}
+	clients.confModifier.Apply(ctx)
 }
 
 // handleDelClient is the handler for POST /control/clients/delete HTTP API.
 func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	cj := clientJSON{}
 	err := json.NewDecoder(r.Body).Decode(&cj)
 	if err != nil {
@@ -481,7 +483,7 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if !clients.storage.RemoveByName(r.Context(), cj.Name) {
+	if !clients.storage.RemoveByName(ctx, cj.Name) {
 		aghhttp.Error(r, w, http.StatusBadRequest, "Client not found")
 
 		return
@@ -492,9 +494,17 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 		globalContext.filters.DeleteClientFtlEngine(cj.Name)
 	}
 
-	if !clients.testing {
-		onConfigModified()
+	clients.bulkUpdateClientFilters(&cj.Name)
+	if globalContext.filters != nil {
+		globalContext.filters.DeleteClientFtlEngine(cj.Name)
 	}
+
+	clients.bulkUpdateClientFilters(&cj.Name)
+	if globalContext.filters != nil {
+		globalContext.filters.DeleteClientFtlEngine(cj.Name)
+	}
+
+	clients.confModifier.Apply(ctx)
 }
 
 // updateJSON contains the name and data of the updated persistent client.
@@ -622,6 +632,8 @@ func (clients *clientsContainer) bulkUpdateClientFilters(delClientName *string) 
 //
 // TODO(s.chzhen):  Accept updated parameters instead of whole structure.
 func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	dj := updateJSON{}
 	err := json.NewDecoder(r.Body).Decode(&dj)
 	if err != nil {
@@ -636,7 +648,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 
-	c, err := clients.jsonToClient(r.Context(), dj.Data, nil)
+	c, err := clients.jsonToClient(ctx, dj.Data, nil)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
 
@@ -667,7 +679,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
 	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
-	err = clients.storage.Update(r.Context(), dj.Name, c)
+	err = clients.storage.Update(ctx, dj.Name, c)
 	if err != nil {
 		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
 
@@ -682,9 +694,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 
 	clients.bulkUpdateClientFilters(delClientName)
 	clients.updateClientDNSFtl(*prev, *c, hasFilterChange, hasWhiteListFilterChange, !slices.Equal(prev.UserRules, c.UserRules))
-	if !clients.testing {
-		onConfigModified()
-	}
+	clients.confModifier.Apply(ctx)
 }
 
 // updateClientDNSFtl Update DNSFilter for client
@@ -762,7 +772,13 @@ func (clients *clientsContainer) findClient(
 		params.RemoteIP,
 		string(params.ClientID),
 	)
-	cj.Disallowed, cj.DisallowedRule, cj.WHOIS = &disallowed, &rule, whois
+	cj.Disallowed = &disallowed
+
+	if disallowed && rule != "" {
+		// Since "disallowed_rule" is omitted from JSON unless present, it
+		// should only be set when the client is actually blocked.
+		cj.DisallowedRule, cj.WHOIS = &rule, whois
+	}
 
 	return cj
 }
@@ -841,6 +857,13 @@ func (clients *clientsContainer) findRuntime(
 	// See https://github.com/AdguardTeam/AdGuardHome/issues/2428.
 	disallowed, rule, whoisInfo := clients.clientChecker.IsBlockedClient(ip, string(params.ClientID))
 
+	var disallowedRule *string
+	if disallowed && rule != "" {
+		// Since "disallowed_rule" is omitted from JSON unless present, it
+		// should only be set when the client is actually blocked.
+		disallowedRule = &rule
+	}
+
 	if whoisInfo != nil {
 		whois = whoisInfo
 	}
@@ -850,7 +873,7 @@ func (clients *clientsContainer) findRuntime(
 		IDs:            []string{idStr},
 		WHOIS:          whois,
 		Disallowed:     &disallowed,
-		DisallowedRule: &rule,
+		DisallowedRule: disallowedRule,
 	}
 }
 

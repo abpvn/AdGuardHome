@@ -192,7 +192,7 @@ func (l *queryLog) handleQueryLogConfig(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	defer l.conf.ConfigModified()
+	defer l.conf.ConfigModifier.Apply(r.Context())
 
 	l.confMu.Lock()
 	defer l.confMu.Unlock()
@@ -266,7 +266,7 @@ func (l *queryLog) handlePutQueryLogConfig(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	defer l.conf.ConfigModified()
+	defer l.conf.ConfigModifier.Apply(r.Context())
 
 	l.confMu.Lock()
 	defer l.confMu.Unlock()

@@ -660,6 +660,8 @@
     "safe_search": "Tìm kiếm an toàn",
     "blocklist": "Danh sách chặn",
     "milliseconds_abbreviation": "ms",
+    "cache_enabled": "Bật bộ nhớ cache",
+    "cache_enabled_desc": "Lưu trữ phản hồi DNS cục bộ.",
     "cache_size": "Kích thước cache",
     "cache_size_desc": "Kích thước bộ nhớ đệm DNS (tính bằng byte). Để vô hiệu hoá bộ nhớ đệm, hãy đặt giá trị là 0.",
     "cache_ttl_min_override": "Ghi đè TTL tối thiểu",

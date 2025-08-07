@@ -19,7 +19,7 @@ env:
   BUILD_CHANNEL: 'release'
 
 concurrency:
-  group: build_${{ github.event.head_commit.id }}
+  group: build_${{ github.event.ref }}
   cancel-in-progress: true
 
 jobs:

@@ -12,7 +12,7 @@
   'pull_request':
 
 'concurrency':
-  'group': lint_${{ github.event.head_commit.id }}
+  'group': lint_${{ github.event.ref }}
   'cancel-in-progress': true
 
 'jobs':

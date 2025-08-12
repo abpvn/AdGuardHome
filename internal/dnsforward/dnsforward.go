@@ -952,7 +952,7 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 		// Return now without substituting the empty rule for the
 		// clientID because the rule can't be empty here.
 		return true, rule, whois
-	} else if !allowlistMode && (blockedByIP || blockedByClientID || blocked) {
+	} else if !allowlistMode && (blockedByIP || blockedByClientID || blockedByCountry) {
 		s.logger.DebugContext(
 			ctx,
 			"client is in access blocklist",

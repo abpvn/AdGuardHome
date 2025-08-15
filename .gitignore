@@ -37,6 +37,8 @@ AdGuardHome.exe
 AdGuardHome.yaml*
 coverage.txt
 node_modules/
+test-reports/
+tmp/
 __debug_bin*
 .DS_Store
 

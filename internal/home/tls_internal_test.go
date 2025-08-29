@@ -115,14 +115,14 @@ func TestValidateCertificates(t *testing.T) {
 
 		status := &tlsConfigStatus{}
 		var ok bool
-		ok, err = m.validateCertificate(ctx, status, chainPEM, "")
+		ok, err = m.validateCertificate(ctx, status, chainPEM, []string{""})
 		assert.True(t, ok)
 		assert.ErrorIs(t, err, errNoIPInCert)
 		assert.True(t, status.ValidCert)
 		assert.True(t, status.ValidChain)
 
 		status = &tlsConfigStatus{}
-		err = m.validateCertificates(ctx, status, chainPEM, leafKeyPEM, "")
+		err = m.validateCertificates(ctx, status, chainPEM, leafKeyPEM, []string{""})
 		assert.ErrorIs(t, err, errNoIPInCert)
 		assert.True(t, status.ValidCert)
 		assert.True(t, status.ValidChain)

@@ -191,7 +191,7 @@ func newWHOIS(logger *slog.Logger, dialFunc aghnet.DialContextFunc) (w whois.Int
 	// TODO(s.chzhen):  Consider making configurable.
 	const (
 		// defaultTimeout is the timeout for WHOIS requests.
-		defaultTimeout = 5 * time.Second
+		defaultTimeout = 3 * time.Second
 
 		// defaultMaxConnReadSize is an upper limit in bytes for reading from a
 		// net.Conn.

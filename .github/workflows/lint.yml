@@ -2,6 +2,7 @@
 
 'env':
   'GO_VERSION': '1.25.1'
+  'NODE_VERSION': '24.7.0'
 
 'on':
   'push':
@@ -32,6 +33,10 @@
     'runs-on': 'ubuntu-latest'
     'steps':
     - 'uses': 'actions/checkout@v2'
+    - 'name': 'Set up Node'
+      'uses': 'actions/setup-node@v5'
+      'with':
+        'node-version': '${{ env.NODE_VERSION }}'
     - 'name': 'Install modules'
       'run': 'npm --prefix="./client" ci'
     - 'name': 'Run ESLint'

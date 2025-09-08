@@ -22,7 +22,7 @@ const ErrClosed errors.Error = "use of closed address processor"
 // AddressProcessor is the interface for types that can process clients.
 type AddressProcessor interface {
 	Process(ctx context.Context, ip netip.Addr)
-	ProcessWHOIS(ctx context.Context, ip netip.Addr, returnFromCache bool) (info *whois.Info)
+	ProcessWHOIS(ctx context.Context, ip netip.Addr, returnFromCache bool, findInCacheOnly bool) (info *whois.Info)
 	Close() (err error)
 }
 
@@ -36,7 +36,7 @@ var _ AddressProcessor = EmptyAddrProc{}
 func (EmptyAddrProc) Process(_ context.Context, _ netip.Addr) {}
 
 // ProcessWHOIS Process implements the [AddressProcessor] interface for EmptyAddrProc.
-func (EmptyAddrProc) ProcessWHOIS(_ context.Context, _ netip.Addr, _ bool) (_ *whois.Info) {
+func (EmptyAddrProc) ProcessWHOIS(_ context.Context, _ netip.Addr, _ bool, _ bool) (_ *whois.Info) {
 	return nil
 }
 
@@ -249,7 +249,7 @@ func (p *DefaultAddrProc) process(ctx context.Context, catchPanics bool) {
 
 	for ip := range p.clientIPs {
 		host := p.processRDNS(ctx, ip)
-		info := p.ProcessWHOIS(ctx, ip, false)
+		info := p.ProcessWHOIS(ctx, ip, false, false)
 
 		p.addrUpdater.UpdateAddress(ctx, ip, host, info)
 	}
@@ -295,7 +295,7 @@ func (p *DefaultAddrProc) shouldResolve(ip netip.Addr) (ok bool) {
 // WHOIS databases. If returnFromCache is true, it returns the cached information
 // if available. info is nil if there were errors, if the information hasn't changed,
 // or if returnFromCache is false and the information is not available in the cache.
-func (p *DefaultAddrProc) ProcessWHOIS(ctx context.Context, ip netip.Addr, returnFromCache bool) (info *whois.Info) {
+func (p *DefaultAddrProc) ProcessWHOIS(ctx context.Context, ip netip.Addr, returnFromCache bool, findInCacheOnly bool) (info *whois.Info) {
 	start := time.Now()
 	p.logger.DebugContext(ctx, "processing whois", "ip", ip)
 	defer func() {
@@ -310,7 +310,7 @@ func (p *DefaultAddrProc) ProcessWHOIS(ctx context.Context, ip netip.Addr, retur
 
 	// TODO(s.chzhen):  Move the timeout logic from WHOIS configuration to the
 	// context.
-	info, changed := p.whois.Process(ctx, ip)
+	info, changed := p.whois.Process(ctx, ip, findInCacheOnly)
 	if !changed && !returnFromCache {
 		info = nil
 	}

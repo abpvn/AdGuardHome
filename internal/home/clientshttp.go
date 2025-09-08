@@ -768,9 +768,10 @@ func (clients *clientsContainer) findClient(
 	}
 
 	cj = clientToJSON(c)
-	disallowed, rule, whois := clients.clientChecker.IsBlockedClient(
+	disallowed, rule, whois := clients.clientChecker.IsBlockedClientWithWHOIS(
 		params.RemoteIP,
 		string(params.ClientID),
+		false,
 	)
 	cj.Disallowed = &disallowed
 
@@ -855,7 +856,7 @@ func (clients *clientsContainer) findRuntime(
 	// then the server was reloaded.
 	//
 	// See https://github.com/AdguardTeam/AdGuardHome/issues/2428.
-	disallowed, rule, whoisInfo := clients.clientChecker.IsBlockedClient(ip, string(params.ClientID))
+	disallowed, rule, whoisInfo := clients.clientChecker.IsBlockedClientWithWHOIS(ip, string(params.ClientID), false)
 
 	var disallowedRule *string
 	if disallowed && rule != "" {

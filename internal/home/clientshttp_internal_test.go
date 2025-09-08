@@ -48,6 +48,16 @@ func (c *testBlockedClientChecker) IsBlockedClient(
 	return c.onIsBlockedClient(ip, clientID)
 }
 
+// IsBlockedClient implements the [BlockedClientChecker] interface for
+// *testBlockedClientChecker.
+func (c *testBlockedClientChecker) IsBlockedClientWithWHOIS(
+	ip netip.Addr,
+	clientID string,
+	useCacheWhois bool,
+) (blocked bool, rule string, whois *whois.Info) {
+	return c.onIsBlockedClient(ip, clientID)
+}
+
 // newPersistentClient is a helper function that returns a persistent client
 // with the specified name and newly generated UID.
 func newPersistentClient(name string) (c *client.Persistent) {

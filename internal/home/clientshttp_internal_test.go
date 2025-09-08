@@ -53,7 +53,7 @@ func (c *testBlockedClientChecker) IsBlockedClient(
 func (c *testBlockedClientChecker) IsBlockedClientWithWHOIS(
 	ip netip.Addr,
 	clientID string,
-	useCacheWhois bool,
+	findInCacheOnly bool,
 ) (blocked bool, rule string, whois *whois.Info) {
 	return c.onIsBlockedClient(ip, clientID)
 }

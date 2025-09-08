@@ -22,7 +22,7 @@ const ErrClosed errors.Error = "use of closed address processor"
 // AddressProcessor is the interface for types that can process clients.
 type AddressProcessor interface {
 	Process(ctx context.Context, ip netip.Addr)
-	ProcessWHOIS(ctx context.Context, ip netip.Addr, returnFromCache bool, findInCacheOnly bool) (info *whois.Info)
+	ProcessWHOIS(ctx context.Context, ip netip.Addr, returnFromCache, findInCacheOnly bool) (info *whois.Info)
 	Close() (err error)
 }
 
@@ -36,7 +36,7 @@ var _ AddressProcessor = EmptyAddrProc{}
 func (EmptyAddrProc) Process(_ context.Context, _ netip.Addr) {}
 
 // ProcessWHOIS Process implements the [AddressProcessor] interface for EmptyAddrProc.
-func (EmptyAddrProc) ProcessWHOIS(_ context.Context, _ netip.Addr, _ bool, _ bool) (_ *whois.Info) {
+func (EmptyAddrProc) ProcessWHOIS(_ context.Context, _ netip.Addr, _, _ bool) (_ *whois.Info) {
 	return nil
 }
 
@@ -295,7 +295,7 @@ func (p *DefaultAddrProc) shouldResolve(ip netip.Addr) (ok bool) {
 // WHOIS databases. If returnFromCache is true, it returns the cached information
 // if available. info is nil if there were errors, if the information hasn't changed,
 // or if returnFromCache is false and the information is not available in the cache.
-func (p *DefaultAddrProc) ProcessWHOIS(ctx context.Context, ip netip.Addr, returnFromCache bool, findInCacheOnly bool) (info *whois.Info) {
+func (p *DefaultAddrProc) ProcessWHOIS(ctx context.Context, ip netip.Addr, returnFromCache, findInCacheOnly bool) (info *whois.Info) {
 	start := time.Now()
 	p.logger.DebugContext(ctx, "processing whois", "ip", ip)
 	defer func() {

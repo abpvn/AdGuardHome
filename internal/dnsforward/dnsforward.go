@@ -903,7 +903,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID bool, ip netip.Addr, useCacheWhois bool) (bool, string, *whois.Info) {
+func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID bool, ip netip.Addr, findInCacheOnly bool) (bool, string, *whois.Info) {
 	if allowlistMode || blockedByIP || blockedByClientID {
 		return true, "", nil
 	}
@@ -913,7 +913,7 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 	}
 
 	// Use a background context and avoid extra processing for speed.
-	info := s.addrProc.ProcessWHOIS(context.Background(), ip, true, useCacheWhois)
+	info := s.addrProc.ProcessWHOIS(context.Background(), ip, true, findInCacheOnly)
 	if info == nil {
 		return false, "", nil
 	}

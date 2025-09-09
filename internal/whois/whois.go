@@ -35,7 +35,7 @@ const (
 type Interface interface {
 	// Process makes WHOIS request and returns WHOIS information or nil.
 	// changed indicates that Info was updated since last request.
-	Process(ctx context.Context, ip netip.Addr) (info *Info, changed bool)
+	Process(ctx context.Context, ip netip.Addr, findInCacheOnly bool) (info *Info, changed bool)
 }
 
 // Empty is an empty [Interface] implementation which does nothing.
@@ -45,7 +45,7 @@ type Empty struct{}
 var _ Interface = (*Empty)(nil)
 
 // Process implements the [Interface] interface for Empty.
-func (Empty) Process(_ context.Context, _ netip.Addr) (info *Info, changed bool) {
+func (Empty) Process(_ context.Context, _ netip.Addr, _ bool) (info *Info, changed bool) {
 	return nil, false
 }
 
@@ -284,12 +284,15 @@ var _ Interface = (*Default)(nil)
 
 // Process makes WHOIS request and returns WHOIS information or nil.  changed
 // indicates that Info was updated since last request.
-func (w *Default) Process(ctx context.Context, ip netip.Addr) (wi *Info, changed bool) {
+func (w *Default) Process(ctx context.Context, ip netip.Addr, findInCacheOnly bool) (wi *Info, changed bool) {
 	if netutil.IsSpecialPurpose(ip) {
 		return nil, false
 	}
 
 	wi, expired := w.findInCache(ctx, ip)
+	if findInCacheOnly {
+		return wi, expired
+	}
 	if wi != nil && !expired {
 		// Don't return an empty struct so that the frontend doesn't get
 		// confused.

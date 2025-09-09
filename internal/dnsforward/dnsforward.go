@@ -903,7 +903,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID bool, ip netip.Addr) (bool, string, *whois.Info) {
+func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID bool, ip netip.Addr, findInCacheOnly bool) (bool, string, *whois.Info) {
 	if allowlistMode || blockedByIP || blockedByClientID {
 		return true, "", nil
 	}
@@ -913,7 +913,7 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 	}
 
 	// Use a background context and avoid extra processing for speed.
-	info := s.addrProc.ProcessWHOIS(context.Background(), ip, true)
+	info := s.addrProc.ProcessWHOIS(context.Background(), ip, true, findInCacheOnly)
 	if info == nil {
 		return false, "", nil
 	}
@@ -924,6 +924,12 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 // IsBlockedClient returns true if the client is blocked by the current access
 // settings.
 func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, rule string, whois *whois.Info) {
+	return s.IsBlockedClientWithWHOIS(ip, clientID, true)
+}
+
+// IsBlockedClientWithWHOIS returns true if the client is blocked by the current access
+// settings.
+func (s *Server) IsBlockedClientWithWHOIS(ip netip.Addr, clientID string, findInCacheOnly bool) (blocked bool, rule string, whois *whois.Info) {
 	s.serverLock.RLock()
 	defer s.serverLock.RUnlock()
 
@@ -937,7 +943,7 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 
 	// TODO(s.chzhen):  Pass context.
 	ctx := context.TODO()
-	blockedByCountry, countryRule, whois := s.isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID, ip)
+	blockedByCountry, countryRule, whois := s.isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID, ip, findInCacheOnly)
 
 	// Allow if at least one of the checks allows in allowlist mode,
 	// but block if at least one of the checks blocks in blocklist mode.

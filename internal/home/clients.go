@@ -64,6 +64,7 @@ type clientsContainer struct {
 type BlockedClientChecker interface {
 	// TODO(s.chzhen):  Accept [client.FindParams].
 	IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, rule string, whois *whois.Info)
+	IsBlockedClientWithWHOIS(ip netip.Addr, clientID string, findInCacheOnly bool) (blocked bool, rule string, whois *whois.Info)
 }
 
 // Init initializes clients container
@@ -343,7 +344,7 @@ func (clients *clientsContainer) clientOrArtificial(
 	id string,
 ) (c *querylog.Client, art bool) {
 	defer func() {
-		c.Disallowed, c.DisallowedRule, c.WHOIS = clients.clientChecker.IsBlockedClient(ip, id)
+		c.Disallowed, c.DisallowedRule, c.WHOIS = clients.clientChecker.IsBlockedClientWithWHOIS(ip, id, false)
 		if c.WHOIS == nil {
 			c.WHOIS = &whois.Info{}
 		}

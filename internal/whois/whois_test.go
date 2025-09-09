@@ -134,14 +134,14 @@ func TestDefault_Process(t *testing.T) {
 				CacheTTL:        time.Hour,
 			})
 
-			got, changed := w.Process(context.Background(), ip)
+			got, changed := w.Process(context.Background(), ip, false)
 			require.True(t, changed)
 
 			assert.Equal(t, tc.want, got)
 			assert.Equal(t, 1, hit)
 
 			// From cache.
-			got, changed = w.Process(context.Background(), ip)
+			got, changed = w.Process(context.Background(), ip, false)
 			require.False(t, changed)
 
 			assert.Equal(t, tc.want, got)

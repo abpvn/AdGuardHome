@@ -24,15 +24,18 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Changed
 
+- Optimized matching of filtering rules.
 - Our snap package now uses the `core24` image as its base.
 - Outgoing HTTP requests now use the `User-Agent` header `AdGuardHome/v0.107.66` (where `v0.107.66` is the current version) instead of `Go-http-client/1.1` ([#7979]).
 
 ### Fixed
 
+- Lowered the severity of log messages for failed deletion of old filter files ([#7964]).
 - Authentication errors in the Web UI when AdGuard Home is behind a proxy that sets Basic Auth headers ([#7987]).
 - The HTTP API `GET /control/profile` endpoint failing when no users were configured ([#7985]).
 - Missing warning on the *Encryption Settings* page when using a certificate without an IP address.
 
+[#7964]: https://github.com/AdguardTeam/AdGuardHome/issues/7964
 [#7979]: https://github.com/AdguardTeam/AdGuardHome/issues/7979
 [#7985]: https://github.com/AdguardTeam/AdGuardHome/issues/7985
 [#7987]: https://github.com/AdguardTeam/AdGuardHome/issues/7987

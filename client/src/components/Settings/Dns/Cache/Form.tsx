@@ -3,7 +3,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import i18next from 'i18next';
 import { clearDnsCache } from '../../../../actions/dnsConfig';
 import { CACHE_CONFIG_FIELDS, UINT32_RANGE } from '../../../../helpers/constants';
 import { replaceZeroWithEmptyString } from '../../../../helpers/helpers';
@@ -13,21 +12,21 @@ import { Checkbox } from '../../../ui/Controls/Checkbox';
 const INPUTS_FIELDS = [
     {
         name: CACHE_CONFIG_FIELDS.cache_size,
-        title: i18next.t('cache_size'),
-        description: i18next.t('cache_size_desc'),
-        placeholder: i18next.t('enter_cache_size'),
+        title: 'cache_size',
+        description: 'cache_size_desc',
+        placeholder: 'enter_cache_size',
     },
     {
         name: CACHE_CONFIG_FIELDS.cache_ttl_min,
-        title: i18next.t('cache_ttl_min_override'),
-        description: i18next.t('cache_ttl_min_override_desc'),
-        placeholder: i18next.t('enter_cache_ttl_min_override'),
+        title: 'cache_ttl_min_override',
+        description: 'cache_ttl_min_override_desc',
+        placeholder: 'enter_cache_ttl_min_override',
     },
     {
         name: CACHE_CONFIG_FIELDS.cache_ttl_max,
-        title: i18next.t('cache_ttl_max_override'),
-        description: i18next.t('cache_ttl_max_override_desc'),
-        placeholder: i18next.t('enter_cache_ttl_max_override'),
+        title: 'cache_ttl_max_override',
+        description: 'cache_ttl_max_override_desc',
+        placeholder: 'enter_cache_ttl_max_override',
     },
 ];
 
@@ -107,10 +106,10 @@ const Form = ({ initialValues, onSubmit }: CacheFormProps) => {
                         <div className="col-12 col-md-7 p-0">
                             <div className="form__group form__group--settings">
                                 <label htmlFor={name} className="form__label form__label--with-desc">
-                                    {title}
+                                    {t(title)}
                                 </label>
 
-                                <div className="form__desc form__desc--top">{description}</div>
+                                <div className="form__desc form__desc--top">{t(description)}</div>
 
                                 <input
                                     type="number"

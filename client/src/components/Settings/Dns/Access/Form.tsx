@@ -2,7 +2,6 @@ import React, { ReactNode, useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
 
-import i18next from 'i18next';
 import { CLIENT_ID_LINK } from '../../../../helpers/constants';
 import { removeEmptyLines, trimMultilineString } from '../../../../helpers/helpers';
 import { Textarea } from '../../../ui/Controls/Textarea';
@@ -18,54 +17,54 @@ type FormData = {
 const fields: {
     id: keyof FormData;
     title: string;
-    subtitle: ReactNode;
+    subtitle: ((t: (key: string) => string) => ReactNode) | string;
     placeholder?: string;
     normalizeOnBlur: (value: string) => string;
 }[] = [
     {
         id: 'allowed_clients',
-        title: i18next.t('access_allowed_title'),
-        subtitle: (
+        title: 'access_allowed_title',
+        subtitle: (t) => (
             <Trans
                 components={{
                     a: <a href={CLIENT_ID_LINK} target="_blank" rel="noopener noreferrer" />,
                 }}>
-                access_allowed_desc
+                {t('access_allowed_desc')}
             </Trans>
         ),
         normalizeOnBlur: removeEmptyLines,
     },
     {
         id: 'disallowed_clients',
-        title: i18next.t('access_disallowed_title'),
-        subtitle: (
+        title: 'access_disallowed_title',
+        subtitle: (t) => (
             <Trans
                 components={{
                     a: <a href={CLIENT_ID_LINK} target="_blank" rel="noopener noreferrer" />,
                 }}>
-                access_disallowed_desc
+                {t('access_disallowed_desc')}
             </Trans>
         ),
         normalizeOnBlur: trimMultilineString,
     },
     {
         id: 'blocked_hosts',
-        title: i18next.t('access_blocked_title'),
-        subtitle: i18next.t('access_blocked_desc'),
+        title: 'access_blocked_title',
+        subtitle: 'access_blocked_desc',
         normalizeOnBlur: removeEmptyLines,
     },
     {
         id: 'allowed_countries',
-        title: i18next.t('allowed_countries_title'),
-        subtitle: i18next.t('allowed_countries_desc'),
-        placeholder: i18next.t('example_countries_placeholder'),
+        title: 'allowed_countries_title',
+        subtitle: 'allowed_countries_desc',
+        placeholder: 'example_countries_placeholder',
         normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
     },
     {
         id: 'blocked_countries',
-        title: i18next.t('blocked_countries_title'),
-        subtitle: i18next.t('blocked_countries_desc'),
-        placeholder: i18next.t('example_countries_placeholder'),
+        title: 'blocked_countries_title',
+        subtitle: 'blocked_countries_desc',
+        placeholder: 'example_countries_placeholder',
         normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
     },
 ];
@@ -120,7 +119,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
     }: {
         id: keyof FormData;
         title: string;
-        subtitle: ReactNode;
+        subtitle: ((t: (key: string) => string) => ReactNode) | string;
         placeholder?: string;
         normalizeOnBlur: (value: string) => string;
     }) => {
@@ -129,11 +128,11 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
         return (
             <div key={id} className="form__group mb-5">
                 <label className="form__label form__label--with-desc" htmlFor={id}>
-                    {title}
+                    {t(title)}
                     {disabled && <>&nbsp;({t('disabled')})</>}
                 </label>
 
-                <div className="form__desc form__desc--top">{subtitle}</div>
+                <div className="form__desc form__desc--top">{typeof subtitle === 'string' ? t(subtitle): subtitle(t)}</div>
 
                 <Controller
                     name={id}
@@ -144,7 +143,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
                             id={id}
                             data-testid={id}
                             disabled={disabled || processingSet}
-                            placeholder={placeholder}
+                            placeholder={t(placeholder)}
                             onBlur={(e) => {
                                 field.onChange(normalizeOnBlur(e.target.value));
                             }}

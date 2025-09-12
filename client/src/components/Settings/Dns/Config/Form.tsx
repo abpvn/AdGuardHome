@@ -2,7 +2,6 @@ import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import i18next from 'i18next';
 import { validateIp, validateIpv4, validateIpv6, validateRequiredValue } from '../../../../helpers/validators';
 
 import { BLOCKING_MODES, UINT32_RANGE } from '../../../../helpers/constants';
@@ -19,13 +18,13 @@ const checkboxes: {
 }[] = [
     {
         name: 'dnssec_enabled',
-        placeholder: i18next.t('dnssec_enable'),
-        subtitle: i18next.t('dnssec_enable_desc'),
+        placeholder: 'dnssec_enable',
+        subtitle: 'dnssec_enable_desc',
     },
     {
         name: 'disable_ipv6',
-        placeholder: i18next.t('disable_ipv6'),
-        subtitle: i18next.t('disable_ipv6_desc'),
+        placeholder: 'disable_ipv6',
+        subtitle: 'disable_ipv6_desc',
     },
 ];
 
@@ -37,14 +36,14 @@ const customIps: {
 }[] = [
     {
         name: 'blocking_ipv4',
-        label: i18next.t('blocking_ipv4'),
-        description: i18next.t('blocking_ipv4_desc'),
+        label: 'blocking_ipv4',
+        description: 'blocking_ipv4_desc',
         validateIp: validateIpv4,
     },
     {
         name: 'blocking_ipv6',
-        label: i18next.t('blocking_ipv6'),
-        description: i18next.t('blocking_ipv6_desc'),
+        label: 'blocking_ipv6',
+        description: 'blocking_ipv6_desc',
         validateIp: validateIpv6,
     },
 ];
@@ -52,32 +51,32 @@ const customIps: {
 const blockingModeOptions = [
     {
         value: BLOCKING_MODES.default,
-        label: i18next.t('default'),
+        label: 'default',
     },
     {
         value: BLOCKING_MODES.refused,
-        label: i18next.t('refused'),
+        label: 'refused',
     },
     {
         value: BLOCKING_MODES.nxdomain,
-        label: i18next.t('nxdomain'),
+        label: 'nxdomain',
     },
     {
         value: BLOCKING_MODES.null_ip,
-        label: i18next.t('null_ip'),
+        label: 'null_ip',
     },
     {
         value: BLOCKING_MODES.custom_ip,
-        label: i18next.t('custom_ip'),
+        label: 'custom_ip',
     },
 ];
 
 const blockingModeDescriptions = [
-    i18next.t(`blocking_mode_default`),
-    i18next.t(`blocking_mode_refused`),
-    i18next.t(`blocking_mode_nxdomain`),
-    i18next.t(`blocking_mode_null_ip`),
-    i18next.t(`blocking_mode_custom_ip`),
+    `blocking_mode_default`,
+    `blocking_mode_refused`,
+    `blocking_mode_nxdomain`,
+    `blocking_mode_null_ip`,
+    `blocking_mode_custom_ip`,
 ];
 
 type FormData = {
@@ -288,8 +287,8 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
                                     <Checkbox
                                         {...field}
                                         data-testid={`dns_config_${name}`}
-                                        title={placeholder}
-                                        subtitle={subtitle}
+                                        title={t(placeholder)}
+                                        subtitle={t(subtitle)}
                                         disabled={processing}
                                     />
                                 )}
@@ -304,7 +303,7 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
 
                         <div className="form__desc form__desc--top">
                             {blockingModeDescriptions.map((desc: string) => (
-                                <li key={desc}>{desc}</li>
+                                <li key={desc}>{t(desc)}</li>
                             ))}
                         </div>
 
@@ -338,8 +337,8 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
                                                 {...field}
                                                 data-testid="dns_config_blocked_response_ttl"
                                                 type="text"
-                                                label={label}
-                                                desc={description}
+                                                label={t(label)}
+                                                desc={t(description)}
                                                 error={fieldState.error?.message}
                                                 disabled={processing}
                                             />

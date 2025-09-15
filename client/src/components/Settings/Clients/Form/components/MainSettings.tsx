@@ -1,7 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Controller, useFormContext } from 'react-hook-form';
-import i18next from 'i18next';
 import { captitalizeWords } from '../../../../../helpers/helpers';
 import { ClientForm } from '../types';
 import { Checkbox } from '../../../../ui/Controls/Checkbox';
@@ -14,19 +13,19 @@ const settingsCheckboxes: {
 }[] = [
     {
         name: 'use_global_settings',
-        placeholder: i18next.t('client_global_settings'),
+        placeholder: 'client_global_settings',
     },
     {
         name: 'filtering_enabled',
-        placeholder: i18next.t('block_domain_use_filters_and_hosts'),
+        placeholder: 'block_domain_use_filters_and_hosts',
     },
     {
         name: 'safebrowsing_enabled',
-        placeholder: i18next.t('use_adguard_browsing_sec'),
+        placeholder: 'use_adguard_browsing_sec',
     },
     {
         name: 'parental_enabled',
-        placeholder: i18next.t('use_adguard_parental'),
+        placeholder: 'use_adguard_parental',
     },
 ];
 
@@ -38,7 +37,7 @@ const filtersCheckboxes: {
 }[] = [
     {
         name: 'use_global_filters',
-        placeholder: i18next.t('use_global_filters'),
+        placeholder: 'use_global_filters',
     },
 ];
 
@@ -47,11 +46,11 @@ type LogsStatsSettings = 'ignore_querylog' | 'ignore_statistics';
 const logAndStatsCheckboxes: { name: LogsStatsSettings; placeholder: string }[] = [
     {
         name: 'ignore_querylog',
-        placeholder: i18next.t('ignore_query_log'),
+        placeholder: 'ignore_query_log',
     },
     {
         name: 'ignore_statistics',
-        placeholder: i18next.t('ignore_statistics'),
+        placeholder: 'ignore_statistics',
     },
 ];
 
@@ -74,7 +73,7 @@ export const MainSettings = ({ safeSearchServices }: Props) => {
                         name={setting.name}
                         control={control}
                         render={({ field }) => (
-                            <Checkbox {...field} data-testid={`clients_${setting.name}`} title={setting.placeholder} />
+                            <Checkbox {...field} data-testid={`clients_${setting.name}`} title={t(setting.placeholder)} />
                         )}
                     />
                 </div>
@@ -89,7 +88,7 @@ export const MainSettings = ({ safeSearchServices }: Props) => {
                             <Checkbox
                                 {...field}
                                 data-testid={`clients_${setting.name}`}
-                                title={setting.placeholder}
+                                title={t(setting.placeholder)}
                                 disabled={setting.name !== 'use_global_settings' ? useGlobalSettings : false}
                             />
                         )}
@@ -140,7 +139,7 @@ export const MainSettings = ({ safeSearchServices }: Props) => {
                         name={setting.name}
                         control={control}
                         render={({ field }) => (
-                            <Checkbox {...field} data-testid={`clients_${setting.name}`} title={setting.placeholder} />
+                            <Checkbox {...field} data-testid={`clients_${setting.name}`} title={t(setting.placeholder)} />
                         )}
                     />
                 </div>

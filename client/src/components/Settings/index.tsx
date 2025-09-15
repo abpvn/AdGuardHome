@@ -25,15 +25,15 @@ const ORDER_KEY = 'order';
 const SETTINGS = {
     safebrowsing: {
         enabled: false,
-        title: i18next.t('use_adguard_browsing_sec'),
-        subtitle: i18next.t('use_adguard_browsing_sec_hint'),
+        title: 'use_adguard_browsing_sec',
+        subtitle: 'use_adguard_browsing_sec_hint',
         testId: 'safebrowsing',
         [ORDER_KEY]: 0,
     },
     parental: {
         enabled: false,
-        title: i18next.t('use_adguard_parental'),
-        subtitle: i18next.t('use_adguard_parental_hint'),
+        title: 'use_adguard_parental',
+        subtitle: 'use_adguard_parental_hint',
         testId: 'parental',
         [ORDER_KEY]: 1,
     },
@@ -100,8 +100,8 @@ class Settings extends Component<SettingsProps> {
                     <Checkbox
                         data-testid={testId}
                         value={enabled}
-                        title={title}
-                        subtitle={subtitle}
+                        title={i18next.t(title)}
+                        subtitle={i18next.t(subtitle)}
                         onChange={(checked) => this.props.toggleSetting(key, !checked)}
                     />
                 </div>

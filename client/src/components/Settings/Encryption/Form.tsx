@@ -31,22 +31,22 @@ import { toNumber } from '../../../helpers/form';
 
 const certificateSourceOptions = [
     {
-        label: i18next.t('encryption_certificates_source_path'),
+        label: 'encryption_certificates_source_path',
         value: ENCRYPTION_SOURCE.PATH,
     },
     {
-        label: i18next.t('encryption_certificates_source_content'),
+        label: 'encryption_certificates_source_content',
         value: ENCRYPTION_SOURCE.CONTENT,
     },
 ];
 
 const keySourceOptions = [
     {
-        label: i18next.t('encryption_key_source_path'),
+        label: 'encryption_key_source_path',
         value: ENCRYPTION_SOURCE.PATH,
     },
     {
-        label: i18next.t('encryption_key_source_content'),
+        label: 'encryption_key_source_content',
         value: ENCRYPTION_SOURCE.CONTENT,
     },
 ];

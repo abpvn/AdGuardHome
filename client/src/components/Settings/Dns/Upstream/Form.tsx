@@ -3,7 +3,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import i18next from 'i18next';
 import clsx from 'clsx';
 import { testUpstreamWithFormValues } from '../../../../actions';
 import { DNS_REQUEST_OPTIONS, UINT32_RANGE, UPSTREAM_CONFIGURATION_WIKI_LINK } from '../../../../helpers/constants';
@@ -37,20 +36,24 @@ type FormProps = {
     onSubmit: (data: FormData) => void;
 };
 
-const upstreamModeOptions = [
+const upstreamModeOptions: {
+    label: string;
+    desc: (t: (key: string) => string) => React.ReactNode;
+    value: string;
+}[] = [
     {
-        label: i18next.t('load_balancing'),
-        desc: <Trans components={{ br: <br />, b: <b /> }}>load_balancing_desc</Trans>,
+        label: 'load_balancing',
+        desc: (t) => <Trans components={{ br: <br />, b: <b /> }}>{t('load_balancing_desc')}</Trans>,
         value: DNS_REQUEST_OPTIONS.LOAD_BALANCING,
     },
     {
-        label: i18next.t('parallel_requests'),
-        desc: <Trans components={{ br: <br />, b: <b /> }}>upstream_parallel</Trans>,
+        label: 'parallel_requests',
+        desc: (t) => <Trans components={{ br: <br />, b: <b /> }}>{t('upstream_parallel')}</Trans>,
         value: DNS_REQUEST_OPTIONS.PARALLEL,
     },
     {
-        label: i18next.t('fastest_addr'),
-        desc: <Trans components={{ br: <br />, b: <b /> }}>fastest_addr_desc</Trans>,
+        label: 'fastest_addr',
+        desc: (t) => <Trans components={{ br: <br />, b: <b /> }}>{t('fastest_addr_desc')}</Trans>,
         value: DNS_REQUEST_OPTIONS.FASTEST_ADDR,
     },
 ];
@@ -296,11 +299,11 @@ const Form = ({ initialValues, onSubmit }: FormProps) => {
                 <div className="col-12 col-md-7">
                     <div className="form__group">
                         <label htmlFor="upstream_timeout" className="form__label form__label--with-desc">
-                            <Trans>upstream_timeout</Trans>
+                            {t('upstream_timeout')}
                         </label>
 
                         <div className="form__desc form__desc--top">
-                            <Trans>upstream_timeout_desc</Trans>
+                            {t('upstream_timeout_desc')}
                         </div>
 
                         <Controller

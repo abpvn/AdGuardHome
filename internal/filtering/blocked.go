@@ -32,7 +32,7 @@ func initBlockedServices(ctx context.Context, l *slog.Logger) {
 	for i, s := range blockedServices {
 		netRules := make([]*rules.NetworkRule, 0, len(s.Rules))
 		for _, text := range s.Rules {
-			rule, err := rules.NewNetworkRule(text, rulelist.URLFilterIDBlockedService)
+			rule, err := rules.NewNetworkRule(text, rulelist.IDBlockedService)
 			if err == nil {
 				netRules = append(netRules, rule)
 
@@ -133,8 +133,10 @@ func (d *DNSFilter) handleBlockedServicesIDs(w http.ResponseWriter, r *http.Requ
 func (d *DNSFilter) handleBlockedServicesAll(w http.ResponseWriter, r *http.Request) {
 	aghhttp.WriteJSONResponseOK(w, r, struct {
 		BlockedServices []blockedService `json:"blocked_services"`
+		ServiceGroups   []serviceGroup   `json:"groups"`
 	}{
 		BlockedServices: blockedServices,
+		ServiceGroups:   serviceGroups,
 	})
 }
 

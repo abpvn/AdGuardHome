@@ -445,7 +445,11 @@ func (m *tlsManager) handleTLSValidate(w http.ResponseWriter, r *http.Request) {
 
 	setts, err := unmarshalTLS(r)
 	if err != nil {
-		aghhttp.Error(r, w, http.StatusBadRequest, "Failed to unmarshal TLS config: %s", err)
+		// errFmt does not follow error message guidelines because it is sent
+		// directly to the frontend.
+		const errFmt = "Failed to unmarshal TLS config: %s"
+
+		aghhttp.ErrorAndLog(ctx, m.logger, r, w, http.StatusBadRequest, errFmt, err)
 
 		return
 	}
@@ -460,7 +464,7 @@ func (m *tlsManager) handleTLSValidate(w http.ResponseWriter, r *http.Request) {
 	if err = m.validateTLSSettings(setts); err != nil {
 		m.logger.InfoContext(ctx, "validating tls settings", slogutil.KeyError, err)
 
-		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
+		aghhttp.ErrorAndLog(ctx, m.logger, r, w, http.StatusBadRequest, "%s", err)
 
 		return
 	}
@@ -510,7 +514,15 @@ func (m *tlsManager) handleTLSConfigure(w http.ResponseWriter, r *http.Request) 
 
 	req, err := unmarshalTLS(r)
 	if err != nil {
-		aghhttp.Error(r, w, http.StatusBadRequest, "Failed to unmarshal TLS config: %s", err)
+		aghhttp.ErrorAndLog(
+			ctx,
+			m.logger,
+			r,
+			w,
+			http.StatusBadRequest,
+			"Failed to unmarshal TLS config: %s",
+			err,
+		)
 
 		return
 	}
@@ -530,7 +542,7 @@ func (m *tlsManager) handleTLSConfigure(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err = m.validateTLSSettings(req); err != nil {
-		aghhttp.Error(r, w, http.StatusBadRequest, "%s", err)
+		aghhttp.ErrorAndLog(ctx, m.logger, r, w, http.StatusBadRequest, "%s", err)
 
 		return
 	}
@@ -564,7 +576,7 @@ func (m *tlsManager) handleTLSConfigure(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		m.logger.ErrorContext(ctx, "reconfiguring dns server", slogutil.KeyError, err)
 
-		aghhttp.Error(r, w, http.StatusInternalServerError, "%s", err)
+		aghhttp.ErrorAndLog(ctx, m.logger, r, w, http.StatusInternalServerError, "%s", err)
 
 		return
 	}

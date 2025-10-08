@@ -1,6 +1,7 @@
 package configmigrate
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 )
@@ -26,7 +27,7 @@ import (
 //	    - '/opt/AdGuardHome/data/userfilters/*'
 //	    - '/path/to/file.txt'
 //	  # …
-func (m Migrator) migrateTo30(diskConf yobj) (err error) {
+func (m Migrator) migrateTo30(_ context.Context, diskConf yobj) (err error) {
 	diskConf["schema_version"] = 30
 
 	filterVals, ok, err := fieldVal[[]any](diskConf, "filters")

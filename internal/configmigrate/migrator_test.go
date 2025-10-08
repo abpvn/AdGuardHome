@@ -16,10 +16,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func TestMain(m *testing.M) {
-	testutil.DiscardLogOutput(m)
-}
-
 // testdata is a virtual filesystem containing test data.
 var testdata = os.DirFS("testdata")
 
@@ -197,6 +193,10 @@ func TestMigrateConfig_Migrate(t *testing.T) {
 		targetVersion: 27,
 	}, {
 		yamlEqFunc:    require.YAMLEq,
+		name:          "v28",
+		targetVersion: 28,
+	}, {
+		yamlEqFunc:    require.YAMLEq,
 		name:          "v31",
 		targetVersion: 31,
 	}}
@@ -212,10 +212,12 @@ func TestMigrateConfig_Migrate(t *testing.T) {
 			require.NoError(t, err)
 
 			migrator := configmigrate.New(&configmigrate.Config{
+				Logger:     testLogger,
 				WorkingDir: t.Name(),
 				DataDir:    filepath.Join(t.Name(), "data"),
 			})
-			newBody, upgraded, err := migrator.Migrate(body, tc.targetVersion)
+			ctx := testutil.ContextWithTimeout(t, testTimeout)
+			newBody, upgraded, err := migrator.Migrate(ctx, body, tc.targetVersion)
 			require.NoError(t, err)
 			require.True(t, upgraded)
 
@@ -226,6 +228,8 @@ func TestMigrateConfig_Migrate(t *testing.T) {
 
 // TODO(a.garipov):  Consider ways of merging into the previous one.
 func TestMigrateConfig_Migrate_v30(t *testing.T) {
+	t.Parallel()
+
 	const (
 		pathUnix       = `/path/to/file.txt`
 		userDirPatUnix = `TestMigrateConfig_Migrate/v30/data/userfilters/*`
@@ -253,11 +257,13 @@ func TestMigrateConfig_Migrate_v30(t *testing.T) {
 	wantBody = bytes.ReplaceAll(wantBody, []byte("USERFILTERSPATH"), []byte(patternToReplace))
 
 	migrator := configmigrate.New(&configmigrate.Config{
+		Logger:     testLogger,
 		WorkingDir: t.Name(),
 		DataDir:    "TestMigrateConfig_Migrate/v30/data",
 	})
 
-	newBody, upgraded, err := migrator.Migrate(body, 30)
+	ctx := testutil.ContextWithTimeout(t, testTimeout)
+	newBody, upgraded, err := migrator.Migrate(ctx, body, 30)
 	require.NoError(t, err)
 	require.True(t, upgraded)
 

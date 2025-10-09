@@ -8,7 +8,7 @@ on:
       - master
 
 env:
-  GO_VERSION: '1.25.1'
+  GO_VERSION: '1.25.2'
   NODE_VERSION: '24.8.0'
   DIST_FOLDER: 'dist'
   REGISTRY: 'ghcr.io'

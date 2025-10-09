@@ -749,7 +749,14 @@ func run(
 	confPath := configFilePath()
 
 	updLogger := slogLogger.With(slogutil.KeyPrefix, "updater")
-	upd, isCustomURL := newUpdater(ctx, updLogger, config, globalContext.workDir, confPath, execPath)
+	upd, isCustomURL := newUpdater(
+		ctx,
+		updLogger,
+		config,
+		globalContext.workDir,
+		confPath,
+		execPath,
+	)
 
 	// TODO(e.burkov): This could be made earlier, probably as the option's
 	// effect.
@@ -820,7 +827,15 @@ func run(
 	}
 
 	if !opts.noPermCheck {
-		checkPermissions(ctx, slogLogger, globalContext.workDir, confPath, dataDir, statsDir, querylogDir)
+		checkPermissions(
+			ctx,
+			slogLogger,
+			globalContext.workDir,
+			confPath,
+			dataDir,
+			statsDir,
+			querylogDir,
+		)
 	}
 
 	web.start(ctx)

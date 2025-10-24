@@ -32,7 +32,7 @@
     'steps':
     - 'uses': 'actions/checkout@v2'
     - 'name': 'Set up Node'
-      'uses': 'actions/setup-node@v5'
+      'uses': 'actions/setup-node@v6'
       'with':
         'node-version': '${{ env.NODE_VERSION }}'
     - 'name': 'Install modules'

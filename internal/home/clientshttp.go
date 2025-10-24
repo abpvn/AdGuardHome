@@ -102,6 +102,7 @@ func whoisOrEmpty(r *client.Runtime) (info *whois.Info) {
 
 // handleGetClients is the handler for GET /control/clients HTTP API.
 func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	data := clientListJSON{}
 
 	clients.lock.Lock()
@@ -114,7 +115,7 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http
 		return true
 	})
 
-	clients.storage.UpdateDHCP(r.Context())
+	clients.storage.UpdateDHCP(ctx)
 
 	clients.storage.RangeRuntime(func(rc *client.Runtime) (cont bool) {
 		src, host := rc.Info()
@@ -132,36 +133,37 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http
 
 	data.Tags = clients.storage.AllowedTags()
 
-	aghhttp.WriteJSONResponseOK(w, r, data)
+	aghhttp.WriteJSONResponseOK(ctx, clients.logger, w, r, data)
 }
 
 // handleGetClients is the handler for GET /control/clients HTTP API.
 func (clients *clientsContainer) handleGetClient(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	data := clientJSON{}
 	clientName := r.URL.Query().Get("name")
 
 	if clientName == "" {
-		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("missing required parameter name"))
+		aghhttp.WriteJSONResponseError(ctx, clients.logger, w, r, fmt.Errorf("missing required parameter name"))
 		return
 	}
 
 	clients.lock.Lock()
 	defer clients.lock.Unlock()
-
 	if client, ok := clients.storage.FindByName(clientName); ok {
 		data = *clientToJSON(client)
 	} else {
-		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("client %s not found", clientName))
+		aghhttp.WriteJSONResponseError(ctx, clients.logger, w, r, fmt.Errorf("client %s not found", clientName))
 	}
 
-	aghhttp.WriteJSONResponseOK(w, r, data)
+	aghhttp.WriteJSONResponseOK(ctx, clients.logger, w, r, data)
 }
 
 // handleGetClientStats is the handler for GET /control/clients/stats HTTP API.
 func (clients *clientsContainer) handleGetClientStats(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	clientName := r.URL.Query().Get("name")
 	if clientName == "" {
-		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("missing required parameter name"))
+		aghhttp.WriteJSONResponseError(ctx, clients.logger, w, r, fmt.Errorf("missing required parameter name"))
 		return
 	}
 
@@ -169,7 +171,7 @@ func (clients *clientsContainer) handleGetClientStats(w http.ResponseWriter, r *
 	clientObj, ok := clients.storage.FindByName(clientName)
 	clients.lock.Unlock()
 	if !ok {
-		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("client %s not found", clientName))
+		aghhttp.WriteJSONResponseError(ctx, clients.logger, w, r, fmt.Errorf("client %s not found", clientName))
 		return
 	}
 
@@ -178,17 +180,17 @@ func (clients *clientsContainer) handleGetClientStats(w http.ResponseWriter, r *
 	// Use the new GetStatsByIDs method from stats.StatsCtx
 	statsCtx := globalContext.stats.(*stats.StatsCtx)
 	if !ok || statsCtx == nil {
-		aghhttp.WriteJSONResponseError(w, r, fmt.Errorf("stats module is not available"))
+		aghhttp.WriteJSONResponseError(ctx, clients.logger, w, r, fmt.Errorf("stats module is not available"))
 		return
 	}
 
 	result, err := statsCtx.GetStatsByIDs(ids)
 	if err != nil {
-		aghhttp.WriteJSONResponseError(w, r, err)
+		aghhttp.WriteJSONResponseError(ctx, clients.logger, w, r, err)
 		return
 	}
 
-	aghhttp.WriteJSONResponseOK(w, r, result)
+	aghhttp.WriteJSONResponseOK(ctx, clients.logger, w, r, result)
 }
 
 // initPrev initializes the persistent client with the default or previous
@@ -692,7 +694,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 	}()
 
 	if !ok {
-		aghhttp.Error(r, w, http.StatusBadRequest, "client not found")
+		aghhttp.ErrorAndLog(ctx, clients.logger, r, w, http.StatusBadRequest, "client not found")
 
 		return
 	}
@@ -751,6 +753,9 @@ func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, h
 //
 // Deprecated:  Remove it when migration to the new API is over.
 func (clients *clientsContainer) handleFindClient(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	l := clients.logger
+
 	q := r.URL.Query()
 	data := make([]map[string]*clientJSON, 0, len(q))
 	params := &client.FindParams{}
@@ -764,12 +769,7 @@ func (clients *clientsContainer) handleFindClient(w http.ResponseWriter, r *http
 
 		err = params.Set(idStr)
 		if err != nil {
-			clients.logger.DebugContext(
-				r.Context(),
-				"finding client",
-				"id", idStr,
-				slogutil.KeyError, err,
-			)
+			l.DebugContext(ctx, "finding client", "id", idStr, slogutil.KeyError, err)
 
 			continue
 		}
@@ -779,7 +779,7 @@ func (clients *clientsContainer) handleFindClient(w http.ResponseWriter, r *http
 		})
 	}
 
-	aghhttp.WriteJSONResponseOK(w, r, data)
+	aghhttp.WriteJSONResponseOK(ctx, l, w, r, data)
 }
 
 // findClient returns available information about a client by params from the
@@ -828,13 +828,14 @@ type searchClientJSON struct {
 // API.
 func (clients *clientsContainer) handleSearchClient(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	l := clients.logger
 
 	q := searchQueryJSON{}
 	err := json.NewDecoder(r.Body).Decode(&q)
 	if err != nil {
 		aghhttp.ErrorAndLog(
 			ctx,
-			clients.logger,
+			l,
 			r,
 			w,
 			http.StatusBadRequest,
@@ -852,12 +853,7 @@ func (clients *clientsContainer) handleSearchClient(w http.ResponseWriter, r *ht
 		idStr := c.ID
 		err = params.Set(idStr)
 		if err != nil {
-			clients.logger.DebugContext(
-				ctx,
-				"searching client",
-				"id", idStr,
-				slogutil.KeyError, err,
-			)
+			l.DebugContext(ctx, "searching client", "id", idStr, slogutil.KeyError, err)
 
 			continue
 		}
@@ -867,7 +863,7 @@ func (clients *clientsContainer) handleSearchClient(w http.ResponseWriter, r *ht
 		})
 	}
 
-	aghhttp.WriteJSONResponseOK(w, r, data)
+	aghhttp.WriteJSONResponseOK(ctx, l, w, r, data)
 }
 
 // findRuntime looks up the IP in runtime and temporary storages, like
@@ -915,16 +911,16 @@ func (clients *clientsContainer) findRuntime(
 	}
 }
 
-// RegisterClientsHandlers registers HTTP handlers
+// registerWebHandlers registers HTTP handlers.
 func (clients *clientsContainer) registerWebHandlers() {
-	httpRegister(http.MethodGet, "/control/clients", clients.handleGetClients)
-	httpRegister(http.MethodGet, "/control/clients/detail", clients.handleGetClient)
-	httpRegister(http.MethodGet, "/control/clients/stats", clients.handleGetClientStats)
-	httpRegister(http.MethodPost, "/control/clients/add", clients.handleAddClient)
-	httpRegister(http.MethodPost, "/control/clients/delete", clients.handleDelClient)
-	httpRegister(http.MethodPost, "/control/clients/update", clients.handleUpdateClient)
-	httpRegister(http.MethodPost, "/control/clients/search", clients.handleSearchClient)
+	clients.httpReg.Register(http.MethodGet, "/control/clients", clients.handleGetClients)
+	clients.httpReg.Register(http.MethodGet, "/control/clients/detail", clients.handleGetClient)
+	clients.httpReg.Register(http.MethodGet, "/control/clients/stats", clients.handleGetClientStats)
+	clients.httpReg.Register(http.MethodPost, "/control/clients/add", clients.handleAddClient)
+	clients.httpReg.Register(http.MethodPost, "/control/clients/delete", clients.handleDelClient)
+	clients.httpReg.Register(http.MethodPost, "/control/clients/update", clients.handleUpdateClient)
+	clients.httpReg.Register(http.MethodPost, "/control/clients/search", clients.handleSearchClient)
 
 	// Deprecated handler.
-	httpRegister(http.MethodGet, "/control/clients/find", clients.handleFindClient)
+	clients.httpReg.Register(http.MethodGet, "/control/clients/find", clients.handleFindClient)
 }

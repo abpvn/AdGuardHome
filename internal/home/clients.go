@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/agh"
+	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
 	"github.com/AdguardTeam/AdGuardHome/internal/arpdb"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
@@ -44,6 +45,9 @@ type clientsContainer struct {
 	// nil.
 	confModifier agh.ConfigModifier
 
+	// httpReg registers HTTP handlers.  It must not be nil.
+	httpReg aghhttp.Registrar
+
 	// lock protects all fields.
 	//
 	// TODO(a.garipov): Use a pointer and describe which fields are protected in
@@ -67,9 +71,12 @@ type BlockedClientChecker interface {
 	IsBlockedClientWithWHOIS(ip netip.Addr, clientID string, findInCacheOnly bool) (blocked bool, rule string, whois *whois.Info)
 }
 
-// Init initializes clients container
-// dhcpServer: optional
-// Note: this function must be called only once
+// Init initializes the clients container.  All arguments must not be nil except
+// for objects.
+//
+// NOTE:  This function must be called only once.
+//
+// TODO(s.chzhen):  Use a configuration structure.
 func (clients *clientsContainer) Init(
 	ctx context.Context,
 	baseLogger *slog.Logger,
@@ -80,6 +87,7 @@ func (clients *clientsContainer) Init(
 	filteringConf *filtering.Config,
 	sigHdlr *signalHandler,
 	confModifier agh.ConfigModifier,
+	httpReg aghhttp.Registrar,
 ) (err error) {
 	// TODO(s.chzhen):  Refactor it.
 	if clients.storage != nil {
@@ -91,6 +99,7 @@ func (clients *clientsContainer) Init(
 	clients.safeSearchCacheSize = filteringConf.SafeSearchCacheSize
 	clients.safeSearchCacheTTL = time.Minute * time.Duration(filteringConf.CacheTime)
 	clients.confModifier = confModifier
+	clients.httpReg = httpReg
 
 	confClients := make([]*client.Persistent, 0, len(objects))
 	for i, o := range objects {

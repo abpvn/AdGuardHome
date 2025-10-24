@@ -292,6 +292,7 @@ func TestGetStatsByIDs(t *testing.T) {
 		Filename:          filepath.Join(t.TempDir(), "stats.db"),
 		Limit:             timeutil.Day,
 		Enabled:           true,
+		HTTPReg:           aghhttp.EmptyRegistrar{},
 	}
 
 	s, err := stats.New(conf)
@@ -324,6 +325,7 @@ func TestGetStatsByIDs_WithIPs(t *testing.T) {
 		Filename:          filepath.Join(t.TempDir(), "stats.db"),
 		Limit:             timeutil.Day,
 		Enabled:           true,
+		HTTPReg:           aghhttp.EmptyRegistrar{},
 	}
 
 	s, err := stats.New(conf)

@@ -30,8 +30,36 @@ class Table extends Component<TableProps> {
         </div>
     );
 
+    renderCheckbox = ({ original }: any) => {
+        const { processing, settings, toggleRewrite } = this.props;
+        const isEnabledSettings = Boolean(settings && settings.enabled);
+
+        return (
+            <label className="checkbox">
+                <input
+                    data-testid="rewrite-enabled"
+                    type="checkbox"
+                    className="checkbox__input"
+                    onChange={() => toggleRewrite(original)}
+                    checked={original.enabled}
+                    disabled={processing || !isEnabledSettings}
+                />
+
+                <span className="checkbox__label" />
+            </label>
+        );
+    };
+
     render() {
         const columns = [
+            {
+                Header: this.props.t('enabled_table_header'),
+                accessor: 'enabled',
+                Cell: this.renderCheckbox,
+                width: 90,
+                className: 'text-center',
+                resizable: false,
+            },
             {
                 Header: this.props.t('domain'),
                 accessor: 'domain',
@@ -46,35 +74,22 @@ class Table extends Component<TableProps> {
             {
                 Header: this.props.t('actions_table_header'),
                 accessor: 'actions',
-                maxWidth: 150,
+                maxWidth: 100,
                 sortable: false,
                 resizable: false,
                 Cell: (row: any) => {
                     const { original } = row;
-                    const { processing, settings, toggleRewrite } = this.props;
-                    const isEnabledSettings = Boolean(settings && settings.enabled);
 
                     return (
                         <div className="logs__row logs__row--center">
-                            <label className="checkbox">
-                                <input
-                                    type="checkbox"
-                                    className="checkbox__input"
-                                    onChange={() => toggleRewrite(original)}
-                                    checked={original.enabled}
-                                    disabled={processing || !isEnabledSettings}
-                                />
-
-                                <span className="checkbox__label checkbox__label--l" />
-                            </label>
-
                             <button
+                                data-testid="edit-rewrite"
                                 type="button"
                                 className="btn btn-icon btn-outline-primary btn-sm mr-2"
                                 onClick={() => {
                                     this.props.toggleRewritesModal({
                                         type: MODAL_TYPE.EDIT_REWRITE,
-                                        original,
+                                        currentRewrite: original,
                                     });
                                 }}
                                 disabled={this.props.processingUpdate}
@@ -85,6 +100,7 @@ class Table extends Component<TableProps> {
                             </button>
 
                             <button
+                                data-testid="delete-rewrite"
                                 type="button"
                                 className="btn btn-icon btn-outline-secondary btn-sm"
                                 onClick={() => this.props.handleDelete(original)}

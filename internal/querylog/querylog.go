@@ -80,8 +80,8 @@ type Config struct {
 	// addresses.
 	AnonymizeClientIP bool
 
-	// IgnoreNoneClientLog defines only store query log of configured clients
-	IgnoreNoneClientLog bool
+	// IgnoreNonClientLog defines only store query log of configured clients
+	IgnoreNonClientLog bool
 }
 
 // AddParams is the parameters for adding an entry.

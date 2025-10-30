@@ -59,8 +59,8 @@ type getConfigResp struct {
 	// TODO(a.garipov): Consider using separate setting for statistics.
 	AnonymizeClientIP aghalg.NullBool `json:"anonymize_client_ip"`
 
-	// IgnoreNoneClientLog defines only store query log of configured clients
-	IgnoreNoneClientLog aghalg.NullBool `json:"ignore_non_client_log"`
+	// IgnoreNonClientLog defines only store query log of configured clients
+	IgnoreNonClientLog aghalg.NullBool `json:"ignore_non_client_log"`
 }
 
 // Register web handlers
@@ -141,11 +141,11 @@ func (l *queryLog) handleGetQueryLogConfig(w http.ResponseWriter, r *http.Reques
 		defer l.confMu.RUnlock()
 
 		resp = &getConfigResp{
-			Interval:            float64(l.conf.RotationIvl.Milliseconds()),
-			Enabled:             aghalg.BoolToNullBool(l.conf.Enabled),
-			AnonymizeClientIP:   aghalg.BoolToNullBool(l.conf.AnonymizeClientIP),
-			IgnoreNoneClientLog: aghalg.BoolToNullBool(l.conf.IgnoreNoneClientLog),
-			Ignored:             l.conf.Ignored.Values(),
+			Interval:           float64(l.conf.RotationIvl.Milliseconds()),
+			Enabled:            aghalg.BoolToNullBool(l.conf.Enabled),
+			AnonymizeClientIP:  aghalg.BoolToNullBool(l.conf.AnonymizeClientIP),
+			IgnoreNonClientLog: aghalg.BoolToNullBool(l.conf.IgnoreNonClientLog),
+			Ignored:            l.conf.Ignored.Values(),
 		}
 	}()
 
@@ -219,7 +219,7 @@ func (l *queryLog) handleQueryLogConfig(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if newConf.IgnoreNoneClientLog != aghalg.NBNull {
-		conf.IgnoreNoneClientLog = newConf.IgnoreNoneClientLog == aghalg.NBTrue
+		conf.IgnoreNonClientLog = newConf.IgnoreNoneClientLog == aghalg.NBTrue
 	}
 
 	l.conf = &conf
@@ -272,7 +272,11 @@ func (l *queryLog) handlePutQueryLogConfig(w http.ResponseWriter, r *http.Reques
 
 		return
 	}
+	if newConf.IgnoreNonClientLog == aghalg.NBNull {
+		aghhttp.ErrorAndLog(ctx, l.logger, r, w, http.StatusUnprocessableEntity, "ignore_non_client_log is null")
 
+		return
+	}
 	l.applyQueryLogConfig(ctx, engine, ivl, newConf)
 }
 
@@ -315,12 +319,6 @@ func (l *queryLog) applyQueryLogConfig(
 	ivl time.Duration,
 	newConf *getConfigResp,
 ) {
-	if newConf.IgnoreNoneClientLog == aghalg.NBNull {
-		aghhttp.ErrorAndLog(ctx, l.logger, r, w, http.StatusUnprocessableEntity, "ignore_non_client_log is null")
-
-		return
-	}
-
 	defer l.conf.ConfigModifier.Apply(ctx)
 
 	l.confMu.Lock()
@@ -333,7 +331,7 @@ func (l *queryLog) applyQueryLogConfig(
 	conf.Enabled = newConf.Enabled == aghalg.NBTrue
 
 	conf.AnonymizeClientIP = newConf.AnonymizeClientIP == aghalg.NBTrue
-	conf.IgnoreNoneClientLog = newConf.IgnoreNoneClientLog == aghalg.NBTrue
+	conf.IgnoreNonClientLog = newConf.IgnoreNonClientLog == aghalg.NBTrue
 	if conf.AnonymizeClientIP {
 		l.anonymizer.Store(AnonymizeIP)
 	} else {

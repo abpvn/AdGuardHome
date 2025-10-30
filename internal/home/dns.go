@@ -76,18 +76,18 @@ func initDNS(
 	}
 
 	conf := querylog.Config{
-		Logger:              baseLogger.With(slogutil.KeyPrefix, "querylog"),
-		Anonymizer:          anonymizer,
-		ConfigModifier:      confModifier,
-		HTTPReg:             httpReg,
-		FindClient:          globalContext.clients.findMultiple,
-		BaseDir:             querylogDir,
-		AnonymizeClientIP:   config.DNS.AnonymizeClientIP,
-		IgnoreNoneClientLog: config.DNS.IgnoreNoneClientLog,
-		RotationIvl:         time.Duration(config.QueryLog.Interval),
-		MemSize:             config.QueryLog.MemSize,
-		Enabled:             config.QueryLog.Enabled,
-		FileEnabled:         config.QueryLog.FileEnabled,
+		Logger:             baseLogger.With(slogutil.KeyPrefix, "querylog"),
+		Anonymizer:         anonymizer,
+		ConfigModifier:     confModifier,
+		HTTPReg:            httpReg,
+		FindClient:         globalContext.clients.findMultiple,
+		BaseDir:            querylogDir,
+		AnonymizeClientIP:  config.DNS.AnonymizeClientIP,
+		IgnoreNonClientLog: config.DNS.IgnoreNoneClientLog,
+		RotationIvl:        time.Duration(config.QueryLog.Interval),
+		MemSize:            config.QueryLog.MemSize,
+		Enabled:            config.QueryLog.Enabled,
+		FileEnabled:        config.QueryLog.FileEnabled,
 	}
 
 	engine, err = aghnet.NewIgnoreEngine(config.QueryLog.Ignored)

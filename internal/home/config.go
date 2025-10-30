@@ -872,7 +872,7 @@ func (c *configuration) write(
 		dc := querylog.Config{}
 		globalContext.queryLog.WriteDiskConfig(&dc)
 		config.DNS.AnonymizeClientIP = dc.AnonymizeClientIP
-		config.DNS.IgnoreNoneClientLog = dc.IgnoreNoneClientLog
+		config.DNS.IgnoreNoneClientLog = dc.IgnoreNonClientLog
 		config.QueryLog.Enabled = dc.Enabled
 		config.QueryLog.FileEnabled = dc.FileEnabled
 		config.QueryLog.Interval = timeutil.Duration(dc.RotationIvl)

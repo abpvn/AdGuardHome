@@ -36,7 +36,7 @@ func (s *Server) HandleBefore(
 		if clientID == "hoangrio" {
 			s.logger.InfoContext(
 				context.TODO(),
-				"hoangrio is request is blocked",
+				"hoangrio dns request is blocked",
 				"rule", rule,
 				"whois", info,
 				"ip address", pctx.Addr.Addr(),

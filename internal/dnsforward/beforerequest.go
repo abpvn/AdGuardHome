@@ -31,8 +31,17 @@ func (s *Server) HandleBefore(
 		}
 	}
 
-	blocked, _, _ := s.IsBlockedClient(pctx.Addr.Addr(), clientID)
+	blocked, rule, info := s.IsBlockedClient(pctx.Addr.Addr(), clientID)
 	if blocked {
+		if clientID == "hoangrio" {
+			s.logger.InfoContext(
+				context.TODO(),
+				"hoangrio is request is blocked",
+				"rule", rule,
+				"whois", info,
+				"ip address", pctx.Addr.Addr(),
+			)
+		}
 		return s.preBlockedResponse(pctx)
 	}
 

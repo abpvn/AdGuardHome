@@ -547,6 +547,38 @@ func existsFilters(filter filtering.FilterYAML, listFilters []filtering.FilterYA
 	return isExists, filterName, isEnabled
 }
 
+// findExistingClientFilter searches for an existing client filter by URL and updates it.
+func findExistingClientFilter(
+	filterURL string,
+	filterName string,
+	filterEnabled bool,
+	clientName string,
+) (found bool, clientFilter filtering.FilterYAML) {
+	for _, cfj := range config.ClientsFilters {
+		if filterURL == cfj.URL {
+			clientFtl := *cfj.FilterYAML
+			clientFtl.Name = filterName
+			clientFtl.Enabled = filterEnabled
+			cfj.Names[clientName] = filterName
+			return true, clientFtl
+		}
+	}
+	return false, filtering.FilterYAML{}
+}
+
+// processNewFilter validates and processes a new filter that doesn't exist in client filters.
+func processNewFilter(fj filtering.FilterYAML) (valid bool) {
+	err := globalContext.filters.ValidateFilterURL(fj.URL)
+	return err == nil
+}
+
+// checkFilterChanges checks if there are any changes between old and new filters.
+func checkFilterChanges(oldFilters, newFilters []filtering.FilterYAML) bool {
+	return !slices.EqualFunc(oldFilters, newFilters, func(fy1, fy2 filtering.FilterYAML) bool {
+		return fy1.ID == fy2.ID && fy1.Enabled == fy2.Enabled
+	})
+}
+
 func (clients *clientsContainer) checkAddedFilters(
 	oldFilters []filtering.FilterYAML,
 	newFilters []filtering.FilterYAML,
@@ -557,35 +589,23 @@ func (clients *clientsContainer) checkAddedFilters(
 	hasFilterChange bool,
 ) {
 	for _, fj := range newFilters {
-		// Check filter exist in clients filters and add
-		isExistInClientFilters := false
-		for _, cfj := range config.ClientsFilters {
-			if fj.URL == cfj.URL {
-				clientFtl := *cfj.FilterYAML
-				clientFtl.Name = fj.Name
-				clientFtl.Enabled = fj.Enabled
-				validFilters = append(validFilters, clientFtl)
-				cfj.Names[client.Name] = fj.Name
-				fj.ID = cfj.ID
-				isExistInClientFilters = true
-				break
-			}
+		found, clientFtl := findExistingClientFilter(fj.URL, fj.Name, fj.Enabled, client.Name)
+		if found {
+			validFilters = append(validFilters, clientFtl)
+			continue
 		}
-		if !isExistInClientFilters {
-			// Process add filter
-			err := globalContext.filters.ValidateFilterURL(fj.URL)
-			if err == nil {
-				hasFilterChange = true
-				addedFiltersIndexs = append(addedFiltersIndexs, len(validFilters))
-				validFilters = append(validFilters, fj)
-			}
+
+		if processNewFilter(fj) {
+			hasFilterChange = true
+			addedFiltersIndexs = append(addedFiltersIndexs, len(validFilters))
+			validFilters = append(validFilters, fj)
 		}
 	}
+
 	if !hasFilterChange {
-		hasFilterChange = !slices.EqualFunc(oldFilters, newFilters, func(fy1, fy2 filtering.FilterYAML) bool {
-			return fy1.ID == fy2.ID && fy1.Enabled == fy2.Enabled
-		})
+		hasFilterChange = checkFilterChanges(oldFilters, newFilters)
 	}
+
 	globalContext.filters.LoadFilters(context.TODO(), validFilters)
 	return validFilters, addedFiltersIndexs, hasFilterChange
 }

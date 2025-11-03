@@ -128,6 +128,7 @@ export type DashboardData = {
     dnsPort: number;
     dnsAddresses: string[];
     dnsVersion: string;
+    dnsStartTime: number | null;
     clients: Client[];
     autoClients: AutoClient[];
     supportedTags: string[];
@@ -449,6 +450,7 @@ export const initialState: RootState = {
         dnsPort: STANDARD_DNS_PORT,
         dnsAddresses: [],
         dnsVersion: '',
+        dnsStartTime: null,
         clients: [],
         autoClients: [],
         supportedTags: [],

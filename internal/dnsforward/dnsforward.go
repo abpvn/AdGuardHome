@@ -914,7 +914,7 @@ func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID 
 
 	// Use a background context and avoid extra processing for speed.
 	info := s.addrProc.ProcessWHOIS(context.Background(), ip, true, findInCacheOnly)
-	if info == nil {
+	if info == nil || info.Country == "" {
 		return false, "", nil
 	}
 

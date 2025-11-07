@@ -316,7 +316,11 @@ func (w *Default) requestInfo(
 	var info Info
 
 	defer func() {
-		item := toCacheItem(info, w.cacheTTL)
+		cacheTTL := w.cacheTTL
+		if info.Country == "" {
+			cacheTTL = 10 * time.Second
+		}
+		item := toCacheItem(info, cacheTTL)
 		err := w.cache.Set(ip, item)
 		if err != nil {
 			w.logger.DebugContext(ctx, "adding item to cache", "key", ip, slogutil.KeyError, err)

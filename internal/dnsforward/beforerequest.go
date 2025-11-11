@@ -33,15 +33,14 @@ func (s *Server) HandleBefore(
 
 	blocked, rule, info := s.IsBlockedClient(pctx.Addr.Addr(), clientID)
 	if blocked {
-		if clientID == "hoangrio" {
-			s.logger.InfoContext(
-				context.TODO(),
-				"hoangrio dns request is blocked",
-				"rule", rule,
-				"whois", info,
-				"ip address", pctx.Addr.Addr(),
-			)
-		}
+		s.logger.InfoContext(
+			context.TODO(),
+			"dns request is blocked",
+			"clientId", clientID,
+			"rule", rule,
+			"whois", info,
+			"ip address", pctx.Addr.Addr(),
+		)
 		return s.preBlockedResponse(pctx)
 	}
 

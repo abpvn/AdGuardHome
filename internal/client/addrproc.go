@@ -139,7 +139,7 @@ const (
 
 	// defaultCacheSize is the maximum size of the cache for rDNS and WHOIS
 	// processing.  It must be greater than zero.
-	defaultCacheSize = 10_000
+	defaultCacheSize = 5000
 
 	// defaultIPTTL is the Time to Live duration for IP addresses cached by
 	// rDNS and WHOIS.

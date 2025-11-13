@@ -291,7 +291,10 @@ func (w *Default) Process(ctx context.Context, ip netip.Addr, findInCacheOnly bo
 
 	wi, expired := w.findInCache(ctx, ip)
 	if findInCacheOnly {
-		return wi, expired
+		if expired {
+			return nil, false
+		}
+		return wi, false
 	}
 	if wi != nil && !expired {
 		// Don't return an empty struct so that the frontend doesn't get

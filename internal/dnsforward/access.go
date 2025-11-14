@@ -35,6 +35,8 @@ type accessManager struct {
 	// TODO(a.garipov): Create a type for an efficient tree set of IP networks.
 	allowedNets []netip.Prefix
 	blockedNets []netip.Prefix
+
+	blockedHosts []string
 }
 
 // processAccessClients is a helper for processing a list of client strings,
@@ -66,7 +68,7 @@ func processAccessClients(
 }
 
 // newAccessCtx creates a new accessCtx.
-func newAccessCtx(allowed, blocked, blockedHosts, allowedCountries, blockedCountries []string) (a *accessManager, err error) {
+func newAccessCtx(old *accessManager, allowed, blocked, blockedHosts, allowedCountries, blockedCountries []string) (a *accessManager, err error) {
 	a = &accessManager{
 		allowedIPs: container.NewMapSet[netip.Addr](),
 		blockedIPs: container.NewMapSet[netip.Addr](),
@@ -75,6 +77,7 @@ func newAccessCtx(allowed, blocked, blockedHosts, allowedCountries, blockedCount
 		blockedClientIDs:    container.NewMapSet[string](),
 		AllowedCountriesIDs: container.NewMapSet(allowedCountries...),
 		BlockedCountriesIDs: container.NewMapSet(blockedCountries...),
+		blockedHosts:        blockedHosts,
 	}
 
 	err = processAccessClients(allowed, a.allowedIPs, &a.allowedNets, a.allowedClientIDs)
@@ -87,25 +90,30 @@ func newAccessCtx(allowed, blocked, blockedHosts, allowedCountries, blockedCount
 		return nil, fmt.Errorf("adding blocked: %w", err)
 	}
 
-	b := &strings.Builder{}
-	for _, h := range blockedHosts {
-		stringutil.WriteToBuilder(b, strings.ToLower(h), "\n")
-	}
+	if old != nil && slices.Equal(blockedHosts, old.blockedHosts) {
+		a.blockedHostsEng = old.blockedHostsEng
+	} else {
+		b := &strings.Builder{}
+		for _, h := range blockedHosts {
+			stringutil.WriteToBuilder(b, strings.ToLower(h), "\n")
+		}
 
-	lists := []filterlist.Interface{
-		filterlist.NewString(&filterlist.StringConfig{
-			ID:             0,
-			RulesText:      b.String(),
-			IgnoreCosmetic: true,
-		}),
-	}
+		lists := []filterlist.Interface{
+			filterlist.NewString(&filterlist.StringConfig{
+				ID:             0,
+				RulesText:      b.String(),
+				IgnoreCosmetic: true,
+			}),
+		}
 
-	rulesStrg, err := filterlist.NewRuleStorage(lists)
-	if err != nil {
-		return nil, fmt.Errorf("adding blocked hosts: %w", err)
-	}
+		var rulesStrg *filterlist.RuleStorage
+		rulesStrg, err = filterlist.NewRuleStorage(lists)
+		if err != nil {
+			return nil, fmt.Errorf("adding blocked hosts: %w", err)
+		}
 
-	a.blockedHostsEng = urlfilter.NewDNSEngine(rulesStrg)
+		a.blockedHostsEng = urlfilter.NewDNSEngine(rulesStrg)
+	}
 
 	return a, nil
 }
@@ -301,7 +309,7 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 	for i, country := range list.BlockedCountries {
 		list.BlockedCountries[i] = strings.ToUpper(country)
 	}
-	a, err = newAccessCtx(list.AllowedClients, list.DisallowedClients, list.BlockedHosts, list.AllowedCountries, list.BlockedCountries)
+	a, err = newAccessCtx(s.access, list.AllowedClients, list.DisallowedClients, list.BlockedHosts, list.AllowedCountries, list.BlockedCountries)
 	if err != nil {
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "creating access ctx: %s", err)
 

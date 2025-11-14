@@ -35,7 +35,7 @@ func (s *Server) HandleBefore(
 
 	blocked, rule, info := s.IsBlockedClient(pctx.Addr.Addr(), clientID)
 	if blocked {
-		s.logger.InfoContext(
+		s.logger.DebugContext(
 			context.TODO(),
 			"dns request is blocked",
 			"clientId", clientID,

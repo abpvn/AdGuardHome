@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
@@ -284,8 +285,11 @@ func validateStrUniq(clients []string) (uc aghalg.UniqChecker[string], err error
 
 // handleAccessSet handles requests to the POST /control/access/set endpoint.
 func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	ctx := r.Context()
 	l := s.logger
+
+	l.DebugContext(ctx, "starting access list update")
 
 	list := &accessListJSON{}
 	err := json.NewDecoder(r.Body).Decode(&list)
@@ -302,6 +306,8 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	l.DebugContext(ctx, "access list validation completed", "duration", time.Since(start))
+
 	var a *accessManager
 	for i, country := range list.AllowedCountries {
 		list.AllowedCountries[i] = strings.ToUpper(country)
@@ -309,6 +315,8 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 	for i, country := range list.BlockedCountries {
 		list.BlockedCountries[i] = strings.ToUpper(country)
 	}
+
+	newAccessStart := time.Now()
 	a, err = newAccessCtx(s.access, list.AllowedClients, list.DisallowedClients, list.BlockedHosts, list.AllowedCountries, list.BlockedCountries)
 	if err != nil {
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "creating access ctx: %s", err)
@@ -316,6 +324,10 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newAccessDuration := time.Since(newAccessStart)
+	l.DebugContext(ctx, "newAccessCtx completed", "duration", newAccessDuration)
+
+	totalDuration := time.Since(start)
 	defer l.DebugContext(
 		ctx,
 		"updated access lists",
@@ -324,6 +336,7 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 		"blocked_hosts", len(list.BlockedHosts),
 		"allowed_countries", len(list.AllowedCountries),
 		"blocked_countries", len(list.BlockedCountries),
+		"total_duration", totalDuration,
 	)
 
 	defer s.conf.ConfModifier.Apply(ctx)

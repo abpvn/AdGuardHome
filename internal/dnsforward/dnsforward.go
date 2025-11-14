@@ -526,6 +526,7 @@ func (s *Server) Prepare(ctx context.Context, conf *ServerConfig) (err error) {
 	s.setupDNS64()
 
 	s.access, err = newAccessCtx(
+		nil,
 		s.conf.AllowedClients,
 		s.conf.DisallowedClients,
 		s.conf.BlockedHosts,

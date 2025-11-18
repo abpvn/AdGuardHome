@@ -934,6 +934,7 @@ func (s *Server) isBlockedCountry(ip netip.Addr, findInCacheOnly bool) (bool, st
 
 	var country string
 	var err error
+	var whoisInfo *whois.Info
 
 	// Try GeoIP first if available
 	if s.geoIP != nil {
@@ -941,18 +942,25 @@ func (s *Server) isBlockedCountry(ip netip.Addr, findInCacheOnly bool) (bool, st
 		if err != nil {
 			s.logger.DebugContext(context.Background(), "geoip lookup failed", "ip", ip, "error", err)
 		}
+		whoisInfo = &whois.Info{Country: country}
 	}
 
 	// Fallback to WHOIS if GeoIP not available or failed
-	if country == "" {
+	if country == "" || !findInCacheOnly {
 		info := s.addrProc.ProcessWHOIS(context.Background(), ip, true, findInCacheOnly)
 		if info == nil || info.Country == "" {
 			return false, "", nil
 		}
-		country = info.Country
+		whoisInfo = info
+		if country != "" && info.Country != country {
+			// Country from GeoIP different with Whois
+			whoisInfo.Country = "Geo: " + country + ",Whois: " + info.Country
+		} else {
+			country = info.Country
+		}
 	}
 
-	return s.access.isBlockedCountry(country), constants.CountryPrefix + country, &whois.Info{Country: country}
+	return s.access.isBlockedCountry(country), constants.CountryPrefix + country, whoisInfo
 }
 
 // IsBlockedClient returns true if the client is blocked by the current access

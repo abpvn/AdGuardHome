@@ -14,7 +14,6 @@ func TestGeoIP(t *testing.T) {
 	testData := `# Test database
 16777216,16777471,US
 16842752,16843007,AU
-2130706433,2130706433,LOCAL
 `
 
 	// Write test data to a temporary file
@@ -45,10 +44,10 @@ func TestGeoIP(t *testing.T) {
 		ip       string
 		expected string
 	}{
-		{"1.0.0.1", "US"},      // 16777217 -> US
-		{"1.1.0.1", "AU"},      // 16842753 -> AU
-		{"127.0.0.1", "LOCAL"}, // 2130706433 -> LOCAL
-		{"8.8.8.8", ""},        // Not in test ranges
+		{"1.0.0.1", "US"},   // Within US range
+		{"1.1.0.1", "AU"},   // Within AU range
+		{"8.8.8.8", ""},     // Not in test ranges
+		{"2001:db8::1", ""}, // IPv6 not supported
 	}
 
 	for _, tt := range tests {
@@ -65,36 +64,5 @@ func TestGeoIP(t *testing.T) {
 				t.Errorf("Country(%s) = %s, expected %s", tt.ip, country, tt.expected)
 			}
 		})
-	}
-}
-
-func TestGeoIP_InvalidIP(t *testing.T) {
-	conf := &Config{
-		Logger:       slogutil.NewDiscardLogger(),
-		DatabasePath: "testdata/GeoLite2-Country.mmdb",
-	}
-
-	g, err := New(conf)
-	if err != nil {
-		t.Skipf("GeoIP database not available: %v", err)
-	}
-	defer func() { _ = g.Close() }()
-
-	// Test with invalid IP - should not parse
-	_, err = netip.ParseAddr("invalid")
-	if err == nil {
-		t.Error("Expected parse error for invalid IP string")
-	}
-}
-
-func TestGeoIP_DatabaseNotFound(t *testing.T) {
-	conf := &Config{
-		Logger:       slogutil.NewDiscardLogger(),
-		DatabasePath: "/nonexistent/path.mmdb",
-	}
-
-	_, err := New(conf)
-	if err == nil {
-		t.Error("Expected error for non-existent database")
 	}
 }

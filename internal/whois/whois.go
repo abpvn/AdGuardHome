@@ -6,12 +6,14 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"log/slog"
 	"net"
 	"net/netip"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
@@ -19,7 +21,6 @@ import (
 	"github.com/AdguardTeam/golibs/ioutil"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/netutil"
-	"github.com/bluele/gcache"
 	"github.com/c2h5oh/datasize"
 )
 
@@ -29,6 +30,9 @@ const (
 
 	// DefaultPort is the default port for WHOIS requests.
 	DefaultPort = 43
+
+	// numShards is the number of shards for the cache.
+	numShards = 16
 )
 
 // Interface provides WHOIS functionality.
@@ -84,6 +88,53 @@ type Config struct {
 	Port uint16
 }
 
+// shardedCache is a cache sharded by IP hash to reduce lock contention.
+type shardedCache struct {
+	shards [numShards]struct {
+		m  map[netip.Addr]*cacheItem
+		mu sync.RWMutex
+	}
+}
+
+// newShardedCache creates a new sharded cache.
+func newShardedCache() *shardedCache {
+	sc := &shardedCache{}
+	for i := range sc.shards {
+		sc.shards[i].m = make(map[netip.Addr]*cacheItem)
+	}
+	return sc
+}
+
+// getShard returns the shard for the given IP.
+func (sc *shardedCache) getShard(ip netip.Addr) *struct {
+	m  map[netip.Addr]*cacheItem
+	mu sync.RWMutex
+} {
+	h := fnv.New32a()
+	if _, err := h.Write(ip.AsSlice()); err != nil {
+		// This should never happen for valid IP addresses.
+		return &sc.shards[0]
+	}
+	return &sc.shards[h.Sum32()%numShards]
+}
+
+// Get retrieves an item from the cache.
+func (sc *shardedCache) Get(ip netip.Addr) (*cacheItem, bool) {
+	shard := sc.getShard(ip)
+	shard.mu.RLock()
+	item, ok := shard.m[ip]
+	shard.mu.RUnlock()
+	return item, ok
+}
+
+// Set stores an item in the cache.
+func (sc *shardedCache) Set(ip netip.Addr, item *cacheItem) {
+	shard := sc.getShard(ip)
+	shard.mu.Lock()
+	shard.m[ip] = item
+	shard.mu.Unlock()
+}
+
 // Default is the default WHOIS information processor.
 type Default struct {
 	// logger is used for logging the operation of the WHOIS lookup queries.  It
@@ -94,7 +145,7 @@ type Default struct {
 	// address is resolved once again after it expires.  If IP address couldn't
 	// be resolved, it stays here for some time to prevent further attempts to
 	// resolve the same IP.
-	cache gcache.Cache
+	cache *shardedCache
 
 	// dialContext is used to create TCP connections to WHOIS servers.
 	dialContext aghnet.DialContextFunc
@@ -129,7 +180,7 @@ func New(conf *Config) (w *Default) {
 		serverAddr:      conf.ServerAddr,
 		dialContext:     conf.DialContext,
 		timeout:         conf.Timeout,
-		cache:           gcache.New(conf.CacheSize).LRU().Build(),
+		cache:           newShardedCache(),
 		maxConnReadSize: conf.MaxConnReadSize,
 		maxRedirects:    conf.MaxRedirects,
 		portStr:         strconv.Itoa(int(conf.Port)),
@@ -289,7 +340,7 @@ func (w *Default) Process(ctx context.Context, ip netip.Addr, findInCacheOnly bo
 		return nil, false
 	}
 
-	wi, expired := w.findInCache(ctx, ip)
+	wi, expired := w.findInCache(ip)
 	if findInCacheOnly {
 		if expired {
 			return nil, false
@@ -324,10 +375,7 @@ func (w *Default) requestInfo(
 			cacheTTL = 10 * time.Second
 		}
 		item := toCacheItem(info, cacheTTL)
-		err := w.cache.Set(ip, item)
-		if err != nil {
-			w.logger.DebugContext(ctx, "adding item to cache", "key", ip, slogutil.KeyError, err)
-		}
+		w.cache.Set(ip, item)
 	}()
 
 	kv, err := w.queryAll(ctx, ip.String())
@@ -354,22 +402,13 @@ func (w *Default) requestInfo(
 }
 
 // findInCache finds Info in the cache.  expired indicates that Info is valid.
-func (w *Default) findInCache(ctx context.Context, ip netip.Addr) (wi *Info, expired bool) {
-	val, err := w.cache.Get(ip)
-	if err != nil {
-		if !errors.Is(err, gcache.KeyNotFoundError) {
-			w.logger.DebugContext(
-				ctx,
-				"retrieving item from cache",
-				"key", ip,
-				slogutil.KeyError, err,
-			)
-		}
-
+func (w *Default) findInCache(ip netip.Addr) (wi *Info, expired bool) {
+	val, ok := w.cache.Get(ip)
+	if !ok {
 		return nil, false
 	}
 
-	return fromCacheItem(val.(*cacheItem))
+	return fromCacheItem(val)
 }
 
 // Info is the filtered WHOIS data for a runtime client.

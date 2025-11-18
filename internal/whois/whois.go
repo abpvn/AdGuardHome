@@ -90,49 +90,42 @@ type Config struct {
 
 // shardedCache is a cache sharded by IP hash to reduce lock contention.
 type shardedCache struct {
-	shards [numShards]struct {
-		m  map[netip.Addr]*cacheItem
-		mu sync.RWMutex
-	}
+	shards [numShards]*sync.Map
 }
 
 // newShardedCache creates a new sharded cache.
 func newShardedCache() *shardedCache {
 	sc := &shardedCache{}
 	for i := range sc.shards {
-		sc.shards[i].m = make(map[netip.Addr]*cacheItem)
+		sc.shards[i] = &sync.Map{}
 	}
 	return sc
 }
 
 // getShard returns the shard for the given IP.
-func (sc *shardedCache) getShard(ip netip.Addr) *struct {
-	m  map[netip.Addr]*cacheItem
-	mu sync.RWMutex
-} {
+func (sc *shardedCache) getShard(ip netip.Addr) *sync.Map {
 	h := fnv.New32a()
 	if _, err := h.Write(ip.AsSlice()); err != nil {
 		// This should never happen for valid IP addresses.
-		return &sc.shards[0]
+		return sc.shards[0]
 	}
-	return &sc.shards[h.Sum32()%numShards]
+	return sc.shards[h.Sum32()%numShards]
 }
 
 // Get retrieves an item from the cache.
 func (sc *shardedCache) Get(ip netip.Addr) (*cacheItem, bool) {
 	shard := sc.getShard(ip)
-	shard.mu.RLock()
-	item, ok := shard.m[ip]
-	shard.mu.RUnlock()
-	return item, ok
+	val, ok := shard.Load(ip)
+	if !ok {
+		return nil, false
+	}
+	return val.(*cacheItem), true
 }
 
 // Set stores an item in the cache.
 func (sc *shardedCache) Set(ip netip.Addr, item *cacheItem) {
 	shard := sc.getShard(ip)
-	shard.mu.Lock()
-	shard.m[ip] = item
-	shard.mu.Unlock()
+	shard.Store(ip, item)
 }
 
 // Default is the default WHOIS information processor.

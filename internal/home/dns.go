@@ -294,6 +294,7 @@ func newServerConfig(
 		CatchPanics:      true,
 		UseRDNS:          clientSrcConf.RDNS,
 		UseWHOIS:         clientSrcConf.WHOIS,
+		CacheSize:        clientSrcConf.CacheSize,
 	}
 
 	return newConf, nil

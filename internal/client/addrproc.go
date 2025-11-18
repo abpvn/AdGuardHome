@@ -85,6 +85,10 @@ type DefaultAddrProcConfig struct {
 
 	// UseWHOIS, if true, enables resolving of client IP addresses using WHOIS.
 	UseWHOIS bool
+
+	// CacheSize is the maximum size of the cache for rDNS and WHOIS
+	// processing.  It must be greater than zero.  If zero, defaultCacheSize is used.
+	CacheSize int
 }
 
 // AddressUpdater is the interface for storages of DNS clients that can update
@@ -149,6 +153,11 @@ const (
 // NewDefaultAddrProc returns a new running client address processor.  c must
 // not be nil.
 func NewDefaultAddrProc(c *DefaultAddrProcConfig) (p *DefaultAddrProc) {
+	cacheSize := c.CacheSize
+	if cacheSize <= 0 {
+		cacheSize = defaultCacheSize
+	}
+
 	p = &DefaultAddrProc{
 		logger:         c.BaseLogger.With(slogutil.KeyPrefix, "addrproc"),
 		clientIPsMu:    &sync.Mutex{},
@@ -164,13 +173,13 @@ func NewDefaultAddrProc(c *DefaultAddrProcConfig) (p *DefaultAddrProc) {
 		p.rdns = rdns.New(&rdns.Config{
 			Logger:    c.BaseLogger.With(slogutil.KeyPrefix, "rdns"),
 			Exchanger: c.Exchanger,
-			CacheSize: defaultCacheSize,
+			CacheSize: cacheSize,
 			CacheTTL:  defaultIPTTL,
 		})
 	}
 
 	if c.UseWHOIS {
-		p.whois = newWHOIS(c.BaseLogger.With(slogutil.KeyPrefix, "whois"), c.DialContext)
+		p.whois = newWHOIS(c.BaseLogger.With(slogutil.KeyPrefix, "whois"), c.DialContext, cacheSize)
 	}
 
 	// TODO(s.chzhen):  Pass context.
@@ -187,7 +196,7 @@ func NewDefaultAddrProc(c *DefaultAddrProcConfig) (p *DefaultAddrProc) {
 
 // newWHOIS returns a whois.Interface instance using the given function for
 // dialing.
-func newWHOIS(logger *slog.Logger, dialFunc aghnet.DialContextFunc) (w whois.Interface) {
+func newWHOIS(logger *slog.Logger, dialFunc aghnet.DialContextFunc, cacheSize int) (w whois.Interface) {
 	// TODO(s.chzhen):  Consider making configurable.
 	const (
 		// defaultTimeout is the timeout for WHOIS requests.
@@ -210,7 +219,7 @@ func newWHOIS(logger *slog.Logger, dialFunc aghnet.DialContextFunc) (w whois.Int
 		ServerAddr:      whois.DefaultServer,
 		Port:            whois.DefaultPort,
 		Timeout:         defaultTimeout,
-		CacheSize:       defaultCacheSize,
+		CacheSize:       cacheSize,
 		MaxConnReadSize: defaultMaxConnReadSize,
 		MaxRedirects:    defaultMaxRedirects,
 		MaxInfoLen:      defaultMaxInfoLen,

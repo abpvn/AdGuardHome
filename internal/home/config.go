@@ -103,6 +103,7 @@ type clientSourcesConfig struct {
 	RDNS      bool `yaml:"rdns"`
 	DHCP      bool `yaml:"dhcp"`
 	HostsFile bool `yaml:"hosts"`
+	CacheSize int  `yaml:"cache_size"`
 }
 
 // configuration is loaded from YAML.
@@ -577,6 +578,7 @@ var config = &configuration{
 			RDNS:      true,
 			DHCP:      true,
 			HostsFile: true,
+			CacheSize: 5000,
 		},
 	},
 	Log: logSettings{

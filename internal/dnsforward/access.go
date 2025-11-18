@@ -1,8 +1,10 @@
 package dnsforward
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/netip"
 	"slices"
@@ -11,7 +13,9 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
+	"github.com/AdguardTeam/AdGuardHome/internal/geoip"
 	"github.com/AdguardTeam/golibs/container"
+	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/stringutil"
 	"github.com/AdguardTeam/urlfilter"
 	"github.com/AdguardTeam/urlfilter/filterlist"
@@ -287,35 +291,56 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	l := s.logger
 
+	list, err := s.decodeAndValidateAccessList(r)
+	if err != nil {
+		return // Error already logged
+	}
+
+	a, err := s.createAccessManager(list)
+	if err != nil {
+		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "creating access ctx: %s", err)
+		return
+	}
+
+	s.updateConfiguration(ctx, l, list, a)
+}
+
+// decodeAndValidateAccessList decodes and validates the access list from the request.
+func (s *Server) decodeAndValidateAccessList(r *http.Request) (*accessListJSON, error) {
+	ctx := r.Context()
+	l := s.logger
+
 	list := &accessListJSON{}
 	err := json.NewDecoder(r.Body).Decode(&list)
 	if err != nil {
-		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "decoding request: %s", err)
-
-		return
+		aghhttp.ErrorAndLog(ctx, l, r, nil, http.StatusBadRequest, "decoding request: %s", err)
+		return nil, err
 	}
 
 	err = validateAccessSet(list)
 	if err != nil {
-		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "%s", err)
-
-		return
+		aghhttp.ErrorAndLog(ctx, l, r, nil, http.StatusBadRequest, "%s", err)
+		return nil, err
 	}
 
-	var a *accessManager
+	return list, nil
+}
+
+// createAccessManager creates a new access manager with normalized country codes.
+func (s *Server) createAccessManager(list *accessListJSON) (*accessManager, error) {
+	// Normalize country codes
 	for i, country := range list.AllowedCountries {
 		list.AllowedCountries[i] = strings.ToUpper(country)
 	}
 	for i, country := range list.BlockedCountries {
 		list.BlockedCountries[i] = strings.ToUpper(country)
 	}
-	a, err = newAccessCtx(s.access, list.AllowedClients, list.DisallowedClients, list.BlockedHosts, list.AllowedCountries, list.BlockedCountries)
-	if err != nil {
-		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "creating access ctx: %s", err)
 
-		return
-	}
+	return newAccessCtx(s.access, list.AllowedClients, list.DisallowedClients, list.BlockedHosts, list.AllowedCountries, list.BlockedCountries)
+}
 
+// updateConfiguration updates the server configuration with the new access settings.
+func (s *Server) updateConfiguration(ctx context.Context, l *slog.Logger, list *accessListJSON, a *accessManager) {
 	defer l.DebugContext(
 		ctx,
 		"updated access lists",
@@ -337,4 +362,20 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 	s.conf.AllowedCountries = list.AllowedCountries
 	s.conf.BlockedCountries = list.BlockedCountries
 	s.access = a
+
+	s.initializeGeoIPIfNeeded(ctx, list)
+}
+
+// initializeGeoIPIfNeeded initializes GeoIP if countries are configured.
+func (s *Server) initializeGeoIPIfNeeded(ctx context.Context, list *accessListJSON) {
+	if (len(list.AllowedCountries) > 0 || len(list.BlockedCountries) > 0) && s.geoIP == nil && s.conf.GeoIPEnabled && s.conf.GeoIPDatabasePath != "" {
+		var err error
+		s.geoIP, err = geoip.New(&geoip.Config{
+			Logger:       s.baseLogger.With(slogutil.KeyPrefix, "geoip"),
+			DatabasePath: s.conf.GeoIPDatabasePath,
+		})
+		if err != nil {
+			s.logger.ErrorContext(ctx, "initializing geoip after config update", slogutil.KeyError, err)
+		}
+	}
 }

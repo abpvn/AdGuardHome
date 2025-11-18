@@ -160,6 +160,9 @@ type configuration struct {
 	// Keep this field sorted to ensure consistent ordering.
 	Clients *clientsConfig `yaml:"clients"`
 
+	// GeoIP contains the GeoIP database configuration.
+	GeoIP *geoIPConfig `yaml:"geoip"`
+
 	// Log is a block with log configuration settings.
 	Log logSettings `yaml:"log"`
 
@@ -431,6 +434,14 @@ type statsConfig struct {
 	Enabled bool `yaml:"enabled"`
 }
 
+type geoIPConfig struct {
+	// Enabled defines if GeoIP is enabled for country blocking.
+	Enabled bool `yaml:"enabled"`
+
+	// DatabasePath is the path to the GeoIP database file.
+	DatabasePath string `yaml:"database_path"`
+}
+
 // Default block host constants.
 const (
 	defaultSafeBrowsingBlockHost = "standard-block.dns.adguard.com"
@@ -580,6 +591,10 @@ var config = &configuration{
 			HostsFile: true,
 			CacheSize: 5000,
 		},
+	},
+	GeoIP: &geoIPConfig{
+		Enabled:      false, // Will be auto-enabled if country rules exist
+		DatabasePath: filepath.Join(dataDir, "geo-db.csv"),
 	},
 	Log: logSettings{
 		Enabled:    true,
@@ -910,6 +925,16 @@ func (c *configuration) write(
 	}
 
 	config.Clients.Persistent = globalContext.clients.forConfig()
+
+	// Auto-update GeoIP enabled status based on country rules
+	if s := globalContext.dnsServer; s != nil {
+		c := dnsforward.Config{}
+		s.WriteDiskConfig(&c)
+		hasCountryRules := len(c.AllowedCountries) > 0 || len(c.BlockedCountries) > 0
+		if config.GeoIP != nil {
+			config.GeoIP.Enabled = hasCountryRules
+		}
+	}
 
 	confPath = configFilePath(ctx, l, workDir, confPath)
 	l.DebugContext(ctx, "writing config file", "path", confPath)

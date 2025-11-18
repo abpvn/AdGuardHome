@@ -19,6 +19,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
 	"github.com/AdguardTeam/AdGuardHome/internal/dnsforward"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
+	"github.com/AdguardTeam/AdGuardHome/internal/geoip"
 	"github.com/AdguardTeam/AdGuardHome/internal/querylog"
 	"github.com/AdguardTeam/AdGuardHome/internal/stats"
 	"github.com/AdguardTeam/golibs/errors"
@@ -105,6 +106,12 @@ func initDNS(
 	if err != nil {
 		// Don't wrap the error, since it's informative enough as is.
 		return err
+	}
+
+	// Download GeoIP database if needed
+	err = downloadGeoIPDatabase(ctx, baseLogger)
+	if err != nil {
+		baseLogger.WarnContext(ctx, "geoip database download failed, continuing without geoip", "error", err)
 	}
 
 	return initDNSServer(
@@ -251,6 +258,8 @@ func newServerConfig(
 
 	fwdConf := dnsConf.Config
 	fwdConf.ClientsContainer = clientsContainer
+	fwdConf.GeoIPEnabled = config.GeoIP.Enabled
+	fwdConf.GeoIPDatabasePath = config.GeoIP.DatabasePath
 
 	intTLSConf, err := newDNSTLSConfig(tlsConf, hosts)
 	if err != nil {
@@ -549,6 +558,31 @@ func checkStatsAndQuerylogDirs(
 	}
 
 	return statsDir, querylogDir, nil
+}
+
+// downloadGeoIPDatabase downloads the GeoIP database if configured and not present.
+func downloadGeoIPDatabase(ctx context.Context, logger *slog.Logger) error {
+	if !config.GeoIP.Enabled || config.GeoIP.DatabasePath == "" {
+		return nil
+	}
+
+	// Check if database file exists
+	if _, err := os.Stat(config.GeoIP.DatabasePath); err == nil {
+		logger.DebugContext(ctx, "geoip database already exists", "path", config.GeoIP.DatabasePath)
+		return nil
+	}
+
+	logger.InfoContext(ctx, "geoip database not found, attempting to download", "path", config.GeoIP.DatabasePath)
+
+	downloader := geoip.NewDownloader(logger)
+	err := downloader.Download(ctx, config.GeoIP.DatabasePath)
+	if err != nil {
+		logger.WarnContext(ctx, "failed to download geoip database", "error", err)
+		return err
+	}
+
+	logger.InfoContext(ctx, "successfully downloaded geoip database", "path", config.GeoIP.DatabasePath)
+	return nil
 }
 
 // checkDir checks if the path is a directory.  It's used to check for

@@ -18,28 +18,28 @@ func TestGeoIP(t *testing.T) {
 `
 
 	// Write test data to a temporary file
-	tmpFile, err := os.CreateTemp("", "geoip_test_*.csv")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
+	tmpFile, createErr := os.CreateTemp("", "geoip_test_*.csv")
+	if createErr != nil {
+		t.Fatalf("Failed to create temp file: %v", createErr)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
 
-	if _, err := tmpFile.WriteString(testData); err != nil {
-		t.Fatalf("Failed to write test data: %v", err)
+	if _, writeErr := tmpFile.WriteString(testData); writeErr != nil {
+		t.Fatalf("Failed to write test data: %v", writeErr)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	conf := &Config{
 		Logger:       slogutil.NewDiscardLogger(),
 		DatabasePath: tmpFile.Name(),
 	}
 
-	g, err := New(conf)
-	if err != nil {
-		t.Fatalf("Failed to create GeoIP: %v", err)
+	g, newErr := New(conf)
+	if newErr != nil {
+		t.Fatalf("Failed to create GeoIP: %v", newErr)
 	}
-	defer g.Close()
+	defer func() { _ = g.Close() }()
 
 	tests := []struct {
 		ip       string
@@ -53,13 +53,13 @@ func TestGeoIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.ip, func(t *testing.T) {
-			ip, err := netip.ParseAddr(tt.ip)
-			if err != nil {
-				t.Fatalf("Invalid IP %s: %v", tt.ip, err)
+			ip, parseErr := netip.ParseAddr(tt.ip)
+			if parseErr != nil {
+				t.Fatalf("Invalid IP %s: %v", tt.ip, parseErr)
 			}
-			country, err := g.Country(ip)
-			if err != nil {
-				t.Errorf("Country(%s) error: %v", tt.ip, err)
+			country, countryErr := g.Country(ip)
+			if countryErr != nil {
+				t.Errorf("Country(%s) error: %v", tt.ip, countryErr)
 			}
 			if country != tt.expected {
 				t.Errorf("Country(%s) = %s, expected %s", tt.ip, country, tt.expected)
@@ -78,7 +78,7 @@ func TestGeoIP_InvalidIP(t *testing.T) {
 	if err != nil {
 		t.Skipf("GeoIP database not available: %v", err)
 	}
-	defer g.Close()
+	defer func() { _ = g.Close() }()
 
 	// Test with invalid IP - should not parse
 	_, err = netip.ParseAddr("invalid")

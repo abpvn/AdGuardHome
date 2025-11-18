@@ -22,7 +22,7 @@ import (
 // Interface provides GeoIP functionality.
 type Interface interface {
 	// Country returns the country code for the given IP address.
-	Country(ip netip.Addr) (country string, err error)
+	Country(ip netip.Addr) (string, error)
 	// Close closes the GeoIP database.
 	Close() error
 }
@@ -85,12 +85,12 @@ func parseDatabase(content string) ([]ipRange, error) {
 			continue // Skip invalid lines
 		}
 
-		start, err := strconv.ParseUint(parts[0], 10, 32)
-		if err != nil {
+		start, startErr := strconv.ParseUint(parts[0], 10, 32)
+		if startErr != nil {
 			continue
 		}
-		end, err := strconv.ParseUint(parts[1], 10, 32)
-		if err != nil {
+		end, endErr := strconv.ParseUint(parts[1], 10, 32)
+		if endErr != nil {
 			continue
 		}
 		country := strings.ToUpper(strings.TrimSpace(parts[2]))
@@ -121,7 +121,7 @@ func parseDatabase(content string) ([]ipRange, error) {
 }
 
 // Country returns the ISO country code for the given IP.
-func (g *Default) Country(ip netip.Addr) (country string, err error) {
+func (g *Default) Country(ip netip.Addr) (string, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -200,45 +200,45 @@ func (d *Downloader) generateURL(t time.Time) string {
 
 // downloadFile downloads and extracts a gzipped CSV file.
 func (d *Downloader) downloadFile(ctx context.Context, url, destPath string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
+	req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if reqErr != nil {
+		return fmt.Errorf("creating request: %w", reqErr)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("downloading file: %w", err)
+	resp, respErr := http.DefaultClient.Do(req)
+	if respErr != nil {
+		return fmt.Errorf("downloading file: %w", respErr)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("bad status: %s", resp.Status)
 	}
 
 	// Create temp file for download
-	tempFile, err := os.CreateTemp(filepath.Dir(destPath), "geoip_download_*.csv")
-	if err != nil {
-		return fmt.Errorf("creating temp file: %w", err)
+	tempFile, tempErr := os.CreateTemp(filepath.Dir(destPath), "geoip_download_*.csv")
+	if tempErr != nil {
+		return fmt.Errorf("creating temp file: %w", tempErr)
 	}
-	defer os.Remove(tempFile.Name())
-	defer tempFile.Close()
+	defer func() { _ = os.Remove(tempFile.Name()) }()
+	defer func() { _ = tempFile.Close() }()
 
 	// Decompress and write
-	gzipReader, err := gzip.NewReader(resp.Body)
-	if err != nil {
-		return fmt.Errorf("creating gzip reader: %w", err)
+	gzipReader, gzipErr := gzip.NewReader(resp.Body)
+	if gzipErr != nil {
+		return fmt.Errorf("creating gzip reader: %w", gzipErr)
 	}
-	defer gzipReader.Close()
+	defer func() { _ = gzipReader.Close() }()
 
-	if _, err := io.Copy(tempFile, gzipReader); err != nil {
-		return fmt.Errorf("writing decompressed data: %w", err)
+	if _, copyErr := io.Copy(tempFile, gzipReader); copyErr != nil {
+		return fmt.Errorf("writing decompressed data: %w", copyErr)
 	}
 
-	tempFile.Close()
+	_ = tempFile.Close()
 
 	// Convert to our format and write to final destination
-	if err := d.convertToInternalFormat(tempFile.Name(), destPath); err != nil {
-		return fmt.Errorf("converting database format: %w", err)
+	if convertErr := d.convertToInternalFormat(tempFile.Name(), destPath); convertErr != nil {
+		return fmt.Errorf("converting database format: %w", convertErr)
 	}
 
 	return nil
@@ -250,43 +250,43 @@ func (d *Downloader) convertToInternalFormat(srcPath, destPath string) error {
 	if err != nil {
 		return fmt.Errorf("opening source file: %w", err)
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
 	destFile, err := os.Create(destPath)
 	if err != nil {
 		return fmt.Errorf("creating dest file: %w", err)
 	}
-	defer destFile.Close()
+	defer func() { _ = destFile.Close() }()
 
 	return d.convertAndWrite(srcFile, destFile)
 }
 
 // convertAndWrite reads from src and writes converted data to dest.
-func (d *Downloader) convertAndWrite(srcFile *os.File, destFile *os.File) error {
+func (d *Downloader) convertAndWrite(srcFile, destFile *os.File) error {
 	scanner := bufio.NewScanner(srcFile)
 	writer := bufio.NewWriter(destFile)
 
 	// Write header
-	if _, err := writer.WriteString("# Converted from DB-IP\n"); err != nil {
-		return err
+	if _, writeErr := writer.WriteString("# Converted from DB-IP\n"); writeErr != nil {
+		return writeErr
 	}
 
 	for scanner.Scan() {
-		line, err := d.processLine(scanner.Text())
-		if err != nil {
+		line, processErr := d.processLine(scanner.Text())
+		if processErr != nil {
 			continue // Skip invalid lines
 		}
 		if line == "" {
 			continue
 		}
 
-		if _, err := writer.WriteString(line); err != nil {
-			return err
+		if _, writeErr := writer.WriteString(line); writeErr != nil {
+			return writeErr
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("scanning file: %w", err)
+	if scanErr := scanner.Err(); scanErr != nil {
+		return fmt.Errorf("scanning file: %w", scanErr)
 	}
 
 	return writer.Flush()
@@ -310,13 +310,13 @@ func (d *Downloader) processLine(text string) (string, error) {
 	country := strings.Trim(strings.ToUpper(parts[2]), `"`)
 
 	// Convert IPs to uint32
-	startUint, err := ipToUint32FromString(startIP)
-	if err != nil {
-		return "", err
+	startUint, startErr := ipToUint32FromString(startIP)
+	if startErr != nil {
+		return "", startErr
 	}
-	endUint, err := ipToUint32FromString(endIP)
-	if err != nil {
-		return "", err
+	endUint, endErr := ipToUint32FromString(endIP)
+	if endErr != nil {
+		return "", endErr
 	}
 
 	// Return in our format: start,end,country
@@ -325,9 +325,9 @@ func (d *Downloader) processLine(text string) (string, error) {
 
 // ipToUint32FromString converts IP string to uint32.
 func ipToUint32FromString(ipStr string) (uint32, error) {
-	ip, err := netip.ParseAddr(ipStr)
-	if err != nil {
-		return 0, err
+	ip, parseErr := netip.ParseAddr(ipStr)
+	if parseErr != nil {
+		return 0, parseErr
 	}
 	if !ip.Is4() {
 		return 0, fmt.Errorf("IPv6 not supported")

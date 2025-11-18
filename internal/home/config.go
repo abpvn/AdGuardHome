@@ -926,15 +926,7 @@ func (c *configuration) write(
 
 	config.Clients.Persistent = globalContext.clients.forConfig()
 
-	// Auto-update GeoIP enabled status based on country rules
-	if s := globalContext.dnsServer; s != nil {
-		c := dnsforward.Config{}
-		s.WriteDiskConfig(&c)
-		hasCountryRules := len(c.AllowedCountries) > 0 || len(c.BlockedCountries) > 0
-		if config.GeoIP != nil {
-			config.GeoIP.Enabled = hasCountryRules
-		}
-	}
+	c.updateGeoIPConfig()
 
 	confPath = configFilePath(ctx, l, workDir, confPath)
 	l.DebugContext(ctx, "writing config file", "path", confPath)
@@ -1018,4 +1010,17 @@ func (cm *defaultConfigModifier) setAuth(a *auth) {
 // setTLSManager sets the TLS manager used by Apply.
 func (cm *defaultConfigModifier) setTLSManager(m *tlsManager) {
 	cm.tlsMgr = m
+}
+
+// updateGeoIPConfig updates the GeoIP configuration based on current DNS server settings.
+func (c *configuration) updateGeoIPConfig() {
+	// Auto-update GeoIP enabled status based on country rules
+	if s := globalContext.dnsServer; s != nil {
+		dnsConf := dnsforward.Config{}
+		s.WriteDiskConfig(&dnsConf)
+		hasCountryRules := len(dnsConf.AllowedCountries) > 0 || len(dnsConf.BlockedCountries) > 0
+		if config.GeoIP != nil {
+			config.GeoIP.Enabled = hasCountryRules
+		}
+	}
 }

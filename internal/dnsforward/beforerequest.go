@@ -115,7 +115,7 @@ var errAccessBlocked errors.Error = "blocked by access settings"
 // was blocked by access settings.
 func (s *Server) preBlockedResponse(pctx *proxy.DNSContext) (err error) {
 	if pctx.Proto == proxy.ProtoUDP || pctx.Proto == proxy.ProtoDNSCrypt {
-		// Return nil so that dnsproxy drops the connection and thus
+		// Return an error so that dnsproxy drops the connection and thus
 		// prevent DNS amplification attacks.
 		return errAccessBlocked
 	}

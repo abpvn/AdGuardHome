@@ -104,6 +104,12 @@ type Config struct {
 	// AllowedCountries is the list of countries that should be allowed.
 	AllowedCountries []string `yaml:"allowed_countries"`
 
+	// GeoIPEnabled defines if GeoIP is enabled for country blocking.
+	GeoIPEnabled bool `yaml:"geoip_enabled"`
+
+	// GeoIPDatabasePath is the path to the GeoIP database file.
+	GeoIPDatabasePath string `yaml:"geoip_database_path"`
+
 	// TrustedProxies is the list of CIDR networks with proxy servers addresses
 	// from which the DoH requests should be handled.  The value of nil or an
 	// empty slice for this field makes Proxy not trust any address.

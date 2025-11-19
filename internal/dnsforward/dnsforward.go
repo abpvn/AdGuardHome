@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"os"
 	"runtime"
 	"slices"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
 	"github.com/AdguardTeam/AdGuardHome/internal/constants" // Import the constants package
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
+	"github.com/AdguardTeam/AdGuardHome/internal/geoip"
 	"github.com/AdguardTeam/AdGuardHome/internal/querylog"
 	"github.com/AdguardTeam/AdGuardHome/internal/rdns"
 	"github.com/AdguardTeam/AdGuardHome/internal/stats"
@@ -138,6 +140,9 @@ type Server struct {
 
 	// access drops disallowed clients.
 	access *accessManager
+
+	// geoIP provides GeoIP lookups for country blocking.
+	geoIP geoip.Interface
 
 	// anonymizer masks the client's IP addresses if needed.
 	anonymizer *aghnet.IPMut
@@ -537,6 +542,11 @@ func (s *Server) Prepare(ctx context.Context, conf *ServerConfig) (err error) {
 		return fmt.Errorf("preparing access: %w", err)
 	}
 
+	err = s.initGeoIP()
+	if err != nil {
+		return err
+	}
+
 	proxyConfig.Fallbacks, err = s.setupFallbackDNS()
 	if err != nil {
 		return fmt.Errorf("setting up fallback dns servers: %w", err)
@@ -912,22 +922,67 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID bool, ip netip.Addr, findInCacheOnly bool) (bool, string, *whois.Info) {
-	if allowlistMode || blockedByIP || blockedByClientID {
-		return true, "", nil
-	}
-
+func (s *Server) isBlockedCountry(ip netip.Addr, findInCacheOnly bool) (bool, string, *whois.Info) {
 	if s.access.BlockedCountriesIDs.Len() == 0 && !s.access.allowCountryMode() {
 		return false, "", nil
 	}
 
-	// Use a background context and avoid extra processing for speed.
-	info := s.addrProc.ProcessWHOIS(context.Background(), ip, true, findInCacheOnly)
-	if info == nil || info.Country == "" {
+	// Skip GeoIP lookup for local/private IP addresses
+	if s.isLocalIP(ip) {
 		return false, "", nil
 	}
 
-	return s.access.isBlockedCountry(info.Country), constants.CountryPrefix + info.Country, info
+	country, whoisInfo := s.lookupCountry(ip, findInCacheOnly)
+	if country == "" {
+		return false, "", nil
+	}
+
+	return s.access.isBlockedCountry(country), constants.CountryPrefix + country, whoisInfo
+}
+
+// lookupCountry performs country lookup using GeoIP and WHOIS fallback.
+func (s *Server) lookupCountry(ip netip.Addr, findInCacheOnly bool) (string, *whois.Info) {
+	country, whoisInfo := s.lookupGeoIP(ip)
+	return s.lookupWHOISFallback(ip, findInCacheOnly, country, whoisInfo)
+}
+
+// lookupGeoIP performs country lookup using GeoIP.
+func (s *Server) lookupGeoIP(ip netip.Addr) (string, *whois.Info) {
+	if s.geoIP == nil {
+		return "", nil
+	}
+
+	country, err := s.geoIP.Country(ip)
+	if err != nil {
+		s.logger.DebugContext(context.Background(), "geoip lookup failed", "ip", ip, "error", err)
+	}
+
+	return country, &whois.Info{Country: country}
+}
+
+// lookupWHOISFallback performs WHOIS lookup as fallback.
+func (s *Server) lookupWHOISFallback(ip netip.Addr, findInCacheOnly bool, geoCountry string, geoInfo *whois.Info) (string, *whois.Info) {
+	if geoCountry != "" && findInCacheOnly {
+		return geoCountry, geoInfo
+	}
+
+	info := s.addrProc.ProcessWHOIS(context.Background(), ip, true, findInCacheOnly)
+	if info == nil {
+		return geoCountry, geoInfo
+	}
+
+	if geoCountry == "" {
+		return info.Country, info
+	}
+
+	if info.Country != geoCountry {
+		// Country from GeoIP different with Whois
+		clonedInfo := info.Clone()
+		clonedInfo.Country = "Geo: " + geoCountry + ",Whois: " + info.Country
+		info = clonedInfo
+	}
+
+	return info.Country, info
 }
 
 // IsBlockedClient returns true if the client is blocked by the current access
@@ -942,42 +997,219 @@ func (s *Server) IsBlockedClientWithWHOIS(ip netip.Addr, clientID string, findIn
 	s.serverLock.RLock()
 	defer s.serverLock.RUnlock()
 
-	blockedByIP := false
-	if ip != (netip.Addr{}) {
+	checks := s.performAccessChecks(ip, clientID, findInCacheOnly)
+
+	if s.access.allowlistMode() {
+		return s.handleAllowlistMode(ip, clientID, checks)
+	}
+
+	return s.handleBlocklistMode(ip, clientID, checks)
+}
+
+// accessChecks holds the results of all access rule checks.
+type accessChecks struct {
+	ipChecked         bool
+	clientIDChecked   bool
+	countryChecked    bool
+	blockedByIP       bool
+	blockedByClientID bool
+	blockedByCountry  bool
+	rule              string
+	countryRule       string
+	whois             *whois.Info
+}
+
+// performAccessChecks performs all access rule checks and returns the results.
+func (s *Server) performAccessChecks(ip netip.Addr, clientID string, findInCacheOnly bool) accessChecks {
+	ipChecked := s.access.allowedIPs.Len() > 0 || s.access.blockedIPs.Len() > 0
+	clientIDChecked := s.access.allowedClientIDs.Len() > 0 || s.access.blockedClientIDs.Len() > 0
+	countryChecked := s.access.AllowedCountriesIDs.Len() > 0 || s.access.BlockedCountriesIDs.Len() > 0
+
+	var blockedByIP bool
+	var rule string
+	if ipChecked && ip != (netip.Addr{}) {
 		blockedByIP, rule = s.access.isBlockedIP(ip)
 	}
 
-	allowlistMode := s.access.allowlistMode()
-	blockedByClientID := s.access.isBlockedClientID(clientID)
+	var blockedByClientID bool
+	if clientIDChecked {
+		blockedByClientID = s.access.isBlockedClientID(clientID)
+	}
 
-	// TODO(s.chzhen):  Pass context.
-	ctx := context.TODO()
-	blockedByCountry, countryRule, whois := s.isBlockedCountry(allowlistMode, blockedByIP, blockedByClientID, ip, findInCacheOnly)
+	var blockedByCountry bool
+	var countryRule string
+	var whois *whois.Info
+	if countryChecked {
+		blockedByCountry, countryRule, whois = s.isBlockedCountry(ip, findInCacheOnly)
+	}
 
-	// Allow if at least one of the checks allows in allowlist mode,
-	// but block if at least one of the checks blocks in blocklist mode.
-	if allowlistMode && blockedByIP && blockedByClientID && blockedByCountry {
+	return accessChecks{
+		ipChecked:         ipChecked,
+		clientIDChecked:   clientIDChecked,
+		countryChecked:    countryChecked,
+		blockedByIP:       blockedByIP,
+		blockedByClientID: blockedByClientID,
+		blockedByCountry:  blockedByCountry,
+		rule:              rule,
+		countryRule:       countryRule,
+		whois:             whois,
+	}
+}
+
+// handleAllowlistMode handles allowlist mode logic.
+func (s *Server) handleAllowlistMode(ip netip.Addr, clientID string, checks accessChecks) (blocked bool, rule string, whois *whois.Info) {
+	ipBlocks := !checks.ipChecked || checks.blockedByIP
+	clientIDBlocks := !checks.clientIDChecked || checks.blockedByClientID
+	countryBlocks := !checks.countryChecked || checks.blockedByCountry
+
+	if ipBlocks && clientIDBlocks && countryBlocks {
 		s.logger.DebugContext(
-			ctx,
+			context.TODO(),
 			"client is not in access allowlist mode",
 			"ip", ip,
 			"client_id", clientID,
 		)
+		return true, checks.rule, checks.whois
+	}
 
-		// Return now without substituting the empty rule for the
-		// clientID because the rule can't be empty here.
-		return true, rule, whois
-	} else if !allowlistMode && (blockedByIP || blockedByClientID || blockedByCountry) {
+	return false, cmp.Or(checks.countryRule, checks.rule, clientID), checks.whois
+}
+
+// handleBlocklistMode handles blocklist mode logic.
+func (s *Server) handleBlocklistMode(ip netip.Addr, clientID string, checks accessChecks) (blocked bool, rule string, whois *whois.Info) {
+	if checks.blockedByIP || checks.blockedByClientID || checks.blockedByCountry {
 		s.logger.DebugContext(
-			ctx,
+			context.TODO(),
 			"client is in access blocklist",
 			"ip", ip,
 			"client_id", clientID,
-			"country", countryRule,
+			"country", checks.countryRule,
 		)
-
-		blocked = true
+		return true, cmp.Or(checks.countryRule, checks.rule, clientID), checks.whois
 	}
 
-	return blocked, cmp.Or(countryRule, rule, clientID), whois
+	return false, cmp.Or(checks.countryRule, checks.rule, clientID), checks.whois
+}
+
+// isLocalIP returns true if the IP address is a local/private address.
+func (s *Server) isLocalIP(ip netip.Addr) bool {
+	if !ip.Is4() {
+		return false // Only check IPv4 for simplicity
+	}
+
+	// Check common private IP ranges
+	privateRanges := []netip.Prefix{
+		netip.MustParsePrefix("10.0.0.0/8"),     // RFC 1918
+		netip.MustParsePrefix("172.16.0.0/12"),  // RFC 1918
+		netip.MustParsePrefix("192.168.0.0/16"), // RFC 1918
+		netip.MustParsePrefix("127.0.0.0/8"),    // Loopback
+		netip.MustParsePrefix("169.254.0.0/16"), // Link-local
+	}
+
+	for _, prefix := range privateRanges {
+		if prefix.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// initGeoIP initializes the GeoIP database if country rules are configured.
+func (s *Server) initGeoIP() error {
+	// Auto-enable GeoIP if country rules are configured
+	hasCountryRules := len(s.conf.AllowedCountries) > 0 || len(s.conf.BlockedCountries) > 0
+	geoIPEnabled := s.conf.GeoIPEnabled || hasCountryRules
+
+	if geoIPEnabled && s.conf.GeoIPDatabasePath != "" {
+		// Ensure database exists and is up to date
+		if err := s.ensureGeoIPDatabase(); err != nil {
+			return fmt.Errorf("ensuring geoip database: %w", err)
+		}
+
+		var err error
+		s.geoIP, err = geoip.New(&geoip.Config{
+			Logger:       s.baseLogger.With(slogutil.KeyPrefix, "geoip"),
+			DatabasePath: s.conf.GeoIPDatabasePath,
+		})
+		if err != nil {
+			return fmt.Errorf("initializing geoip: %w", err)
+		}
+
+		// Start background update checker
+		go s.startGeoIPUpdateChecker()
+	}
+
+	return nil
+}
+
+// ensureGeoIPDatabase ensures the GeoIP database exists and downloads it if needed.
+func (s *Server) ensureGeoIPDatabase() error {
+	if _, err := os.Stat(s.conf.GeoIPDatabasePath); os.IsNotExist(err) {
+		// Database doesn't exist, download it
+		downloader := geoip.NewDownloader(s.baseLogger.With(slogutil.KeyPrefix, "geoip"))
+		if dlErr := downloader.Download(context.Background(), s.conf.GeoIPDatabasePath); dlErr != nil {
+			return fmt.Errorf("downloading geoip database: %w", dlErr)
+		}
+	}
+	return nil
+}
+
+// startGeoIPUpdateChecker starts a background goroutine that periodically checks for database updates.
+func (s *Server) startGeoIPUpdateChecker() {
+	ticker := time.NewTicker(7 * 24 * time.Hour) // Check weekly
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if s.geoIP != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			if err := s.updateGeoIPDatabase(ctx); err != nil {
+				s.logger.WarnContext(ctx, "failed to update geoip database", slogutil.KeyError, err)
+			}
+			cancel()
+		}
+	}
+}
+
+// updateGeoIPDatabase checks if the database is outdated and updates it if needed.
+func (s *Server) updateGeoIPDatabase(ctx context.Context) error {
+	// Check if database file exists
+	stat, err := os.Stat(s.conf.GeoIPDatabasePath)
+	if err != nil {
+		return fmt.Errorf("stat geoip database: %w", err)
+	}
+
+	now := time.Now()
+	fileModTime := stat.ModTime()
+
+	// Check if file was modified in a previous month and current month data might be available
+	fileYear, fileMonth, _ := fileModTime.Date()
+	currentYear, currentMonth, _ := now.Date()
+
+	needsUpdate := false
+
+	// If file is from a previous month, check if we should update
+	if fileYear < currentYear || (fileYear == currentYear && fileMonth < currentMonth) {
+		needsUpdate = true
+		s.logger.InfoContext(ctx, "geoip database is from previous month, checking for updates",
+			"file_month", fileMonth, "current_month", currentMonth)
+	} else if time.Since(fileModTime) > 30*24*time.Hour {
+		// Fallback: if file is older than 30 days regardless of month
+		needsUpdate = true
+		s.logger.InfoContext(ctx, "geoip database is older than 30 days, updating")
+	}
+
+	if !needsUpdate {
+		return nil
+	}
+
+	s.logger.InfoContext(ctx, "updating geoip database")
+
+	downloader := geoip.NewDownloader(s.baseLogger.With(slogutil.KeyPrefix, "geoip"))
+	if dlErr := downloader.Download(ctx, s.conf.GeoIPDatabasePath); dlErr != nil {
+		return fmt.Errorf("downloading updated geoip database: %w", dlErr)
+	}
+
+	s.logger.InfoContext(ctx, "geoip database updated successfully")
+	return nil
 }

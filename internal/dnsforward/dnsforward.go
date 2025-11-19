@@ -932,35 +932,55 @@ func (s *Server) isBlockedCountry(ip netip.Addr, findInCacheOnly bool) (bool, st
 		return false, "", nil
 	}
 
-	var country string
-	var err error
-	var whoisInfo *whois.Info
-
-	// Try GeoIP first if available
-	if s.geoIP != nil {
-		country, err = s.geoIP.Country(ip)
-		if err != nil {
-			s.logger.DebugContext(context.Background(), "geoip lookup failed", "ip", ip, "error", err)
-		}
-		whoisInfo = &whois.Info{Country: country}
-	}
-
-	// Fallback to WHOIS if GeoIP not available or failed
-	if country == "" || !findInCacheOnly {
-		info := s.addrProc.ProcessWHOIS(context.Background(), ip, true, findInCacheOnly)
-		if info == nil || info.Country == "" {
-			return false, "", nil
-		}
-		whoisInfo = info
-		if country != "" && info.Country != country {
-			// Country from GeoIP different with Whois
-			whoisInfo.Country = "Geo: " + country + ",Whois: " + info.Country
-		} else {
-			country = info.Country
-		}
+	country, whoisInfo := s.lookupCountry(ip, findInCacheOnly)
+	if country == "" && findInCacheOnly {
+		return false, "", nil
 	}
 
 	return s.access.isBlockedCountry(country), constants.CountryPrefix + country, whoisInfo
+}
+
+// lookupCountry performs country lookup using GeoIP and WHOIS fallback.
+func (s *Server) lookupCountry(ip netip.Addr, findInCacheOnly bool) (string, *whois.Info) {
+	country, whoisInfo := s.lookupGeoIP(ip)
+	return s.lookupWHOISFallback(ip, findInCacheOnly, country, whoisInfo)
+}
+
+// lookupGeoIP performs country lookup using GeoIP.
+func (s *Server) lookupGeoIP(ip netip.Addr) (string, *whois.Info) {
+	if s.geoIP == nil {
+		return "", nil
+	}
+
+	country, err := s.geoIP.Country(ip)
+	if err != nil {
+		s.logger.DebugContext(context.Background(), "geoip lookup failed", "ip", ip, "error", err)
+	}
+
+	return country, &whois.Info{Country: country}
+}
+
+// lookupWHOISFallback performs WHOIS lookup as fallback.
+func (s *Server) lookupWHOISFallback(ip netip.Addr, findInCacheOnly bool, geoCountry string, geoInfo *whois.Info) (string, *whois.Info) {
+	if geoCountry != "" && findInCacheOnly {
+		return geoCountry, geoInfo
+	}
+
+	info := s.addrProc.ProcessWHOIS(context.Background(), ip, true, findInCacheOnly)
+	if info == nil {
+		return geoCountry, geoInfo
+	}
+
+	if geoCountry == "" {
+		return info.Country, info
+	}
+
+	if info.Country != geoCountry {
+		// Country from GeoIP different with Whois
+		info.Country = "Geo: " + geoCountry + ",Whois: " + info.Country
+	}
+
+	return info.Country, info
 }
 
 // IsBlockedClient returns true if the client is blocked by the current access

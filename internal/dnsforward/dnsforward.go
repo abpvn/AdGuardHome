@@ -933,7 +933,7 @@ func (s *Server) isBlockedCountry(ip netip.Addr, findInCacheOnly bool) (bool, st
 	}
 
 	country, whoisInfo := s.lookupCountry(ip, findInCacheOnly)
-	if country == "" && findInCacheOnly {
+	if country == "" {
 		return false, "", nil
 	}
 

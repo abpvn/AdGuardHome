@@ -821,11 +821,12 @@ func (clients *clientsContainer) findClient(
 		false,
 	)
 	cj.Disallowed = &disallowed
+	cj.WHOIS = whois
 
 	if disallowed && rule != "" {
 		// Since "disallowed_rule" is omitted from JSON unless present, it
 		// should only be set when the client is actually blocked.
-		cj.DisallowedRule, cj.WHOIS = &rule, whois
+		cj.DisallowedRule = &rule
 	}
 
 	return cj

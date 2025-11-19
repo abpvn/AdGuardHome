@@ -977,7 +977,9 @@ func (s *Server) lookupWHOISFallback(ip netip.Addr, findInCacheOnly bool, geoCou
 
 	if info.Country != geoCountry {
 		// Country from GeoIP different with Whois
-		info.Country = "Geo: " + geoCountry + ",Whois: " + info.Country
+		clonedInfo := info.Clone()
+		clonedInfo.Country = "Geo: " + geoCountry + ",Whois: " + info.Country
+		info = clonedInfo
 	}
 
 	return info.Country, info

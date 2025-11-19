@@ -575,7 +575,7 @@ func downloadGeoIPDatabase(ctx context.Context, logger *slog.Logger) error {
 	logger.InfoContext(ctx, "geoip database not found, attempting to download", "path", config.GeoIP.DatabasePath)
 
 	downloader := geoip.NewDownloader(logger)
-	err := downloader.Download(ctx, config.GeoIP.DatabasePath)
+	err := downloader.Download(ctx, config.GeoIP.DatabasePath, true)
 	if err != nil {
 		logger.WarnContext(ctx, "failed to download geoip database", "error", err)
 		return err

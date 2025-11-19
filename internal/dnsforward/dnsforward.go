@@ -1148,7 +1148,7 @@ func (s *Server) ensureGeoIPDatabase() error {
 	if _, err := os.Stat(s.conf.GeoIPDatabasePath); os.IsNotExist(err) {
 		// Database doesn't exist, download it
 		downloader := geoip.NewDownloader(s.baseLogger.With(slogutil.KeyPrefix, "geoip"))
-		if dlErr := downloader.Download(context.Background(), s.conf.GeoIPDatabasePath); dlErr != nil {
+		if dlErr := downloader.Download(context.Background(), s.conf.GeoIPDatabasePath, true); dlErr != nil {
 			return fmt.Errorf("downloading geoip database: %w", dlErr)
 		}
 	}
@@ -1206,8 +1206,9 @@ func (s *Server) updateGeoIPDatabase(ctx context.Context) error {
 	s.logger.InfoContext(ctx, "updating geoip database")
 
 	downloader := geoip.NewDownloader(s.baseLogger.With(slogutil.KeyPrefix, "geoip"))
-	if dlErr := downloader.Download(ctx, s.conf.GeoIPDatabasePath); dlErr != nil {
-		return fmt.Errorf("downloading updated geoip database: %w", dlErr)
+	if dlErr := downloader.Download(ctx, s.conf.GeoIPDatabasePath, false); dlErr != nil {
+		s.logger.InfoContext(ctx, "current month geoip database not available, skipping update")
+		return nil
 	}
 
 	s.logger.InfoContext(ctx, "geoip database updated successfully")

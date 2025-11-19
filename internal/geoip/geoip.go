@@ -168,12 +168,15 @@ func NewDownloader(logger *slog.Logger) *Downloader {
 }
 
 // Download downloads the latest DB-IP country database.
-func (d *Downloader) Download(ctx context.Context, databasePath string) error {
-	// Try current month first, then previous month
+// If tryPrevious is true, it will try the previous month if current month fails.
+func (d *Downloader) Download(ctx context.Context, databasePath string, tryPrevious bool) error {
+	// Try current month first, then previous month if tryPrevious is true
 	now := time.Now()
 	urls := []string{
 		d.generateURL(now),
-		d.generateURL(now.AddDate(0, -1, 0)), // Previous month
+	}
+	if tryPrevious {
+		urls = append(urls, d.generateURL(now.AddDate(0, -1, 0)))
 	}
 
 	for _, url := range urls {

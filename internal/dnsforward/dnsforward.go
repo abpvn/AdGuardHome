@@ -960,6 +960,15 @@ func (s *Server) lookupGeoIP(ip netip.Addr) (string, *whois.Info) {
 	return country, &whois.Info{Country: country}
 }
 
+// updateGeoIPWithWHOIS updates the GeoIP database with WHOIS country information for IPv4 addresses.
+func (s *Server) updateGeoIPWithWHOIS(ip netip.Addr, country string) {
+	if ip.Is4() && s.geoIP != nil {
+		if err := s.geoIP.Update(ip, country); err != nil {
+			s.logger.WarnContext(context.Background(), "failed to update geoip database for ip", "ip", ip, slogutil.KeyError, err)
+		}
+	}
+}
+
 // lookupWHOISFallback performs WHOIS lookup as fallback.
 func (s *Server) lookupWHOISFallback(ip netip.Addr, findInCacheOnly bool, geoCountry string, geoInfo *whois.Info) (string, *whois.Info) {
 	if geoCountry != "" && findInCacheOnly {
@@ -973,17 +982,13 @@ func (s *Server) lookupWHOISFallback(ip netip.Addr, findInCacheOnly bool, geoCou
 
 	if geoCountry == "" {
 		// Update GeoIP database with WHOIS country for faster lookup next time
-		if err := s.geoIP.Update(ip, info.Country); err != nil {
-			s.logger.WarnContext(context.Background(), "failed to update geoip database for ip", "ip", ip, slogutil.KeyError, err)
-		}
+		s.updateGeoIPWithWHOIS(ip, info.Country)
 		return info.Country, info
 	}
 
 	if info.Country != geoCountry {
 		// Update GeoIP database with original WHOIS country for this IP
-		if err := s.geoIP.Update(ip, info.Country); err != nil {
-			s.logger.WarnContext(context.Background(), "failed to update geoip database for ip", "ip", ip, slogutil.KeyError, err)
-		}
+		s.updateGeoIPWithWHOIS(ip, info.Country)
 
 		// Country from GeoIP different with Whois
 		clonedInfo := info.Clone()

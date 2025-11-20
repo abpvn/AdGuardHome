@@ -972,6 +972,10 @@ func (s *Server) lookupWHOISFallback(ip netip.Addr, findInCacheOnly bool, geoCou
 	}
 
 	if geoCountry == "" {
+		// Update GeoIP database with WHOIS country for faster lookup next time
+		if err := s.geoIP.Update(ip, info.Country); err != nil {
+			s.logger.WarnContext(context.Background(), "failed to update geoip database for ip", "ip", ip, slogutil.KeyError, err)
+		}
 		return info.Country, info
 	}
 

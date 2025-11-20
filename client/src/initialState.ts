@@ -383,6 +383,7 @@ export type ServicesData = {
     processingSet: boolean;
     list: any;
     allServices: any[];
+    allGroups: any[];
 };
 
 export type RootState = {
@@ -597,6 +598,7 @@ export const initialState: RootState = {
         processingSet: false,
         list: {},
         allServices: [],
+        allGroups: [],
     },
     settings: {
         processing: true,

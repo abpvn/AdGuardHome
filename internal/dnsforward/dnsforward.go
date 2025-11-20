@@ -982,7 +982,7 @@ func (s *Server) lookupWHOISFallback(ip netip.Addr, findInCacheOnly bool, geoCou
 		info = clonedInfo
 	}
 
-	return info.Country, info
+	return geoCountry, info
 }
 
 // IsBlockedClient returns true if the client is blocked by the current access

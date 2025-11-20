@@ -976,6 +976,11 @@ func (s *Server) lookupWHOISFallback(ip netip.Addr, findInCacheOnly bool, geoCou
 	}
 
 	if info.Country != geoCountry {
+		// Update GeoIP database with original WHOIS country for this IP
+		if err := s.geoIP.Update(ip, info.Country); err != nil {
+			s.logger.WarnContext(context.Background(), "failed to update geoip database for ip", "ip", ip, slogutil.KeyError, err)
+		}
+
 		// Country from GeoIP different with Whois
 		clonedInfo := info.Clone()
 		clonedInfo.Country = "Geo: " + geoCountry + ",Whois: " + info.Country

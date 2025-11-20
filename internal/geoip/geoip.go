@@ -23,6 +23,8 @@ import (
 type Interface interface {
 	// Country returns the country code for the given IP address.
 	Country(ip netip.Addr) (string, error)
+	// Update updates the country for the given IP address.
+	Update(ip netip.Addr, country string) error
 	// Close closes the GeoIP database.
 	Close() error
 }
@@ -139,6 +141,50 @@ func (g *Default) Country(ip netip.Addr) (string, error) {
 	}
 
 	return "", nil
+}
+
+// Update updates the country for the given IP address by adding a single-IP range.
+func (g *Default) Update(ip netip.Addr, country string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if !ip.Is4() {
+		return fmt.Errorf("IPv6 not supported")
+	}
+
+	ipUint := ipToUint32(ip)
+	country = strings.ToUpper(strings.TrimSpace(country))
+
+	// Check if range already exists
+	for i, r := range g.ranges {
+		if ipUint >= r.start && ipUint <= r.end {
+			// Update existing range
+			g.ranges[i].country = country
+			return nil
+		}
+	}
+
+	// Add new single-IP range
+	newRange := ipRange{
+		start:   ipUint,
+		end:     ipUint,
+		country: country,
+	}
+
+	g.ranges = append(g.ranges, newRange)
+
+	// Re-sort ranges
+	slices.SortFunc(g.ranges, func(a, b ipRange) int {
+		if a.start < b.start {
+			return -1
+		}
+		if a.start > b.start {
+			return 1
+		}
+		return 0
+	})
+
+	return nil
 }
 
 // ipToUint32 converts IPv4 address to uint32.

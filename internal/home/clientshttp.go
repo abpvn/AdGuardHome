@@ -48,22 +48,22 @@ type clientJSON struct {
 	Name string `json:"name"`
 
 	// BlockedServices is the names of blocked services.
-	BlockedServices []string               `json:"blocked_services,omitempty"`
-	IDs             []string               `json:"ids"`
-	Tags            []string               `json:"tags,omitempty"`
-	Filters         []filtering.FilterJSON `json:"filters,omitempty"`
-	WhitelistFilter []filtering.FilterJSON `json:"whitelist_filters,omitempty"`
-	UserRules       []string               `json:"user_rules,omitempty"`
-	Upstreams       []string               `json:"upstreams,omitempty"`
+	BlockedServices []string                `json:"blocked_services,omitempty"`
+	IDs             []string                `json:"ids"`
+	Tags            []string                `json:"tags,omitempty"`
+	Filters         *[]filtering.FilterJSON `json:"filters,omitempty"`
+	WhitelistFilter *[]filtering.FilterJSON `json:"whitelist_filters,omitempty"`
+	UserRules       []string                `json:"user_rules,omitempty"`
+	Upstreams       []string                `json:"upstreams,omitempty"`
 
-	FilteringEnabled    bool `json:"filtering_enabled,omitempty"`
-	ParentalEnabled     bool `json:"parental_enabled,omitempty"`
-	SafeBrowsingEnabled bool `json:"safebrowsing_enabled,omitempty"`
+	FilteringEnabled    *bool `json:"filtering_enabled,omitempty"`
+	ParentalEnabled     *bool `json:"parental_enabled,omitempty"`
+	SafeBrowsingEnabled *bool `json:"safebrowsing_enabled,omitempty"`
 	// Deprecated: use safeSearchConf.
-	SafeSearchEnabled        bool `json:"safesearch_enabled,omitempty"`
-	UseGlobalBlockedServices bool `json:"use_global_blocked_services,omitempty"`
-	UseGlobalSettings        bool `json:"use_global_settings,omitempty"`
-	UseGlobalFilters         bool `json:"use_global_filters,omitempty"`
+	SafeSearchEnabled        *bool `json:"safesearch_enabled,omitempty"`
+	UseGlobalBlockedServices *bool `json:"use_global_blocked_services,omitempty"`
+	UseGlobalSettings        *bool `json:"use_global_settings,omitempty"`
+	UseGlobalFilters         *bool `json:"use_global_filters,omitempty"`
 
 	IgnoreQueryLog   aghalg.NullBool `json:"ignore_querylog,omitempty"`
 	IgnoreStatistics aghalg.NullBool `json:"ignore_statistics,omitempty"`
@@ -247,6 +247,22 @@ func initPrev(cj clientJSON, prev *client.Persistent) (c *client.Persistent, err
 	}, nil
 }
 
+// ensureBool ensure *bool variable to bool
+func ensureBool(boolVal *bool) bool {
+	if boolVal == nil {
+		return false
+	}
+	return *boolVal
+}
+
+// ensureListFilterJSON ensure *[]filtering.FilterJSON variable to []filtering.FilterJSON
+func ensureListFilterJSON(filters *[]filtering.FilterJSON) []filtering.FilterJSON {
+	if filters == nil {
+		return []filtering.FilterJSON{}
+	}
+	return *filters
+}
+
 // jsonToClient converts JSON object to persistent client object if there are no
 // errors.
 func (clients *clientsContainer) jsonToClient(
@@ -266,21 +282,21 @@ func (clients *clientsContainer) jsonToClient(
 		return nil, err
 	}
 
-	c.SafeSearchConf = copySafeSearch(cj.SafeSearchConf, cj.SafeSearchEnabled)
+	c.SafeSearchConf = copySafeSearch(cj.SafeSearchConf, ensureBool(cj.SafeSearchEnabled))
 	c.Name = cj.Name
 	c.Tags = cj.Tags
 	c.Upstreams = cj.Upstreams
-	c.UseOwnSettings = !cj.UseGlobalSettings
-	c.FilteringEnabled = cj.FilteringEnabled
-	c.ParentalEnabled = cj.ParentalEnabled
-	c.SafeBrowsingEnabled = cj.SafeBrowsingEnabled
-	c.UseOwnBlockedServices = !cj.UseGlobalBlockedServices
-	c.UseGlobalFilters = cj.UseGlobalFilters
+	c.UseOwnSettings = !ensureBool(cj.UseGlobalSettings)
+	c.FilteringEnabled = ensureBool(cj.FilteringEnabled)
+	c.ParentalEnabled = ensureBool(cj.ParentalEnabled)
+	c.SafeBrowsingEnabled = ensureBool(cj.SafeBrowsingEnabled)
+	c.UseOwnBlockedServices = !ensureBool(cj.UseGlobalBlockedServices)
+	c.UseGlobalFilters = ensureBool(cj.UseGlobalFilters)
 	c.UserRules = cj.UserRules
-	for _, fj := range cj.Filters {
+	for _, fj := range ensureListFilterJSON(cj.Filters) {
 		c.Filters = append(c.Filters, fj.ToFilterYAML())
 	}
-	for _, fj := range cj.WhitelistFilter {
+	for _, fj := range ensureListFilterJSON(cj.WhitelistFilter) {
 		c.WhitelistFilters = append(c.WhitelistFilters, fj.ToFilterYAML())
 	}
 
@@ -389,22 +405,25 @@ func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
 		blockedfiltersJSON = append(blockedfiltersJSON, filtering.FilterToJSON(filter))
 	}
 
+	useGlobalSettings := !c.UseOwnSettings
+	useGlobalBlockedServices := !c.UseOwnBlockedServices
+
 	return &clientJSON{
 		Name:                c.Name,
 		IDs:                 c.Identifiers(),
 		Tags:                c.Tags,
-		Filters:             blockedfiltersJSON,
-		WhitelistFilter:     allowfiltersJSON,
+		Filters:             &blockedfiltersJSON,
+		WhitelistFilter:     &allowfiltersJSON,
 		UserRules:           c.UserRules,
-		UseGlobalSettings:   !c.UseOwnSettings,
-		UseGlobalFilters:    c.UseGlobalFilters,
-		FilteringEnabled:    c.FilteringEnabled,
-		ParentalEnabled:     c.ParentalEnabled,
-		SafeSearchEnabled:   safeSearchConf.Enabled,
+		UseGlobalSettings:   &useGlobalSettings,
+		UseGlobalFilters:    &c.UseGlobalFilters,
+		FilteringEnabled:    &c.FilteringEnabled,
+		ParentalEnabled:     &c.ParentalEnabled,
+		SafeSearchEnabled:   &safeSearchConf.Enabled,
 		SafeSearchConf:      safeSearchConf,
-		SafeBrowsingEnabled: c.SafeBrowsingEnabled,
+		SafeBrowsingEnabled: &c.SafeBrowsingEnabled,
 
-		UseGlobalBlockedServices: !c.UseOwnBlockedServices,
+		UseGlobalBlockedServices: &useGlobalBlockedServices,
 
 		Schedule:        c.BlockedServices.Schedule,
 		BlockedServices: c.BlockedServices.IDs,

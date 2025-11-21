@@ -190,7 +190,7 @@ func TestClientsContainer_HandleAddClient(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cj := clientToJSON(tc.client)
+			cj := clientToJSON(tc.client, true)
 
 			body, err := json.Marshal(cj)
 			require.NoError(t, err)
@@ -251,7 +251,7 @@ func TestClientsContainer_HandleDelClient(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cj := clientToJSON(tc.client)
+			cj := clientToJSON(tc.client, true)
 
 			var body []byte
 			body, err = json.Marshal(cj)
@@ -328,7 +328,7 @@ func TestClientsContainer_HandleUpdateClient(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			uj := updateJSON{
 				Name: tc.clientName,
-				Data: *clientToJSON(tc.modified),
+				Data: *clientToJSON(tc.modified, true),
 			}
 
 			var body []byte

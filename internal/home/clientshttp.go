@@ -40,36 +40,36 @@ type clientJSON struct {
 
 	// WHOIS is the filtered WHOIS data of a client.
 	WHOIS          *whois.Info                 `json:"whois_info,omitempty"`
-	SafeSearchConf *filtering.SafeSearchConfig `json:"safe_search"`
+	SafeSearchConf *filtering.SafeSearchConfig `json:"safe_search,omitempty"`
 
 	// Schedule is blocked services schedule for every day of the week.
-	Schedule *schedule.Weekly `json:"blocked_services_schedule"`
+	Schedule *schedule.Weekly `json:"blocked_services_schedule,omitempty"`
 
 	Name string `json:"name"`
 
 	// BlockedServices is the names of blocked services.
-	BlockedServices []string               `json:"blocked_services"`
+	BlockedServices []string               `json:"blocked_services,omitempty"`
 	IDs             []string               `json:"ids"`
-	Tags            []string               `json:"tags"`
-	Filters         []filtering.FilterJSON `json:"filters"`
-	WhitelistFilter []filtering.FilterJSON `json:"whitelist_filters"`
-	UserRules       []string               `json:"user_rules"`
-	Upstreams       []string               `json:"upstreams"`
+	Tags            []string               `json:"tags,omitempty"`
+	Filters         []filtering.FilterJSON `json:"filters,omitempty"`
+	WhitelistFilter []filtering.FilterJSON `json:"whitelist_filters,omitempty"`
+	UserRules       []string               `json:"user_rules,omitempty"`
+	Upstreams       []string               `json:"upstreams,omitempty"`
 
-	FilteringEnabled    bool `json:"filtering_enabled"`
-	ParentalEnabled     bool `json:"parental_enabled"`
-	SafeBrowsingEnabled bool `json:"safebrowsing_enabled"`
+	FilteringEnabled    bool `json:"filtering_enabled,omitempty"`
+	ParentalEnabled     bool `json:"parental_enabled,omitempty"`
+	SafeBrowsingEnabled bool `json:"safebrowsing_enabled,omitempty"`
 	// Deprecated: use safeSearchConf.
-	SafeSearchEnabled        bool `json:"safesearch_enabled"`
-	UseGlobalBlockedServices bool `json:"use_global_blocked_services"`
-	UseGlobalSettings        bool `json:"use_global_settings"`
-	UseGlobalFilters         bool `json:"use_global_filters"`
+	SafeSearchEnabled        bool `json:"safesearch_enabled,omitempty"`
+	UseGlobalBlockedServices bool `json:"use_global_blocked_services,omitempty"`
+	UseGlobalSettings        bool `json:"use_global_settings,omitempty"`
+	UseGlobalFilters         bool `json:"use_global_filters,omitempty"`
 
-	IgnoreQueryLog   aghalg.NullBool `json:"ignore_querylog"`
-	IgnoreStatistics aghalg.NullBool `json:"ignore_statistics"`
+	IgnoreQueryLog   aghalg.NullBool `json:"ignore_querylog,omitempty"`
+	IgnoreStatistics aghalg.NullBool `json:"ignore_statistics,omitempty"`
 
-	UpstreamsCacheSize    uint32          `json:"upstreams_cache_size"`
-	UpstreamsCacheEnabled aghalg.NullBool `json:"upstreams_cache_enabled"`
+	UpstreamsCacheSize    uint32          `json:"upstreams_cache_size,omitempty"`
+	UpstreamsCacheEnabled aghalg.NullBool `json:"upstreams_cache_enabled,omitempty"`
 }
 
 // runtimeClientJSON is a JSON representation of the [client.Runtime].
@@ -109,7 +109,7 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http
 	defer clients.lock.Unlock()
 
 	clients.storage.RangeByName(func(c *client.Persistent) (cont bool) {
-		cj := clientToJSON(c)
+		cj := clientToJSON(c, true)
 		data.Clients = append(data.Clients, cj)
 
 		return true
@@ -150,7 +150,7 @@ func (clients *clientsContainer) handleGetClient(w http.ResponseWriter, r *http.
 	clients.lock.Lock()
 	defer clients.lock.Unlock()
 	if client, ok := clients.storage.FindByName(clientName); ok {
-		data = *clientToJSON(client)
+		data = *clientToJSON(client, true)
 	} else {
 		aghhttp.WriteJSONResponseError(ctx, clients.logger, w, r, fmt.Errorf("client %s not found", clientName))
 	}
@@ -366,9 +366,15 @@ func copyBlockedServices(
 }
 
 // clientToJSON converts persistent client object to JSON object.
-func clientToJSON(c *client.Persistent) (cj *clientJSON) {
+func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
 	// TODO(d.kolyshev): Remove after cleaning the deprecated
 	// [clientJSON.SafeSearchEnabled] field.
+	if !isFull {
+		return &clientJSON{
+			Name: c.Name,
+			IDs:  c.Identifiers(),
+		}
+	}
 	ctx := context.TODO()
 	cloneVal := c.SafeSearchConf
 	safeSearchConf := &cloneVal
@@ -814,7 +820,7 @@ func (clients *clientsContainer) findClient(
 		return clients.findRuntime(idStr, params)
 	}
 
-	cj = clientToJSON(c)
+	cj = clientToJSON(c, false)
 	disallowed, rule, whois := clients.clientChecker.IsBlockedClientWithWHOIS(
 		params.RemoteIP,
 		string(params.ClientID),

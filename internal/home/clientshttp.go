@@ -48,13 +48,13 @@ type clientJSON struct {
 	Name string `json:"name"`
 
 	// BlockedServices is the names of blocked services.
-	BlockedServices []string                `json:"blocked_services,omitempty"`
-	IDs             []string                `json:"ids"`
-	Tags            []string                `json:"tags,omitempty"`
+	BlockedServices *[]string               `json:"blocked_services,omitempty"`
+	IDs             *[]string               `json:"ids,omitempty"`
+	Tags            *[]string               `json:"tags,omitempty"`
 	Filters         *[]filtering.FilterJSON `json:"filters,omitempty"`
 	WhitelistFilter *[]filtering.FilterJSON `json:"whitelist_filters,omitempty"`
-	UserRules       []string                `json:"user_rules,omitempty"`
-	Upstreams       []string                `json:"upstreams,omitempty"`
+	UserRules       *[]string               `json:"user_rules,omitempty"`
+	Upstreams       *[]string               `json:"upstreams,omitempty"`
 
 	FilteringEnabled    *bool `json:"filtering_enabled,omitempty"`
 	ParentalEnabled     *bool `json:"parental_enabled,omitempty"`
@@ -225,7 +225,7 @@ func initPrev(cj clientJSON, prev *client.Persistent) (c *client.Persistent, err
 		upsCacheSize = cj.UpstreamsCacheSize
 	}
 
-	svcs, err := copyBlockedServices(cj.Schedule, cj.BlockedServices, prev)
+	svcs, err := copyBlockedServices(cj.Schedule, ensureStrings(cj.BlockedServices), prev)
 	if err != nil {
 		return nil, fmt.Errorf("invalid blocked services: %w", err)
 	}
@@ -263,6 +263,14 @@ func ensureListFilterJSON(filters *[]filtering.FilterJSON) []filtering.FilterJSO
 	return *filters
 }
 
+// ensureStrings ensure *[]string variable to []string
+func ensureStrings(strings *[]string) []string {
+	if strings == nil {
+		return []string{}
+	}
+	return *strings
+}
+
 // jsonToClient converts JSON object to persistent client object if there are no
 // errors.
 func (clients *clientsContainer) jsonToClient(
@@ -276,7 +284,7 @@ func (clients *clientsContainer) jsonToClient(
 		return nil, err
 	}
 
-	err = c.SetIDs(cj.IDs)
+	err = c.SetIDs(ensureStrings(cj.IDs))
 	if err != nil {
 		// Don't wrap the error since it's informative enough as is.
 		return nil, err
@@ -284,15 +292,15 @@ func (clients *clientsContainer) jsonToClient(
 
 	c.SafeSearchConf = copySafeSearch(cj.SafeSearchConf, ensureBool(cj.SafeSearchEnabled))
 	c.Name = cj.Name
-	c.Tags = cj.Tags
-	c.Upstreams = cj.Upstreams
+	c.Tags = ensureStrings(cj.Tags)
+	c.Upstreams = ensureStrings(cj.Upstreams)
 	c.UseOwnSettings = !ensureBool(cj.UseGlobalSettings)
 	c.FilteringEnabled = ensureBool(cj.FilteringEnabled)
 	c.ParentalEnabled = ensureBool(cj.ParentalEnabled)
 	c.SafeBrowsingEnabled = ensureBool(cj.SafeBrowsingEnabled)
 	c.UseOwnBlockedServices = !ensureBool(cj.UseGlobalBlockedServices)
 	c.UseGlobalFilters = ensureBool(cj.UseGlobalFilters)
-	c.UserRules = cj.UserRules
+	c.UserRules = ensureStrings(cj.UserRules)
 	for _, fj := range ensureListFilterJSON(cj.Filters) {
 		c.Filters = append(c.Filters, fj.ToFilterYAML())
 	}
@@ -386,9 +394,10 @@ func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
 	// TODO(d.kolyshev): Remove after cleaning the deprecated
 	// [clientJSON.SafeSearchEnabled] field.
 	if !isFull {
+		ids := c.Identifiers()
 		return &clientJSON{
 			Name: c.Name,
-			IDs:  c.Identifiers(),
+			IDs:  &ids,
 		}
 	}
 	ctx := context.TODO()
@@ -407,14 +416,15 @@ func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
 
 	useGlobalSettings := !c.UseOwnSettings
 	useGlobalBlockedServices := !c.UseOwnBlockedServices
+	ids := c.Identifiers()
 
 	return &clientJSON{
 		Name:                c.Name,
-		IDs:                 c.Identifiers(),
-		Tags:                c.Tags,
+		IDs:                 &ids,
+		Tags:                &c.Tags,
 		Filters:             &blockedfiltersJSON,
 		WhitelistFilter:     &allowfiltersJSON,
-		UserRules:           c.UserRules,
+		UserRules:           &c.UserRules,
 		UseGlobalSettings:   &useGlobalSettings,
 		UseGlobalFilters:    &c.UseGlobalFilters,
 		FilteringEnabled:    &c.FilteringEnabled,
@@ -426,9 +436,9 @@ func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
 		UseGlobalBlockedServices: &useGlobalBlockedServices,
 
 		Schedule:        c.BlockedServices.Schedule,
-		BlockedServices: c.BlockedServices.IDs,
+		BlockedServices: &c.BlockedServices.IDs,
 
-		Upstreams: c.Upstreams,
+		Upstreams: &c.Upstreams,
 
 		IgnoreQueryLog:   aghalg.BoolToNullBool(c.IgnoreQueryLog),
 		IgnoreStatistics: aghalg.BoolToNullBool(c.IgnoreStatistics),
@@ -950,7 +960,7 @@ func (clients *clientsContainer) findRuntime(
 
 	return &clientJSON{
 		Name:           host,
-		IDs:            []string{idStr},
+		IDs:            &[]string{idStr},
 		WHOIS:          whois,
 		Disallowed:     &disallowed,
 		DisallowedRule: disallowedRule,

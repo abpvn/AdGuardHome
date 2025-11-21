@@ -487,7 +487,7 @@ func TestClientsContainer_HandleSearchClient(t *testing.T) {
 		},
 		wantRuntime: &clientJSON{
 			Name:       runtimeCli,
-			IDs:        []string{runtimeCliIP},
+			IDs:        &[]string{runtimeCliIP},
 			Disallowed: &allowed,
 			WHOIS:      &whois.Info{},
 		},
@@ -499,7 +499,7 @@ func TestClientsContainer_HandleSearchClient(t *testing.T) {
 			}},
 		},
 		wantRuntime: &clientJSON{
-			IDs:            []string{blockedCliIP},
+			IDs:            &[]string{blockedCliIP},
 			Disallowed:     &dissallowed,
 			DisallowedRule: &disallowedRule,
 			WHOIS:          &whois.Info{},
@@ -512,7 +512,7 @@ func TestClientsContainer_HandleSearchClient(t *testing.T) {
 			}},
 		},
 		wantRuntime: &clientJSON{
-			IDs:        []string{nonExistentCliIP},
+			IDs:        &[]string{nonExistentCliIP},
 			Disallowed: &allowed,
 			WHOIS:      &whois.Info{},
 		},
@@ -549,7 +549,7 @@ func TestClientsContainer_HandleSearchClient(t *testing.T) {
 			require.Len(t, clientData, 1)
 			require.Len(t, clientData[0], 1)
 
-			rc := clientData[0][tc.wantRuntime.IDs[0]]
+			rc := clientData[0][(*tc.wantRuntime.IDs)[0]]
 			assert.Equal(t, tc.wantRuntime, rc)
 		})
 	}

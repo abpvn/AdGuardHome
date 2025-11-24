@@ -342,20 +342,96 @@ func (s *StatsCtx) TopClientsIP(maxCount uint) (ips []netip.Addr) {
 	return ips
 }
 
-// aggregateStatsByIDs aggregates stats for the given ids from the provided units.
-func aggregateStatsByIDs(units []*unitDB, ids []string) map[string]uint64 {
-	result := make(map[string]uint64)
-	idSet := make(map[string]struct{}, len(ids))
-	for _, id := range ids {
-		idSet[id] = struct{}{}
-	}
-	for _, u := range units {
-		for _, cp := range u.Clients {
-			if _, ok := idSet[cp.Name]; ok {
-				result[cp.Name] += cp.Count
-			}
+// matchIP updates the result map with matches for IP address clients.
+func matchIP(addr netip.Addr, count uint64, ids []string, prefixes []netip.Prefix, isPrefixes []bool, result map[string]uint64) {
+	for i := range ids {
+		if isIPClientMatches(addr, ids[i], prefixes[i], isPrefixes[i]) {
+			result[ids[i]] += count
 		}
 	}
+}
+
+// matchName updates the result map with matches for name clients.
+func matchName(name string, count uint64, ids []string, isPrefixes []bool, result map[string]uint64) {
+	for i := range ids {
+		if isNameClientMatches(name, ids[i], isPrefixes[i]) {
+			result[ids[i]] += count
+		}
+	}
+}
+
+// isIPClientMatches checks if the IP address matches the given id.
+func isIPClientMatches(addr netip.Addr, id string, prefix netip.Prefix, isPrefix bool) bool {
+	if isPrefix {
+		return prefix.Contains(addr)
+	}
+	return addr.String() == id
+}
+
+// isNameClientMatches checks if the client name matches the given id.
+func isNameClientMatches(name, id string, isPrefix bool) bool {
+	return !isPrefix && name == id
+}
+
+// aggregateStatsByIDs aggregates stats for the given ids from the provided units.
+// If an id is a subnet/prefix (e.g., 192.0.2.0/24), it counts clients whose IP addresses fall within that subnet.
+// Otherwise, it performs an exact match on the client name.
+func aggregateStatsByIDs(units []*unitDB, ids []string) map[string]uint64 {
+	prefixes := make([]netip.Prefix, len(ids))
+	isPrefixes := make([]bool, len(ids))
+	for i, id := range ids {
+		if p, err := netip.ParsePrefix(id); err == nil {
+			prefixes[i] = p
+			isPrefixes[i] = true
+		} else {
+			isPrefixes[i] = false
+		}
+	}
+
+	result1 := aggregateIPClients(units, ids, prefixes, isPrefixes)
+	result2 := aggregateNameClients(units, ids, isPrefixes)
+
+	result := make(map[string]uint64, len(ids))
+	for k, v := range result1 {
+		result[k] = v
+	}
+	for k, v := range result2 {
+		result[k] += v
+	}
+
+	return result
+}
+
+// aggregateIPClients aggregates stats for IP address clients.
+func aggregateIPClients(units []*unitDB, ids []string, prefixes []netip.Prefix, isPrefixes []bool) map[string]uint64 {
+	result := make(map[string]uint64)
+
+	for _, u := range units {
+		for _, cp := range u.Clients {
+			addr, err := netip.ParseAddr(cp.Name)
+			if err != nil {
+				continue
+			}
+			matchIP(addr, cp.Count, ids, prefixes, isPrefixes, result)
+		}
+	}
+
+	return result
+}
+
+// aggregateNameClients aggregates stats for non-IP name clients.
+func aggregateNameClients(units []*unitDB, ids []string, isPrefixes []bool) map[string]uint64 {
+	result := make(map[string]uint64)
+
+	for _, u := range units {
+		for _, cp := range u.Clients {
+			if _, err := netip.ParseAddr(cp.Name); err == nil {
+				continue
+			}
+			matchName(cp.Name, cp.Count, ids, isPrefixes, result)
+		}
+	}
+
 	return result
 }
 

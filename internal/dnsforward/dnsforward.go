@@ -986,9 +986,9 @@ func (s *Server) lookupWHOISFallback(ip netip.Addr, findInCacheOnly bool, geoCou
 		return info.Country, info
 	}
 
-	if info.Country != geoCountry {
+	if strings.ToUpper(info.Country) != strings.ToUpper(geoCountry) {
 		// Update GeoIP database with original WHOIS country for this IP
-		s.updateGeoIPWithWHOIS(ip, info.Country)
+		s.updateGeoIPWithWHOIS(ip, strings.ToUpper(info.Country))
 
 		// Country from GeoIP different with Whois
 		clonedInfo := info.Clone()

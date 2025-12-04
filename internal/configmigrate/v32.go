@@ -2,7 +2,7 @@ package configmigrate
 
 import "context"
 
-// migrateTo31 performs the following changes:
+// migrateTo32 performs the following changes:
 //
 //	# BEFORE:
 //	'filtering':

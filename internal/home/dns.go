@@ -260,6 +260,7 @@ func newServerConfig(
 	fwdConf.ClientsContainer = clientsContainer
 	fwdConf.GeoIPEnabled = config.GeoIP.Enabled
 	fwdConf.GeoIPDatabasePath = config.GeoIP.DatabasePath
+	fwdConf.GeoIPUpdatePeriod = config.GeoIP.UpdatePeriod
 
 	intTLSConf, err := newDNSTLSConfig(tlsConf, hosts)
 	if err != nil {

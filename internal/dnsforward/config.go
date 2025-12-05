@@ -110,6 +110,9 @@ type Config struct {
 	// GeoIPDatabasePath is the path to the GeoIP database file.
 	GeoIPDatabasePath string `yaml:"-"`
 
+	// GeoIPUpdatePeriod is the period for checking GeoIP database updates.
+	GeoIPUpdatePeriod timeutil.Duration `yaml:"-"`
+
 	// TrustedProxies is the list of CIDR networks with proxy servers addresses
 	// from which the DoH requests should be handled.  The value of nil or an
 	// empty slice for this field makes Proxy not trust any address.
@@ -475,6 +478,10 @@ func (s *Server) initDefaultSettings() {
 
 	if s.conf.UpstreamTimeout == 0 {
 		s.conf.UpstreamTimeout = DefaultTimeout
+	}
+
+	if s.conf.GeoIPUpdatePeriod == 0 {
+		s.conf.GeoIPUpdatePeriod = timeutil.Duration(24 * time.Hour)
 	}
 }
 

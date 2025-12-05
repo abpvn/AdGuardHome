@@ -1171,7 +1171,11 @@ func (s *Server) ensureGeoIPDatabase() error {
 
 // startGeoIPUpdateChecker starts a background goroutine that periodically checks for database updates.
 func (s *Server) startGeoIPUpdateChecker() {
-	ticker := time.NewTicker(7 * 24 * time.Hour) // Check weekly
+	updatePeriod := time.Duration(s.conf.GeoIPUpdatePeriod)
+	if updatePeriod == 0 {
+		updatePeriod = 24 * time.Hour // fallback to default
+	}
+	ticker := time.NewTicker(updatePeriod)
 	defer ticker.Stop()
 
 	for range ticker.C {

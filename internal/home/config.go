@@ -441,6 +441,9 @@ type geoIPConfig struct {
 
 	// DatabasePath is the path to the GeoIP database file.
 	DatabasePath string `yaml:"database_path"`
+
+	// UpdatePeriod is the period for checking GeoIP database updates.
+	UpdatePeriod timeutil.Duration `yaml:"update_period"`
 }
 
 // Default block host constants.
@@ -598,6 +601,7 @@ var config = &configuration{
 	GeoIP: &geoIPConfig{
 		Enabled:      false, // Will be auto-enabled if country rules exist
 		DatabasePath: filepath.Join(dataDir, "geo-db.csv"),
+		UpdatePeriod: timeutil.Duration(24 * time.Hour),
 	},
 	Log: logSettings{
 		Enabled:    true,

@@ -1178,14 +1178,30 @@ func (s *Server) startGeoIPUpdateChecker() {
 	ticker := time.NewTicker(updatePeriod)
 	defer ticker.Stop()
 
+	// Perform immediate check on startup
+	s.checkGeoIPUpdate("on startup")
+
 	for range ticker.C {
-		if s.geoIP != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-			if err := s.updateGeoIPDatabase(ctx); err != nil {
-				s.logger.WarnContext(ctx, "failed to update geoip database", slogutil.KeyError, err)
-			}
-			cancel()
-		}
+		s.checkGeoIPUpdate("")
+	}
+}
+
+// checkGeoIPUpdate performs a GeoIP database update check with appropriate logging.
+func (s *Server) checkGeoIPUpdate(contextMsg string) {
+	if s.geoIP == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	logMsg := "failed to update geoip database"
+	if contextMsg != "" {
+		logMsg += " " + contextMsg
+	}
+
+	if err := s.updateGeoIPDatabase(ctx); err != nil {
+		s.logger.WarnContext(ctx, logMsg, slogutil.KeyError, err)
 	}
 }
 

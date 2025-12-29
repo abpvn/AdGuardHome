@@ -140,6 +140,7 @@ jobs:
         if: ${{ !contains(env.VERSION, env.DEV_VERSION_CHECK) }}
         run: |
           rsync -have "ssh -i ${{env.SSH_KEY_FILE_PATH}} -o StrictHostKeyChecking=no" ${{ env.DIST_FOLDER }}/version.json ${{secrets.SSH_DEPLOY_USER}}@${{secrets.SSH_MAIN_HOST}}:${{secrets.DEPLOY_PATH}}/${{env.BUILD_CHANNEL}}/
+          rsync -have "ssh -i ${{env.SSH_KEY_FILE_PATH}} -o StrictHostKeyChecking=no" ${{ env.DIST_FOLDER }}/version.json ${{secrets.SSH_DEPLOY_USER}}@${{secrets.SSH_BACKUP_HOST}}:${{secrets.DEPLOY_PATH}}/${{env.BUILD_CHANNEL}}/
       - name: Clean deploy key file
         if: ${{ !contains(env.VERSION, env.DEV_VERSION_CHECK) }}
         run: rm -rf ${{env.SSH_KEY_FILE_PATH}}

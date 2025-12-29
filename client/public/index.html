@@ -24,6 +24,12 @@
             [data-theme="DARK"] .wrapper {
                 background-color: #f5f7fb;
             }
+            @media (prefers-color-scheme: dark) {
+                html,
+                body {
+                    background-color: #131313;
+                }
+            }
         </style>
     </head>
     <body>
@@ -36,10 +42,11 @@
         <script>
             (function() {
                 var LOCAL_STORAGE_THEME_KEY = 'account_theme';
-                var theme = 'light';
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var theme = prefersDark ? 'dark' : 'light';
 
                 try {
-                    theme = window.localStorage.getItem(LOCAL_STORAGE_THEME_KEY);
+                    theme = window.localStorage.getItem(LOCAL_STORAGE_THEME_KEY) || theme;
                 } catch(e) {
                     console.error(e);
                 }

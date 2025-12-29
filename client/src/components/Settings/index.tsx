@@ -58,6 +58,7 @@ interface SettingsProps {
         customInterval?: number;
         enabled?: boolean;
         ignored?: unknown[];
+        ignored_enabled?: boolean;
         processingSetConfig?: boolean;
         processingReset?: boolean;
     };
@@ -71,6 +72,7 @@ interface SettingsProps {
         processingClear?: boolean;
         processingGetConfig?: boolean;
         ignored?: unknown[];
+        ignored_enabled?: boolean;
     };
     filtering?: {
         interval?: number;
@@ -196,6 +198,7 @@ class Settings extends Component<SettingsProps> {
                                 <LogsConfig
                                     enabled={queryLogs.enabled}
                                     ignored={queryLogs.ignored}
+                                    ignoredEnabled={queryLogs.ignored_enabled}
                                     interval={queryLogs.interval}
                                     customInterval={queryLogs.customInterval}
                                     anonymize_client_ip={queryLogs.anonymize_client_ip}
@@ -212,6 +215,7 @@ class Settings extends Component<SettingsProps> {
                                     interval={stats.interval}
                                     customInterval={stats.customInterval}
                                     ignored={stats.ignored}
+                                    ignoredEnabled={stats.ignored_enabled}
                                     enabled={stats.enabled}
                                     processing={stats.processingSetConfig}
                                     processingReset={stats.processingReset}

@@ -14,6 +14,7 @@ interface LogsConfigProps {
     ignore_non_client_log: boolean;
     processing: boolean;
     ignored: unknown[];
+    ignoredEnabled: boolean;
     processingClear: boolean;
     setLogsConfig: (...args: unknown[]) => unknown;
     clearLogs: (...args: unknown[]) => unknown;
@@ -62,6 +63,7 @@ class LogsConfig extends Component<LogsConfigProps> {
 
             ignore_non_client_log,
             ignored,
+            ignoredEnabled,
             customInterval,
         } = this.props;
 
@@ -76,6 +78,7 @@ class LogsConfig extends Component<LogsConfigProps> {
                             anonymize_client_ip,
                             ignore_non_client_log,
                             ignored: ignored?.join('\n'),
+                            ignored_enabled: ignoredEnabled,
                         }}
                         processing={processing}
                         processingReset={processingClear}

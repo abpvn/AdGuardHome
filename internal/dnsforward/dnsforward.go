@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -966,6 +967,12 @@ func (s *Server) updateGeoIPWithWHOIS(ip netip.Addr, country string) {
 	if ip.Is4() && s.geoIP != nil && country != "" {
 		if err := s.geoIP.Update(ip, country); err != nil {
 			s.logger.WarnContext(context.Background(), "failed to update geoip database for ip", "ip", ip, slogutil.KeyError, err)
+			return
+		}
+
+		// Save the custom update to persist across database updates
+		if err := s.saveGeoIPCustomUpdate(ip, country); err != nil {
+			s.logger.WarnContext(context.Background(), "failed to save geoip custom update", "ip", ip, slogutil.KeyError, err)
 		}
 	}
 }
@@ -1206,6 +1213,77 @@ func (s *Server) checkGeoIPUpdate(contextMsg string) {
 	}
 }
 
+// needsGeoIPUpdate checks if the GeoIP database needs to be updated based on file modification time.
+func (s *Server) needsGeoIPUpdate(ctx context.Context, fileModTime time.Time) bool {
+	now := time.Now()
+	fileYear, fileMonth, _ := fileModTime.Date()
+	currentYear, currentMonth, _ := now.Date()
+
+	// If file is from a previous month, check if we should update
+	if fileYear < currentYear || (fileYear == currentYear && fileMonth < currentMonth) {
+		s.logger.InfoContext(ctx, "geoip database is from previous month, checking for updates",
+			"file_month", fileMonth, "current_month", currentMonth)
+		return true
+	}
+
+	// Fallback: if file is older than 30 days regardless of month
+	if time.Since(fileModTime) > 30*24*time.Hour {
+		s.logger.InfoContext(ctx, "geoip database is older than 30 days, updating")
+		return true
+	}
+
+	return false
+}
+
+// downloadGeoIPDatabase downloads the GeoIP database to a temporary file and validates it.
+func (s *Server) downloadGeoIPDatabase(ctx context.Context) (string, error) {
+	downloader := geoip.NewDownloader(s.baseLogger.With(slogutil.KeyPrefix, "geoip"))
+
+	// Download to a temporary file first to avoid corrupting the existing database
+	tempFile, tempErr := os.CreateTemp(filepath.Dir(s.conf.GeoIPDatabasePath), "geoip_update_*.mmdb")
+	if tempErr != nil {
+		return "", fmt.Errorf("creating temp file for geoip update: %w", tempErr)
+	}
+	tempPath := tempFile.Name()
+	if err := tempFile.Close(); err != nil {
+		return "", fmt.Errorf("closing temp file: %w", err)
+	}
+
+	if dlErr := downloader.Download(ctx, tempPath, false); dlErr != nil {
+		_ = os.Remove(tempPath) // cleanup operation, error not critical
+		s.logger.InfoContext(ctx, "current month geoip database not available, skipping update")
+		return "", nil
+	}
+
+	// Validate the downloaded file
+	if valErr := s.validateGeoIPDownload(tempPath); valErr != nil {
+		_ = os.Remove(tempPath) // cleanup operation, error not critical
+		return "", valErr
+	}
+
+	return tempPath, nil
+}
+
+// validateGeoIPDownload validates the downloaded GeoIP database file.
+func (s *Server) validateGeoIPDownload(tempPath string) error {
+	stat, err := os.Stat(tempPath)
+	if err != nil {
+		return fmt.Errorf("stat temp geoip file: %w", err)
+	}
+
+	if stat.Size() == 0 {
+		s.logger.WarnContext(context.Background(), "downloaded geoip database is empty, skipping update")
+		return fmt.Errorf("downloaded geoip database is empty")
+	}
+
+	if stat.Size() < 1024*1024 { // Less than 1MB is suspiciously small
+		s.logger.WarnContext(context.Background(), "downloaded geoip database is too small, skipping update", "size", stat.Size())
+		return fmt.Errorf("downloaded geoip database is too small: %d bytes", stat.Size())
+	}
+
+	return nil
+}
+
 // updateGeoIPDatabase checks if the database is outdated and updates it if needed.
 func (s *Server) updateGeoIPDatabase(ctx context.Context) error {
 	// Check if database file exists
@@ -1214,68 +1292,156 @@ func (s *Server) updateGeoIPDatabase(ctx context.Context) error {
 		return fmt.Errorf("stat geoip database: %w", err)
 	}
 
-	now := time.Now()
-	fileModTime := stat.ModTime()
-
-	// Check if file was modified in a previous month and current month data might be available
-	fileYear, fileMonth, _ := fileModTime.Date()
-	currentYear, currentMonth, _ := now.Date()
-
-	needsUpdate := false
-
-	// If file is from a previous month, check if we should update
-	if fileYear < currentYear || (fileYear == currentYear && fileMonth < currentMonth) {
-		needsUpdate = true
-		s.logger.InfoContext(ctx, "geoip database is from previous month, checking for updates",
-			"file_month", fileMonth, "current_month", currentMonth)
-	} else if time.Since(fileModTime) > 30*24*time.Hour {
-		// Fallback: if file is older than 30 days regardless of month
-		needsUpdate = true
-		s.logger.InfoContext(ctx, "geoip database is older than 30 days, updating")
-	}
-
+	needsUpdate := s.needsGeoIPUpdate(ctx, stat.ModTime())
 	if !needsUpdate {
 		return nil
 	}
 
 	s.logger.InfoContext(ctx, "updating geoip database")
 
-	downloader := geoip.NewDownloader(s.baseLogger.With(slogutil.KeyPrefix, "geoip"))
-
-	// Download to a temporary file first to avoid corrupting the existing database
-	tempFile, err := os.CreateTemp(filepath.Dir(s.conf.GeoIPDatabasePath), "geoip_update_*.mmdb")
+	tempPath, err := s.downloadGeoIPDatabase(ctx)
 	if err != nil {
-		return fmt.Errorf("creating temp file for geoip update: %w", err)
-	}
-	tempPath := tempFile.Name()
-	tempFile.Close() // Close immediately as downloader will open it
-
-	if dlErr := downloader.Download(ctx, tempPath, false); dlErr != nil {
-		os.Remove(tempPath) // Clean up temp file
-		s.logger.InfoContext(ctx, "current month geoip database not available, skipping update")
-		return nil
+		return err
 	}
 
-	// Validate the downloaded file
-	if stat, err := os.Stat(tempPath); err != nil {
-		os.Remove(tempPath) // Clean up temp file
-		return fmt.Errorf("stat temp geoip file: %w", err)
-	} else if stat.Size() == 0 {
-		os.Remove(tempPath) // Clean up temp file
-		s.logger.WarnContext(ctx, "downloaded geoip database is empty, skipping update")
-		return fmt.Errorf("downloaded geoip database is empty")
-	} else if stat.Size() < 1024*1024 { // Less than 1MB is suspiciously small
-		os.Remove(tempPath) // Clean up temp file
-		s.logger.WarnContext(ctx, "downloaded geoip database is too small, skipping update", "size", stat.Size())
-		return fmt.Errorf("downloaded geoip database is too small: %d bytes", stat.Size())
+	if tempPath == "" {
+		return nil // Download not available
 	}
 
 	// Replace the existing database with the validated download
-	if err := os.Rename(tempPath, s.conf.GeoIPDatabasePath); err != nil {
-		os.Remove(tempPath) // Clean up temp file
+	if err = os.Rename(tempPath, s.conf.GeoIPDatabasePath); err != nil {
+		_ = os.Remove(tempPath) // cleanup operation, error not critical
 		return fmt.Errorf("replacing geoip database: %w", err)
 	}
 
 	s.logger.InfoContext(ctx, "geoip database updated successfully")
+
+	// Restore custom updates after successful database update
+	if err = s.restoreGeoIPCustomUpdates(); err != nil {
+		s.logger.WarnContext(ctx, "failed to restore geoip custom updates after database update", slogutil.KeyError, err)
+	}
+
+	return nil
+}
+
+// parseGeoIPCustomUpdates parses the custom updates file into a map.
+func (s *Server) parseGeoIPCustomUpdates(data []byte) map[string]string {
+	existing := make(map[string]string)
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, ",")
+		if len(parts) == 2 {
+			existing[parts[0]] = parts[1]
+		}
+	}
+	return existing
+}
+
+// formatGeoIPCustomUpdates formats the custom updates map into file content.
+func (s *Server) formatGeoIPCustomUpdates(updates map[string]string) string {
+	var lines []string
+	for ipStr, countryStr := range updates {
+		lines = append(lines, ipStr+","+countryStr)
+	}
+	return strings.Join(lines, "\n") + "\n"
+}
+
+// saveGeoIPCustomUpdate saves a custom geoIP update to a persistent file.
+func (s *Server) saveGeoIPCustomUpdate(ip netip.Addr, country string) error {
+	if s.conf.GeoIPDatabasePath == "" {
+		return fmt.Errorf("geoip database path not configured")
+	}
+
+	customPath := s.conf.GeoIPDatabasePath + ".custom"
+
+	// Read existing custom updates
+	existing := make(map[string]string)
+	baseDir := filepath.Dir(s.conf.GeoIPDatabasePath)
+	root := os.DirFS(baseDir)
+	relPath := filepath.Base(customPath)
+	if data, err := fs.ReadFile(root, relPath); err == nil {
+		existing = s.parseGeoIPCustomUpdates(data)
+	}
+
+	// Add/update the new entry
+	existing[ip.String()] = country
+
+	// Write back to file
+	content := s.formatGeoIPCustomUpdates(existing)
+	return os.WriteFile(customPath, []byte(content), 0o600)
+}
+
+// loadGeoIPCustomUpdatesData loads the custom updates data from the file.
+func (s *Server) loadGeoIPCustomUpdatesData() ([]string, error) {
+	customPath := s.conf.GeoIPDatabasePath + ".custom"
+	baseDir := filepath.Dir(s.conf.GeoIPDatabasePath)
+	root := os.DirFS(baseDir)
+	relPath := filepath.Base(customPath)
+	data, readErr := fs.ReadFile(root, relPath)
+	if readErr != nil {
+		if os.IsNotExist(readErr) {
+			return nil, nil // No custom updates file exists
+		}
+		return nil, fmt.Errorf("reading custom geoip updates: %w", readErr)
+	}
+
+	return strings.Split(strings.TrimSpace(string(data)), "\n"), nil
+}
+
+// applyGeoIPCustomUpdate applies a single custom update.
+func (s *Server) applyGeoIPCustomUpdate(ipStr, countryStr string) error {
+	ip, parseErr := netip.ParseAddr(ipStr)
+	if parseErr != nil {
+		s.logger.WarnContext(context.Background(), "invalid IP in custom geoip updates", "ip", ipStr, slogutil.KeyError, parseErr)
+		return parseErr
+	}
+
+	if updateErr := s.geoIP.Update(ip, countryStr); updateErr != nil {
+		s.logger.WarnContext(context.Background(), "failed to restore geoip custom update", "ip", ipStr, "country", countryStr, slogutil.KeyError, updateErr)
+		return updateErr
+	}
+
+	return nil
+}
+
+// processGeoIPCustomUpdateLine processes a single line from the custom updates file.
+func (s *Server) processGeoIPCustomUpdateLine(line string) bool {
+	if line == "" {
+		return false
+	}
+	parts := strings.Split(line, ",")
+	if len(parts) != 2 {
+		return false
+	}
+
+	ipStr, countryStr := parts[0], parts[1]
+	return s.applyGeoIPCustomUpdate(ipStr, countryStr) == nil
+}
+
+// restoreGeoIPCustomUpdates loads and applies custom geoIP updates from the persistent file.
+func (s *Server) restoreGeoIPCustomUpdates() error {
+	if s.conf.GeoIPDatabasePath == "" || s.geoIP == nil {
+		return nil
+	}
+
+	lines, err := s.loadGeoIPCustomUpdatesData()
+	if err != nil {
+		return err
+	}
+
+	restoredCount := 0
+	for _, line := range lines {
+		if s.processGeoIPCustomUpdateLine(line) {
+			restoredCount++
+		}
+	}
+
+	if restoredCount > 0 {
+		s.logger.InfoContext(context.Background(), "restored geoip custom updates", "count", restoredCount)
+	}
+
 	return nil
 }

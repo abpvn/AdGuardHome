@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -962,7 +963,7 @@ func (s *Server) lookupGeoIP(ip netip.Addr) (string, *whois.Info) {
 
 // updateGeoIPWithWHOIS updates the GeoIP database with WHOIS country information for IPv4 addresses.
 func (s *Server) updateGeoIPWithWHOIS(ip netip.Addr, country string) {
-	if ip.Is4() && s.geoIP != nil {
+	if ip.Is4() && s.geoIP != nil && country != "" {
 		if err := s.geoIP.Update(ip, country); err != nil {
 			s.logger.WarnContext(context.Background(), "failed to update geoip database for ip", "ip", ip, slogutil.KeyError, err)
 		}
@@ -1240,9 +1241,39 @@ func (s *Server) updateGeoIPDatabase(ctx context.Context) error {
 	s.logger.InfoContext(ctx, "updating geoip database")
 
 	downloader := geoip.NewDownloader(s.baseLogger.With(slogutil.KeyPrefix, "geoip"))
-	if dlErr := downloader.Download(ctx, s.conf.GeoIPDatabasePath, false); dlErr != nil {
+
+	// Download to a temporary file first to avoid corrupting the existing database
+	tempFile, err := os.CreateTemp(filepath.Dir(s.conf.GeoIPDatabasePath), "geoip_update_*.mmdb")
+	if err != nil {
+		return fmt.Errorf("creating temp file for geoip update: %w", err)
+	}
+	tempPath := tempFile.Name()
+	tempFile.Close() // Close immediately as downloader will open it
+
+	if dlErr := downloader.Download(ctx, tempPath, false); dlErr != nil {
+		os.Remove(tempPath) // Clean up temp file
 		s.logger.InfoContext(ctx, "current month geoip database not available, skipping update")
 		return nil
+	}
+
+	// Validate the downloaded file
+	if stat, err := os.Stat(tempPath); err != nil {
+		os.Remove(tempPath) // Clean up temp file
+		return fmt.Errorf("stat temp geoip file: %w", err)
+	} else if stat.Size() == 0 {
+		os.Remove(tempPath) // Clean up temp file
+		s.logger.WarnContext(ctx, "downloaded geoip database is empty, skipping update")
+		return fmt.Errorf("downloaded geoip database is empty")
+	} else if stat.Size() < 1024*1024 { // Less than 1MB is suspiciously small
+		os.Remove(tempPath) // Clean up temp file
+		s.logger.WarnContext(ctx, "downloaded geoip database is too small, skipping update", "size", stat.Size())
+		return fmt.Errorf("downloaded geoip database is too small: %d bytes", stat.Size())
+	}
+
+	// Replace the existing database with the validated download
+	if err := os.Rename(tempPath, s.conf.GeoIPDatabasePath); err != nil {
+		os.Remove(tempPath) // Clean up temp file
+		return fmt.Errorf("replacing geoip database: %w", err)
 	}
 
 	s.logger.InfoContext(ctx, "geoip database updated successfully")

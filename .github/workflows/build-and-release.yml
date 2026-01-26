@@ -108,8 +108,10 @@ jobs:
         env:
           BUILDX_BUILDER: ${{ steps.builder.outputs.name }}
         run: |
-          make SIGN=0 VERBOSE=1 CHANNEL="${{env.BUILD_CHANNEL}}" DOCKER_IMAGE_NAME="${{env.REGISTRY}}/abpvn/adguardhome" \
-          DOCKER_OUTPUT="type=image,name=${{env.REGISTRY}}/abpvn/adguardhome,push=true" VERSION="${{env.VERSION}}" \
+          make SIGN=0 VERBOSE=1 CHANNEL="${{env.BUILD_CHANNEL}}" \
+          DOCKER_IMAGE_NAME="${{env.REGISTRY}}/abpvn/adguardhome" \
+          DOCKER_PUSH='1' \
+          VERSION="${{env.VERSION}}" \
           build-release build-docker
           rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
       - name: Create release

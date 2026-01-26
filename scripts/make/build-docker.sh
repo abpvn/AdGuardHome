@@ -112,6 +112,7 @@ docker_build_opt_tag() {
 		"$@" \
 		docker \
 		"$debug_flags" \
+		buildx \
 		build \
 		--build-arg BUILD_DATE="$build_date" \
 		--build-arg DIST_DIR="$dist_dir" \
@@ -119,6 +120,11 @@ docker_build_opt_tag() {
 		--build-arg VERSION="$version" \
 		--platform "$docker_platforms" \
 		;
+
+	# Use the BUILDX_BUILDER if it's set (from GitHub Actions)
+	if [ -n "${BUILDX_BUILDER:-}" ]; then
+		set -- "$@" --builder "$BUILDX_BUILDER"
+	fi
 
 	# Append the channel tag, if any.
 	if [ "$docker_channel_tag" != '' ]; then
@@ -138,6 +144,11 @@ docker_build_opt_tag() {
 		. \
 		;
 
+	# Add --push flag if we need to push to registry
+	if [ "$docker_push" -eq 1 ]; then
+		set -- "$@" --push
+	fi
+
 	# Call the command with the assembled parameters.
 	"$@"
 }
@@ -154,7 +165,3 @@ maybe_sudo() {
 	fi
 }
 
-# Push to DockerHub, if requested.
-if [ "$docker_push" -eq 1 ]; then
-	maybe_sudo docker push -a "$docker_image_name"
-fi

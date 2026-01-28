@@ -159,14 +159,3 @@ docker_build_opt_tag() {
 }
 
 docker_build_opt_tag
-
-# maybe_sudo is a function that wraps the call of a command with sudo, if
-# requested.
-maybe_sudo() {
-	if [ "$sudo_cmd" != '' ]; then
-		"$sudo_cmd" "$@"
-	else
-		"$@"
-	fi
-}
-

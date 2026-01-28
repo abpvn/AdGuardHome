@@ -136,6 +136,11 @@ docker_build_opt_tag() {
 		set -- "$@" "$docker_version_tag"
 	fi
 
+	# Push to DockerHub, if requested.
+	if [ "$docker_push" -eq 1 ]; then
+		set -- "$@" "--push"
+	fi
+
 	# Append the rest.
 	set -- \
 		"$@" \

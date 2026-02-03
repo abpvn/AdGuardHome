@@ -65,7 +65,6 @@ case "$channel" in
 	docker_channel_tag="--tag=${docker_image_name}:edge"
 	;;
 'development')
-	# Set both tags to an empty string for development builds.
 	docker_version_tag="--tag=${docker_image_name}:${version}"
 	docker_channel_tag="--tag=${docker_image_name}:latest"
 	;;
@@ -108,7 +107,6 @@ docker_build_opt_tag() {
 	set -- \
 		"$@" \
 		docker \
-		"$debug_flags" \
 		buildx \
 		build \
 		--build-arg BUILD_DATE="$build_date" \
@@ -146,11 +144,6 @@ docker_build_opt_tag() {
 		./docker/Dockerfile \
 		. \
 		;
-
-	# Add --push flag if we need to push to registry
-	if [ "$docker_push" -eq 1 ]; then
-		set -- "$@" --push
-	fi
 
 	# Call the command with the assembled parameters.
 	"$@"

@@ -1,7 +1,7 @@
 'name': 'test'
 
 'env':
-  'GO_VERSION': '1.25.5'
+  'GO_VERSION': '1.25.7'
   'NODE_VERSION': '24.13.0'
 
 'on':

@@ -262,7 +262,7 @@ func (m *tlsManager) reload(ctx context.Context) {
 
 	err = m.loadTLSConfig(ctx, &tlsConf, status)
 	if err != nil {
-		m.logger.ErrorContext(ctx, "reloading", slogutil.KeyError, err)
+		m.logger.WarnContext(ctx, "reloading interrupted", slogutil.KeyError, err)
 
 		return
 	}
@@ -280,7 +280,7 @@ func (m *tlsManager) reload(ctx context.Context) {
 	// The background context is used because the TLSConfigChanged wraps context
 	// with timeout on its own and shuts down the server, which handles current
 	// request.
-	m.web.tlsConfigChanged(context.Background(), tlsConfPtr)
+	m.web.tlsConfigChanged(context.Background(), m.conf)
 }
 
 // reconfigureDNSServer updates the DNS server configuration using the stored

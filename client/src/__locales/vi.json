@@ -294,6 +294,8 @@
   "encryption_plain_dns_desc": "DNS đơn giản được bật theo mặc định. Bạn có thể vô hiệu hóa nó để buộc tất cả các thiết bị sử dụng DNS được mã hóa. Để thực hiện việc này, bạn phải kích hoạt ít nhất một giao thức DNS được mã hóa",
   "encryption_plain_dns_enable": "Kích hoạt DNS đơn giản",
   "encryption_plain_dns_error": "Để tắt DNS đơn giản, hãy bật ít nhất một giao thức DNS được mã hóa",
+  "encryption_allow_unencrypted_doh_enable": "Bật DNS-over-HTTPS không mã hoá",
+  "allow_unencrypted_doh_desc": "Nếu được chọn, DNS-over-HTTPS không mã hoá sẽ được sử dụng theo mặc định. Các giao thức DNS mã hoá sẽ không hoạt động.",
   "encryption_private_key_path": "Đường dẫn khóa riêng",
   "encryption_redirect": "Tự động chuyển hướng đến HTTPS",
   "encryption_redirect_desc": "Nếu được chọn, AdGuard Home sẽ tự động chuyển hướng bạn từ địa chỉ HTTP sang địa chỉ HTTPS.",

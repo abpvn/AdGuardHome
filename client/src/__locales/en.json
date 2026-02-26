@@ -294,6 +294,8 @@
   "encryption_plain_dns_desc": "Plain DNS is enabled by default. You can disable it to force all devices to use encrypted DNS. To do this, you must enable at least one encrypted DNS protocol",
   "encryption_plain_dns_enable": "Enable plain DNS",
   "encryption_plain_dns_error": "To disable plain DNS, enable at least one encrypted DNS protocol",
+  "encryption_allow_unencrypted_doh_enable": "Enable unencrypted DNS-over-HTTPS",
+  "allow_unencrypted_doh_desc": "If enabled, unencrypted DNS-over-HTTPS will be used by default. Encrypted DNS protocols will not work.",
   "encryption_private_key_path": "Private key path",
   "encryption_redirect": "Redirect to HTTPS automatically",
   "encryption_redirect_desc": "If checked, AdGuard Home will automatically redirect you from HTTP to HTTPS addresses.",

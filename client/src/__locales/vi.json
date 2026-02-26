@@ -748,6 +748,7 @@
   "use_adguard_browsing_sec_hint": "AdGuard Home sẽ kiểm tra tên miền với dịch vụ bảo vệ duyệt web. Tính năng sử dụng một API thân thiện với quyền riêng tư: chỉ một phần ngắn tiền tố mã băm SHA256 được gửi đến máy chủ",
   "use_adguard_parental": "Sử dụng dịch vụ quản lý của phụ huynh AdGuard",
   "use_adguard_parental_hint": "AdGuard Home sẽ kiểm tra nếu tên miền chứa từ khoá ngườilớn. Tính năng sử dụng API thân thiện với quyền riêng tư tương tự với dịch vụ bảo vệ duyệt web",
+  "use_global_filters": "Dùng bộ lọc toàn cầu",
   "use_private_ptr_resolvers_desc": "Giải quyết các yêu cầu PTR, SOA và NS cho các miền ARPA chứa địa chỉ IP riêng thông qua máy chủ thượng nguồn riêng, DHCP, /etc/hosts, v. v. Nếu bị vô hiệu hóa, AdGuard Home sẽ phản hồi tất cả các yêu cầu đó bằng NXDOMAIN.",
   "use_private_ptr_resolvers_title": "Sử dụng trình rDNS riêng tư",
   "use_saved_key": "Sử dụng khóa đã lưu trước đó",

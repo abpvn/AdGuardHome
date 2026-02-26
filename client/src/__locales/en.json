@@ -748,6 +748,7 @@
   "use_adguard_browsing_sec_hint": "AdGuard Home will check if the domain is blocked by the browsing security web service. It will use privacy-friendly lookup API to perform the check: only a short prefix of the domain name SHA256 hash is sent to the server.",
   "use_adguard_parental": "Use AdGuard parental control web service",
   "use_adguard_parental_hint": "AdGuard Home will check if domain contains adult materials. It uses the same privacy-friendly API as the browsing security web service.",
+  "use_global_filters": "Use global filters",
   "use_private_ptr_resolvers_desc": "Resolve PTR, SOA, and NS requests for ARPA domains containing private IP addresses through private upstream servers, DHCP, /etc/hosts, etc. If disabled, AdGuard Home will respond to all such requests with NXDOMAIN.",
   "use_private_ptr_resolvers_title": "Use private reverse DNS resolvers",
   "use_saved_key": "Use the previously saved key",

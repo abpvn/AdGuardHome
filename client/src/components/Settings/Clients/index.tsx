@@ -19,6 +19,7 @@ interface ClientsProps {
     deleteClient: (...args: unknown[]) => string;
     addClient: (...args: unknown[]) => string;
     updateClient: (...args: unknown[]) => string;
+    clearClientCache: (...args: unknown[]) => string;
     getClients: (...args: unknown[]) => unknown;
     getStats: (...args: unknown[]) => unknown;
 }
@@ -43,6 +44,7 @@ class Clients extends Component<ClientsProps> {
             addClient,
 
             updateClient,
+            clearClientCache,
 
             deleteClient,
 
@@ -66,6 +68,7 @@ class Clients extends Component<ClientsProps> {
                             modalType={clients.modalType}
                             addClient={addClient}
                             updateClient={updateClient}
+                            clearClientCache={clearClientCache}
                             deleteClient={deleteClient}
                             toggleClientModal={toggleClientModal}
                             processingAdding={clients.processingAdding}

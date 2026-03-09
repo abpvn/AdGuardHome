@@ -49,6 +49,7 @@ interface ModalProps {
     modalType: string;
     currentClientData: object;
     handleSubmit: (values: any) => void;
+    clearClientCache: (name: string) => void;
     handleClose: (...args: unknown[]) => unknown;
     processingAdding: boolean;
     processingUpdating: boolean;
@@ -62,6 +63,7 @@ const Modal = ({
     modalType,
     currentClientData,
     handleSubmit,
+    clearClientCache,
     handleClose,
     processingAdding,
     processingUpdating,
@@ -96,6 +98,8 @@ const Modal = ({
                 <Form
                     initialValues={{ ...initialData }}
                     onSubmit={handleSubmit}
+                    onClearClientCache={clearClientCache}
+                    canClearCache={modalType === MODAL_TYPE.EDIT_CLIENT}
                     onClose={handleClose}
                     processingAdding={processingAdding}
                     processingUpdating={processingUpdating}

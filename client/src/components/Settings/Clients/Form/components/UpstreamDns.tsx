@@ -10,10 +10,31 @@ import { Checkbox } from '../../../../ui/Controls/Checkbox';
 import { Input } from '../../../../ui/Controls/Input';
 import { toNumber } from '../../../../../helpers/form';
 
-export const UpstreamDns = () => {
+type UpstreamDnsProps = {
+    canClearCache: boolean;
+    onClearClientCache: (name: string) => void;
+};
+
+export const UpstreamDns = ({ canClearCache, onClearClientCache }: UpstreamDnsProps) => {
     const { t } = useTranslation();
 
-    const { control } = useFormContext<ClientForm>();
+    const { control, watch } = useFormContext<ClientForm>();
+    const upstreamsCacheEnabled = watch('upstreams_cache_enabled');
+    const upstreamsCacheSize = watch('upstreams_cache_size');
+    const clientName = watch('name');
+
+    const canShowClearCacheButton = canClearCache && upstreamsCacheEnabled && Number(upstreamsCacheSize) > 0;
+
+    const handleClearClientCache = () => {
+        if (!clientName) {
+            return;
+        }
+
+        // eslint-disable-next-line no-alert
+        if (window.confirm(t('confirm_client_dns_cache_clear', { key: clientName }))) {
+            onClearClientCache(clientName);
+        }
+    };
 
     return (
         <div title={t('upstream_dns')}>
@@ -78,6 +99,16 @@ export const UpstreamDns = () => {
                     )}
                 />
             </div>
+
+            {canShowClearCacheButton && (
+                <button
+                    type="button"
+                    data-testid="clients_clear_cache"
+                    className="btn btn-outline-secondary btn-standard"
+                    onClick={handleClearClientCache}>
+                    {t('clear_cache')}
+                </button>
+            )}
         </div>
     );
 };

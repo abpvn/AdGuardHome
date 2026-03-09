@@ -32,6 +32,7 @@ interface ClientsTableProps {
     deleteClient: (...args: unknown[]) => string;
     addClient: (...args: unknown[]) => string;
     updateClient: (...args: unknown[]) => string;
+    clearClientCache: (name: string) => void;
     isModalOpen: boolean;
     modalType: string;
     modalClientName: string;
@@ -50,6 +51,7 @@ const ClientsTable = ({
     modalType,
     addClient,
     updateClient,
+    clearClientCache,
     deleteClient,
     toggleClientModal,
     processingAdding,
@@ -435,6 +437,7 @@ const ClientsTable = ({
                     handleClose={handleClose}
                     currentClientData={currentClientData}
                     handleSubmit={handleSubmit}
+                    clearClientCache={clearClientCache}
                     processingAdding={processingAdding}
                     processingUpdating={processingUpdating}
                     tagsOptions={tagsOptions}

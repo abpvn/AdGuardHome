@@ -1062,6 +1062,23 @@
           'description': 'Missing or invalid client name, or client not found'
         '500':
           'description': 'Stats module is not available or internal error'
+  '/clients/cache_clear':
+    'post':
+      'tags':
+      - 'clients'
+      'operationId': 'clientsCacheClear'
+      'summary': 'Clear custom upstream DNS cache for a specific client'
+      'requestBody':
+        'content':
+          'application/json':
+            'schema':
+              '$ref': '#/components/schemas/ClientDelete'
+        'required': true
+      'responses':
+        '200':
+          'description': 'OK.'
+        '400':
+          'description': 'Missing or invalid client name, or client not found'
   '/access/list':
     'get':
       'operationId': 'accessList'

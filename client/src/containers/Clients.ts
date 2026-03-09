@@ -2,7 +2,13 @@ import { connect } from 'react-redux';
 
 import { getClients } from '../actions';
 import { getStats } from '../actions/stats';
-import { addClient, updateClient, deleteClient, toggleClientModal } from '../actions/clients';
+import {
+    addClient,
+    updateClient,
+    deleteClient,
+    toggleClientModal,
+    clearClientCache,
+} from '../actions/clients';
 
 import Clients from '../components/Settings/Clients';
 
@@ -22,6 +28,7 @@ type DispatchProps = {
     addClient: (dispatch: any) => void;
     updateClient: (config: any, name: any) => (dispatch: any) => void;
     deleteClient: (config: any, name: any) => (dispatch: any) => void;
+    clearClientCache: (name: string) => (dispatch: any) => void;
     toggleClientModal: (...args: unknown[]) => unknown;
 }
 
@@ -31,6 +38,7 @@ const mapDispatchToProps: DispatchProps = {
     addClient,
     updateClient,
     deleteClient,
+    clearClientCache,
     toggleClientModal,
 };
 

@@ -171,6 +171,16 @@ func (m *upstreamManager) clearUpstreamCache() {
 	}
 }
 
+// clearUpstreamCacheForUID clears the upstream cache for a specific client.
+func (m *upstreamManager) clearUpstreamCacheForUID(uid UID) {
+	cliConf, ok := m.uidToCustomConf[uid]
+	if !ok || cliConf.proxyConf == nil {
+		return
+	}
+
+	cliConf.proxyConf.ClearCache()
+}
+
 // remove deletes the custom client upstream configuration and closes
 // [customUpstreamConfig.proxyConf] if necessary.
 func (m *upstreamManager) remove(uid UID) (err error) {

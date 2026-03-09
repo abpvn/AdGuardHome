@@ -68,3 +68,12 @@ export const updateClient = (config: any, name: any) => async (dispatch: any) =>
         dispatch(updateClientFailure());
     }
 };
+
+export const clearClientCache = (name: string) => async (dispatch: any) => {
+    try {
+        await apiClient.clearClientCache({ name });
+        dispatch(addSuccessToast(i18next.t('client_cache_cleared', { key: name })));
+    } catch (error) {
+        dispatch(addErrorToast({ error }));
+    }
+};

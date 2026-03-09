@@ -425,6 +425,8 @@ class Api {
 
     UPDATE_CLIENT = { path: 'clients/update', method: 'POST' };
 
+    CLEAR_CLIENT_CACHE = { path: 'clients/cache_clear', method: 'POST' };
+
     getClients() {
         const { path, method } = this.GET_CLIENTS;
 
@@ -457,6 +459,14 @@ class Api {
 
     updateClient(config: any) {
         const { path, method } = this.UPDATE_CLIENT;
+        const parameters = {
+            data: config,
+        };
+        return this.makeRequest(path, method, parameters);
+    }
+
+    clearClientCache(config: any) {
+        const { path, method } = this.CLEAR_CLIENT_CACHE;
         const parameters = {
             data: config,
         };

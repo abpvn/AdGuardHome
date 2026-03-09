@@ -777,6 +777,22 @@ func (s *Storage) ClearUpstreamCache() {
 	s.upstreamManager.clearUpstreamCache()
 }
 
+// ClearUpstreamCacheByName clears the upstream cache for a specific client.
+// It returns false if the client doesn't exist.
+func (s *Storage) ClearUpstreamCacheByName(name string) (ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	p, ok := s.index.findByName(name)
+	if !ok {
+		return false
+	}
+
+	s.upstreamManager.clearUpstreamCacheForUID(p.UID)
+
+	return true
+}
+
 // ApplyClientFiltering retrieves persistent client information using the
 // ClientID or client IP address, and applies it to the filtering settings.
 // setts must not be nil.

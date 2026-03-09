@@ -50,6 +50,8 @@ const defaultFormValues: ClientForm = {
 
 type Props = {
     onSubmit: (values: ClientForm) => void;
+    onClearClientCache: (name: string) => void;
+    canClearCache: boolean;
     onClose: () => void;
     useGlobalSettings?: boolean;
     useGlobalServices?: boolean;
@@ -64,6 +66,8 @@ type Props = {
 
 export const Form = ({
     onSubmit,
+    onClearClientCache,
+    canClearCache,
     onClose,
     processingAdding,
     processingUpdating,
@@ -109,7 +113,12 @@ export const Form = ({
         },
         upstream_dns: {
             title: 'upstream_dns',
-            component: <UpstreamDns />,
+            component: (
+                <UpstreamDns
+                    canClearCache={canClearCache}
+                    onClearClientCache={onClearClientCache}
+                />
+            ),
         },
         dns_blocklists: {
             title: 'dns_blocklists',

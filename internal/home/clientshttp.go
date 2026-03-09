@@ -193,6 +193,43 @@ func (clients *clientsContainer) handleGetClientStats(w http.ResponseWriter, r *
 	aghhttp.WriteJSONResponseOK(ctx, clients.logger, w, r, result)
 }
 
+// handleClearClientCache is the handler for POST /control/clients/cache_clear
+// HTTP API.
+func (clients *clientsContainer) handleClearClientCache(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	l := clients.logger
+
+	cj := clientJSON{}
+	err := json.NewDecoder(r.Body).Decode(&cj)
+	if err != nil {
+		aghhttp.ErrorAndLog(
+			ctx,
+			l,
+			r,
+			w,
+			http.StatusBadRequest,
+			"failed to process request body: %s",
+			err,
+		)
+
+		return
+	}
+
+	if cj.Name == "" {
+		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "client's name must be non-empty")
+
+		return
+	}
+
+	if !clients.storage.ClearUpstreamCacheByName(cj.Name) {
+		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "Client not found")
+
+		return
+	}
+
+	aghhttp.OK(ctx, l, w)
+}
+
 // initPrev initializes the persistent client with the default or previous
 // client properties.
 func initPrev(cj clientJSON, prev *client.Persistent) (c *client.Persistent, err error) {
@@ -972,6 +1009,7 @@ func (clients *clientsContainer) registerWebHandlers() {
 	clients.httpReg.Register(http.MethodGet, "/control/clients", clients.handleGetClients)
 	clients.httpReg.Register(http.MethodGet, "/control/clients/detail", clients.handleGetClient)
 	clients.httpReg.Register(http.MethodGet, "/control/clients/stats", clients.handleGetClientStats)
+	clients.httpReg.Register(http.MethodPost, "/control/clients/cache_clear", clients.handleClearClientCache)
 	clients.httpReg.Register(http.MethodPost, "/control/clients/add", clients.handleAddClient)
 	clients.httpReg.Register(http.MethodPost, "/control/clients/delete", clients.handleDelClient)
 	clients.httpReg.Register(http.MethodPost, "/control/clients/update", clients.handleUpdateClient)

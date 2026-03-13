@@ -52,53 +52,110 @@ export const toggleClientBlockRequest = createAction('TOGGLE_CLIENT_BLOCK_REQUES
 export const toggleClientBlockFailure = createAction('TOGGLE_CLIENT_BLOCK_FAILURE');
 export const toggleClientBlockSuccess = createAction('TOGGLE_CLIENT_BLOCK_SUCCESS');
 
-export const toggleClientBlock = (ip: any, disallowed: any, disallowed_rule: string) => async (dispatch: any) => {
-    dispatch(toggleClientBlockRequest());
-    try {
-        const accessList = await apiClient.getAccessList();
-        const blocked_hosts = accessList.blocked_hosts ?? [];
-        let allowed_clients = accessList.allowed_clients ?? [];
-        let disallowed_clients = accessList.disallowed_clients ?? [];
-        let blocked_countries = accessList.blocked_countries ?? [];
-        const allowed_countries = accessList.allowed_countries ?? [];
-
-        if (disallowed) {
-            if (!disallowed_rule) {
-                allowed_clients = allowed_clients.concat(ip);
-            } else if (disallowed_rule.startsWith(COUNTRY_PREFIX)) {
-                const un_blocked_country = disallowed_rule.split(':')[1];
-                blocked_countries = blocked_countries.filter((country: any) => country !== un_blocked_country);
-            } else {
-                disallowed_clients = disallowed_clients.filter((client: any) => client !== disallowed_rule);
-            }
-        } else if (allowed_clients.length > 1) {
-            allowed_clients = allowed_clients.filter((client: any) => client !== disallowed_rule);
-        } else {
-            disallowed_clients = disallowed_clients.concat(ip);
-        }
-        const values = {
-            allowed_clients,
-            blocked_hosts,
-            disallowed_clients,
-            blocked_countries,
-            allowed_countries,
-        };
-
-        await apiClient.setAccessList(values);
-        dispatch(toggleClientBlockSuccess(values));
-
-        if (disallowed) {
-            if (disallowed_rule.startsWith(COUNTRY_PREFIX)) {
-                const un_blocked_country = disallowed_rule.split(':')[1];
-                dispatch(addSuccessToast(i18next.t('client_unblocked_country', { country: un_blocked_country })));
-            } else {
-                dispatch(addSuccessToast(i18next.t('client_unblocked', { ip: disallowed_rule || ip })));
-            }
-        } else {
-            dispatch(addSuccessToast(i18next.t('client_blocked', { ip })));
-        }
-    } catch (error) {
-        dispatch(addErrorToast({ error }));
-        dispatch(toggleClientBlockFailure());
-    }
+type AccessList = {
+    allowed_clients?: string[];
+    disallowed_clients?: string[];
+    blocked_hosts?: string[];
+    blocked_countries?: string[];
+    allowed_countries?: string[];
 };
+
+type AccessListValues = {
+    allowed_clients: string[];
+    disallowed_clients: string[];
+    blocked_hosts: string[];
+    blocked_countries: string[];
+    allowed_countries: string[];
+};
+
+type GetNextClientAccessListArgs = {
+    accessList: AccessList;
+    ip: string;
+    disallowed: boolean;
+    disallowedRule: string;
+};
+
+const addUnique = (items: string[], value: string) => (items.includes(value) ? items : items.concat(value));
+
+const removeValue = (items: string[], value: string) => items.filter((item) => item !== value);
+
+const getNextClientAccessList = ({
+    accessList,
+    ip,
+    disallowed,
+    disallowedRule,
+}: GetNextClientAccessListArgs): AccessListValues => {
+    const values = {
+        blocked_hosts: accessList.blocked_hosts ?? [],
+        allowed_clients: accessList.allowed_clients ?? [],
+        disallowed_clients: accessList.disallowed_clients ?? [],
+        blocked_countries: accessList.blocked_countries ?? [],
+        allowed_countries: accessList.allowed_countries ?? [],
+    };
+    const country = disallowedRule.startsWith(COUNTRY_PREFIX) ? disallowedRule.split(':')[1] : '';
+    const isAllowlistMode = values.allowed_clients.length > 0;
+
+    if (disallowed && country) {
+        return {
+            ...values,
+            blocked_countries: removeValue(values.blocked_countries, country),
+        };
+    }
+
+    if (disallowed && isAllowlistMode) {
+        return {
+            ...values,
+            allowed_clients: addUnique(values.allowed_clients, ip),
+        };
+    }
+
+    if (disallowed) {
+        return {
+            ...values,
+            disallowed_clients: removeValue(values.disallowed_clients, disallowedRule || ip),
+        };
+    }
+
+    if (isAllowlistMode) {
+        return {
+            ...values,
+            allowed_clients: removeValue(values.allowed_clients, ip),
+        };
+    }
+
+    return {
+        ...values,
+        disallowed_clients: addUnique(values.disallowed_clients, ip),
+    };
+};
+
+export const toggleClientBlock =
+    (ip: string, disallowed: boolean, disallowed_rule: string) => async (dispatch: any) => {
+        dispatch(toggleClientBlockRequest());
+        try {
+            const accessList: AccessList = await apiClient.getAccessList();
+            const country = disallowed_rule.startsWith(COUNTRY_PREFIX) ? disallowed_rule.split(':')[1] : '';
+            const values = getNextClientAccessList({
+                accessList,
+                ip,
+                disallowed,
+                disallowedRule: disallowed_rule,
+            });
+
+            await apiClient.setAccessList(values);
+            dispatch(toggleClientBlockSuccess(values));
+
+            if (disallowed) {
+                if (country) {
+                    dispatch(addSuccessToast(i18next.t('client_unblocked_country', { country })));
+                } else {
+                    dispatch(addSuccessToast(i18next.t('client_unblocked', { ip: disallowed_rule || ip })));
+                }
+            } else {
+                dispatch(addSuccessToast(i18next.t('client_blocked', { ip })));
+            }
+        } catch (error) {
+            dispatch(addErrorToast({ error }));
+            dispatch(toggleClientBlockFailure());
+        }
+    };

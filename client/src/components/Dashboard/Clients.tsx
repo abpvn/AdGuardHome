@@ -10,7 +10,7 @@ import classNames from 'classnames';
 import Card from '../ui/Card';
 import Cell from '../ui/Cell';
 
-import { getPercent, sortIp } from '../../helpers/helpers';
+import { getPercent, sortIp, splitByNewLine } from '../../helpers/helpers';
 import {
     BLOCK_ACTIONS,
     DASHBOARD_TABLES_DEFAULT_PAGE_SIZE,
@@ -78,7 +78,7 @@ const renderBlockingButton = (ip: any, disallowed: any, disallowed_rule: any) =>
         } else {
             confirmMessage = `${t('adg_will_drop_dns_queries')} ${t('client_confirm_block', { ip })}`;
             if (allowedClients.length > 0) {
-                confirmMessage = confirmMessage.concat(`\n\n${t('filter_allowlist', { disallowed_rule })}`);
+                confirmMessage = confirmMessage.concat(`\n\n${t('filter_allowlist', { disallowed_rule: ip })}`);
             }
         }
 
@@ -94,8 +94,8 @@ const renderBlockingButton = (ip: any, disallowed: any, disallowed_rule: any) =>
     };
 
     const text = disallowed ? BLOCK_ACTIONS.UNBLOCK : BLOCK_ACTIONS.BLOCK;
-
-    const lastRuleInAllowlist = !disallowed && disallowed_rule !== '' && allowedClients === disallowed_rule;
+    const allowedClientsList = splitByNewLine(allowedClients || '');
+    const lastRuleInAllowlist = !disallowed && allowedClientsList.length === 1 && allowedClientsList[0] === ip;
     const disabled = processingSet || lastRuleInAllowlist;
     return (
         <div className="table__action">
@@ -118,7 +118,7 @@ const renderBlockingButton = (ip: any, disallowed: any, disallowed_rule: any) =>
                             )}
                             onClick={onClick}
                             disabled={disabled}
-                            title={lastRuleInAllowlist ? t('last_rule_in_allowlist', { disallowed_rule }) : ''}>
+                            title={lastRuleInAllowlist ? t('last_rule_in_allowlist', { disallowed_rule: ip }) : ''}>
                             <Trans>{text}</Trans>
                         </button>
                     }

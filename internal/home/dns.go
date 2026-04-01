@@ -172,6 +172,7 @@ func initDNSServer(
 		&config.DNS,
 		config.Clients.Sources,
 		tlsMgr.config(),
+		config.HTTPConfig.DoH,
 		tlsMgr,
 		httpReg,
 		globalContext.clients.storage,
@@ -194,6 +195,8 @@ func initDNSServer(
 	if err != nil {
 		return fmt.Errorf("dnsServer.Prepare: %w", err)
 	}
+
+	registerDoHHandlers(config.HTTPConfig.DoH.Routes)
 
 	return nil
 }
@@ -264,6 +267,7 @@ func newServerConfig(
 	dnsConf *dnsConfig,
 	clientSrcConf *clientSourcesConfig,
 	tlsConf *tlsConfigSettings,
+	dohConf *doHConfig,
 	tlsMgr *tlsManager,
 	httpReg aghhttp.Registrar,
 	clientsContainer dnsforward.ClientsContainer,
@@ -277,7 +281,7 @@ func newServerConfig(
 	fwdConf.GeoIPDatabasePath = config.GeoIP.DatabasePath
 	fwdConf.GeoIPUpdatePeriod = config.GeoIP.UpdatePeriod
 
-	intTLSConf, err := newDNSTLSConfig(tlsConf, hosts)
+	intTLSConf, err := newDNSTLSConfig(tlsConf, hosts, dohConf.InsecureEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("constructing tls config: %w", err)
 	}
@@ -287,7 +291,7 @@ func newServerConfig(
 		TCPListenAddrs:         ipsToTCPAddrs(hosts, dnsConf.Port),
 		Config:                 fwdConf,
 		TLSConf:                intTLSConf,
-		TLSAllowUnencryptedDoH: tlsConf.AllowUnencryptedDoH,
+		TLSAllowUnencryptedDoH: dohConf.InsecureEnabled,
 		UpstreamTimeout:        time.Duration(dnsConf.UpstreamTimeout),
 		TLSv12Roots:            tlsMgr.rootCerts,
 		ConfModifier:           confModifier,
@@ -330,6 +334,7 @@ func newServerConfig(
 func newDNSTLSConfig(
 	conf *tlsConfigSettings,
 	addrs []netip.Addr,
+	allowUnencryptedDoH bool,
 ) (dnsConf *dnsforward.TLSConfig, err error) {
 	if !conf.Enabled {
 		return &dnsforward.TLSConfig{}, nil
@@ -364,7 +369,7 @@ func newDNSTLSConfig(
 	cert, err := tls.X509KeyPair(conf.CertificateChainData, conf.PrivateKeyData)
 	if err != nil {
 		err = fmt.Errorf("parsing tls key pair: %w", err)
-		if conf.AllowUnencryptedDoH || dnsCryptConf != nil {
+		if allowUnencryptedDoH || dnsCryptConf != nil {
 			// TODO(s.chzhen):  Use [slog.Logger].
 			log.Info("warning: %s", err)
 
@@ -617,4 +622,11 @@ func checkDir(path string) (err error) {
 	}
 
 	return nil
+}
+
+// registerDoHHandlers registers DoH handlers on the given routes.
+func registerDoHHandlers(routes []string) {
+	for _, route := range routes {
+		globalContext.web.conf.mux.Handle(route, globalContext.dnsServer)
+	}
 }

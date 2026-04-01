@@ -187,8 +187,11 @@ type configuration struct {
 // Field ordering is important, YAML fields better not to be reordered, if it's
 // not absolutely necessary.
 type httpConfig struct {
-	// Pprof defines the profiling HTTP handler.
+	// Pprof defines the profiling HTTP handler.  It is never nil.
 	Pprof *httpPprofConfig `yaml:"pprof"`
+
+	// DoH contains DNS-over-HTTPS configuration.  It is never nil.
+	DoH *doHConfig `yaml:"doh"`
 
 	// Address is the address to serve the web UI on.
 	Address netip.AddrPort
@@ -205,6 +208,20 @@ type httpPprofConfig struct {
 
 	// Enabled defines if the profiling handler is enabled.
 	Enabled bool `yaml:"enabled"`
+}
+
+// doHConfig is the block with DNS-over-HTTPS configuration.
+type doHConfig struct {
+	// Routes is the list of HTTP route patterns for DoH requests.  Default
+	// routes are:
+	//   - "GET /dns-query"
+	//   - "POST /dns-query"
+	//   - "GET /dns-query/{ClientID}"
+	//   - "POST /dns-query/{ClientID}"
+	Routes []string `yaml:"routes"`
+
+	// InsecureEnabled allows DoH queries via unencrypted HTTP.
+	InsecureEnabled bool `yaml:"insecure_enabled"`
 }
 
 // dnsConfig is a block with DNS configuration params.
@@ -321,12 +338,6 @@ type tlsConfigSettings struct {
 	// https://github.com/ameshkov/dnscrypt.
 	DNSCryptConfigFile string `yaml:"dnscrypt_config_file" json:"dnscrypt_config_file"`
 
-	// AllowUnencryptedDoH allows DoH queries via unencrypted HTTP (e.g. for
-	// reverse proxying).
-	//
-	// TODO(s.chzhen):  Add this option into the Web UI.
-	AllowUnencryptedDoH bool `yaml:"allow_unencrypted_doh" json:"allow_unencrypted_doh"`
-
 	// CertificateChain is the PEM-encoded certificate chain.  Must be empty if
 	// [tlsConfigSettings.CertificatePath] is provided.
 	CertificateChain string `yaml:"certificate_chain" json:"certificate_chain"`
@@ -377,7 +388,6 @@ func (c *tlsConfigSettings) clone() (clone *tlsConfigSettings) {
 // It sets the following properties because these are not accepted from the
 // frontend:
 //
-//	[tlsConfigSettings.AllowUnencryptedDoH]
 //	[tlsConfigSettings.DNSCryptConfigFile]
 //	[tlsConfigSettings.OverrideTLSCiphers]
 //	[tlsConfigSettings.PortDNSCrypt]
@@ -472,6 +482,15 @@ var config = &configuration{
 		Pprof: &httpPprofConfig{
 			Enabled: false,
 			Port:    6060,
+		},
+		DoH: &doHConfig{
+			Routes: []string{
+				"GET /dns-query",
+				"POST /dns-query",
+				"GET /dns-query/{ClientID}",
+				"POST /dns-query/{ClientID}",
+			},
+			InsecureEnabled: false,
 		},
 	},
 	DNS: dnsConfig{

@@ -114,7 +114,7 @@ func initDNS(
 		baseLogger.WarnContext(ctx, "geoip database download failed, continuing without geoip", "error", err)
 	}
 
-	return initDNSServer(
+	err = initDNSServer(
 		ctx,
 		globalContext.filters,
 		globalContext.stats,
@@ -126,6 +126,13 @@ func initDNS(
 		baseLogger,
 		confModifier,
 	)
+	if err != nil {
+		return fmt.Errorf("creating dns server: %w", err)
+	}
+
+	registerDoHHandlers(config.HTTPConfig.DoH.Routes)
+
+	return nil
 }
 
 // initDNSServer initializes the [context.dnsServer].  To only use the internal
@@ -191,12 +198,9 @@ func initDNSServer(
 		dnsConf.UsePrivateRDNS = false
 		err = globalContext.dnsServer.Prepare(ctx, dnsConf)
 	}
-
 	if err != nil {
 		return fmt.Errorf("dnsServer.Prepare: %w", err)
 	}
-
-	registerDoHHandlers(config.HTTPConfig.DoH.Routes)
 
 	return nil
 }

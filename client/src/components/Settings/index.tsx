@@ -16,7 +16,7 @@ import PageTitle from '../ui/PageTitle';
 
 import Card from '../ui/Card';
 
-import { getObjectKeysSorted, captitalizeWords } from '../../helpers/helpers';
+import { captitalizeWords, getObjectKeysSorted } from '../../helpers/helpers';
 import './Settings.css';
 import { SettingsData } from '../../initialState';
 
@@ -83,7 +83,7 @@ interface SettingsProps {
 
 class Settings extends Component<SettingsProps> {
     componentDidMount() {
-        this.props.initSettings(SETTINGS);
+        this.props.initSettings();
 
         this.props.getStatsConfig();
 
@@ -94,8 +94,8 @@ class Settings extends Component<SettingsProps> {
 
     renderSettings = (settings: any) =>
         getObjectKeysSorted(SETTINGS, ORDER_KEY).map((key: any) => {
-            const setting = settings[key];
-            const { enabled, title, subtitle, testId } = setting;
+            const { title, subtitle, testId } = SETTINGS[key];
+            const enabled = settings[key]?.enabled ?? false;
 
             return (
                 <div key={key} className="form__group form__group--checkbox">
@@ -111,12 +111,8 @@ class Settings extends Component<SettingsProps> {
         });
 
     renderSafeSearch = () => {
-        const {
-            settings: {
-                settingsList: { safesearch },
-            },
-        } = this.props;
-        const { enabled } = safesearch || {};
+        const safesearch = this.props.settings.settingsList?.safesearch || {};
+        const { enabled } = safesearch;
         const searches = { ...(safesearch || {}) };
         delete searches.enabled;
 
@@ -165,7 +161,6 @@ class Settings extends Component<SettingsProps> {
             setFiltersConfig,
             t,
         } = this.props;
-
         const isDataReady = !settings.processing && !stats.processingGetConfig && !queryLogs.processingGetConfig;
 
         return (
@@ -188,7 +183,7 @@ class Settings extends Component<SettingsProps> {
                                             processing={filtering.processingSetConfig}
                                             setFiltersConfig={setFiltersConfig}
                                         />
-                                        {this.renderSettings(settings.settingsList)}
+                                        {this.renderSettings(settings.settingsList || {})}
                                         {this.renderSafeSearch()}
                                     </div>
                                 </Card>

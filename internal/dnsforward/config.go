@@ -155,7 +155,8 @@ type Config struct {
 	// requests.
 	AAAADisabled bool `yaml:"aaaa_disabled"`
 
-	// EnableDNSSEC, if true, set AD flag in outcoming DNS request.
+	// EnableDNSSEC defines whether the proxy should set the AD/DO bits in the
+	// upstream requests.
 	EnableDNSSEC bool `yaml:"enable_dnssec"`
 
 	// EDNSClientSubnet is the settings list for EDNS Client Subnet.
@@ -380,7 +381,8 @@ func (s *Server) newProxyConfig(ctx context.Context) (conf *proxy.Config, err er
 		PendingRequests: &proxy.PendingRequestsConfig{
 			Enabled: srvConf.PendingRequestsEnabled,
 		},
-		HTTPConfig: httpConf,
+		HTTPConfig:    httpConf,
+		DNSSECEnabled: srvConf.EnableDNSSEC,
 	}
 
 	if srvConf.EDNSClientSubnet.UseCustom {

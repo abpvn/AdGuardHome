@@ -11,74 +11,6 @@ import { toNumber } from '../../../../helpers/form';
 import { Textarea } from '../../../ui/Controls/Textarea';
 import { Radio } from '../../../ui/Controls/Radio';
 
-const checkboxes: {
-    name: 'dnssec_enabled' | 'disable_ipv6';
-    placeholder: string;
-    subtitle: string;
-}[] = [
-    {
-        name: 'dnssec_enabled',
-        placeholder: 'dnssec_enable',
-        subtitle: 'dnssec_enable_desc',
-    },
-    {
-        name: 'disable_ipv6',
-        placeholder: 'disable_ipv6',
-        subtitle: 'disable_ipv6_desc',
-    },
-];
-
-const customIps: {
-    name: 'blocking_ipv4' | 'blocking_ipv6';
-    label: string;
-    description: string;
-    validateIp: (value: string) => string;
-}[] = [
-    {
-        name: 'blocking_ipv4',
-        label: 'blocking_ipv4',
-        description: 'blocking_ipv4_desc',
-        validateIp: validateIpv4,
-    },
-    {
-        name: 'blocking_ipv6',
-        label: 'blocking_ipv6',
-        description: 'blocking_ipv6_desc',
-        validateIp: validateIpv6,
-    },
-];
-
-const blockingModeOptions = [
-    {
-        value: BLOCKING_MODES.default,
-        label: 'default',
-    },
-    {
-        value: BLOCKING_MODES.refused,
-        label: 'refused',
-    },
-    {
-        value: BLOCKING_MODES.nxdomain,
-        label: 'nxdomain',
-    },
-    {
-        value: BLOCKING_MODES.null_ip,
-        label: 'null_ip',
-    },
-    {
-        value: BLOCKING_MODES.custom_ip,
-        label: 'custom_ip',
-    },
-];
-
-const blockingModeDescriptions = [
-    `blocking_mode_default`,
-    `blocking_mode_refused`,
-    `blocking_mode_nxdomain`,
-    `blocking_mode_null_ip`,
-    `blocking_mode_custom_ip`,
-];
-
 type FormData = {
     ratelimit: number;
     ratelimit_subnet_len_ipv4: number;
@@ -113,6 +45,74 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
         mode: 'onBlur',
         defaultValues: initialValues,
     });
+
+    const checkboxes: {
+        name: 'dnssec_enabled' | 'disable_ipv6';
+        placeholder: string;
+        subtitle: string;
+    }[] = [
+        {
+            name: 'dnssec_enabled',
+            placeholder: t('dnssec_enable'),
+            subtitle: t('dnssec_enable_desc'),
+        },
+        {
+            name: 'disable_ipv6',
+            placeholder: t('disable_ipv6'),
+            subtitle: t('disable_ipv6_desc'),
+        },
+    ];
+
+    const customIps: {
+        name: 'blocking_ipv4' | 'blocking_ipv6';
+        label: string;
+        description: string;
+        validateIp: (value: string) => string;
+    }[] = [
+        {
+            name: 'blocking_ipv4',
+            label: t('blocking_ipv4'),
+            description: t('blocking_ipv4_desc'),
+            validateIp: validateIpv4,
+        },
+        {
+            name: 'blocking_ipv6',
+            label: t('blocking_ipv6'),
+            description: t('blocking_ipv6_desc'),
+            validateIp: validateIpv6,
+        },
+    ];
+
+    const blockingModeOptions = [
+        {
+            value: BLOCKING_MODES.default,
+            label: t('default'),
+        },
+        {
+            value: BLOCKING_MODES.refused,
+            label: t('refused'),
+        },
+        {
+            value: BLOCKING_MODES.nxdomain,
+            label: t('nxdomain'),
+        },
+        {
+            value: BLOCKING_MODES.null_ip,
+            label: t('null_ip'),
+        },
+        {
+            value: BLOCKING_MODES.custom_ip,
+            label: t('custom_ip'),
+        },
+    ];
+
+    const blockingModeDescriptions = [
+        t(`blocking_mode_default`),
+        t(`blocking_mode_refused`),
+        t(`blocking_mode_nxdomain`),
+        t(`blocking_mode_null_ip`),
+        t(`blocking_mode_custom_ip`),
+    ];
 
     const blocking_mode = watch('blocking_mode');
     const edns_cs_enabled = watch('edns_cs_enabled');
@@ -287,8 +287,8 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
                                     <Checkbox
                                         {...field}
                                         data-testid={`dns_config_${name}`}
-                                        title={t(placeholder)}
-                                        subtitle={t(subtitle)}
+                                        title={placeholder}
+                                        subtitle={subtitle}
                                         disabled={processing}
                                     />
                                 )}
@@ -303,7 +303,7 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
 
                         <div className="form__desc form__desc--top">
                             {blockingModeDescriptions.map((desc: string) => (
-                                <li key={desc}>{t(desc)}</li>
+                                <li key={desc}>{desc}</li>
                             ))}
                         </div>
 
@@ -335,10 +335,10 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
                                         render={({ field, fieldState }) => (
                                             <Input
                                                 {...field}
-                                                data-testid="dns_config_blocked_response_ttl"
+                                                data-testid={`dns_config_${name}`}
                                                 type="text"
-                                                label={t(label)}
-                                                desc={t(description)}
+                                                label={label}
+                                                desc={description}
                                                 error={fieldState.error?.message}
                                                 disabled={processing}
                                             />

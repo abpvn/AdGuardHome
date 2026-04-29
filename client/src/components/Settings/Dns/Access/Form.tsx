@@ -14,61 +14,6 @@ type FormData = {
     blocked_countries: string;
 };
 
-const fields: {
-    id: keyof FormData;
-    title: string;
-    subtitle: ((t: (key: string) => string) => ReactNode) | string;
-    placeholder?: string;
-    normalizeOnBlur: (value: string) => string;
-}[] = [
-    {
-        id: 'allowed_clients',
-        title: 'access_allowed_title',
-        subtitle: (t) => (
-            <Trans
-                components={{
-                    a: <a href={CLIENT_ID_LINK} target="_blank" rel="noopener noreferrer" />,
-                }}>
-                {t('access_allowed_desc')}
-            </Trans>
-        ),
-        normalizeOnBlur: removeEmptyLines,
-    },
-    {
-        id: 'disallowed_clients',
-        title: 'access_disallowed_title',
-        subtitle: (t) => (
-            <Trans
-                components={{
-                    a: <a href={CLIENT_ID_LINK} target="_blank" rel="noopener noreferrer" />,
-                }}>
-                {t('access_disallowed_desc')}
-            </Trans>
-        ),
-        normalizeOnBlur: trimMultilineString,
-    },
-    {
-        id: 'blocked_hosts',
-        title: 'access_blocked_title',
-        subtitle: 'access_blocked_desc',
-        normalizeOnBlur: removeEmptyLines,
-    },
-    {
-        id: 'allowed_countries',
-        title: 'allowed_countries_title',
-        subtitle: 'allowed_countries_desc',
-        placeholder: 'example_countries_placeholder',
-        normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
-    },
-    {
-        id: 'blocked_countries',
-        title: 'blocked_countries_title',
-        subtitle: 'blocked_countries_desc',
-        placeholder: 'example_countries_placeholder',
-        normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
-    },
-];
-
 type FormProps = {
     initialValues?: {
         allowed_clients?: string;
@@ -103,12 +48,52 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
 
     useEffect(() => {
         if (isSubmitSuccessful) {
-            reset(watch(), {keepValues: true, keepDirty: false, keepDefaultValues: false});
+            reset(watch(), { keepValues: true, keepDirty: false, keepDefaultValues: false });
         }
-    }, [isSubmitSuccessful, reset]);
+    }, [isSubmitSuccessful, reset, watch]);
 
     const allowedClients = watch('allowed_clients');
     const allowedCountries = watch('allowed_countries');
+
+    const fields: {
+        id: keyof FormData;
+        title: string;
+        subtitle: ReactNode;
+        normalizeOnBlur: (value: string) => string;
+    }[] = [
+        {
+            id: 'allowed_clients',
+            title: t('access_allowed_title'),
+            subtitle: (
+                <Trans
+                    components={{
+                        a: <a href={CLIENT_ID_LINK} target="_blank" rel="noopener noreferrer" />,
+                    }}>
+                    access_allowed_desc
+                </Trans>
+            ),
+            normalizeOnBlur: removeEmptyLines,
+        },
+        {
+            id: 'disallowed_clients',
+            title: t('access_disallowed_title'),
+            subtitle: (
+                <Trans
+                    components={{
+                        a: <a href={CLIENT_ID_LINK} target="_blank" rel="noopener noreferrer" />,
+                    }}>
+                    access_disallowed_desc
+                </Trans>
+            ),
+            normalizeOnBlur: trimMultilineString,
+        },
+        {
+            id: 'blocked_hosts',
+            title: t('access_blocked_title'),
+            subtitle: t('access_blocked_desc'),
+            normalizeOnBlur: removeEmptyLines,
+        },
+    ];
 
     const renderField = ({
         id,
@@ -119,7 +104,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
     }: {
         id: keyof FormData;
         title: string;
-        subtitle: ((t: (key: string) => string) => ReactNode) | string;
+        subtitle: ReactNode | ((t: (key: string) => string) => ReactNode);
         placeholder?: string;
         normalizeOnBlur: (value: string) => string;
     }) => {
@@ -128,11 +113,13 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
         return (
             <div key={id} className="form__group mb-5">
                 <label className="form__label form__label--with-desc" htmlFor={id}>
-                    {t(title)}
+                    {title}
                     {disabled && <>&nbsp;({t('disabled')})</>}
                 </label>
 
-                <div className="form__desc form__desc--top">{typeof subtitle === 'string' ? t(subtitle): subtitle(t)}</div>
+                <div className="form__desc form__desc--top">
+                    {typeof subtitle === 'function' ? subtitle(t) : subtitle}
+                </div>
 
                 <Controller
                     name={id}
@@ -143,7 +130,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
                             id={id}
                             data-testid={id}
                             disabled={disabled || processingSet}
-                            placeholder={t(placeholder)}
+                            placeholder={placeholder ? t(placeholder) : undefined}
                             onBlur={(e) => {
                                 field.onChange(normalizeOnBlur(e.target.value));
                             }}

@@ -36,28 +36,6 @@ type FormProps = {
     onSubmit: (data: FormData) => void;
 };
 
-const upstreamModeOptions: {
-    label: string;
-    desc: (t: (key: string) => string) => React.ReactNode;
-    value: string;
-}[] = [
-    {
-        label: 'load_balancing',
-        desc: (t) => <Trans components={{ br: <br />, b: <b /> }}>{t('load_balancing_desc')}</Trans>,
-        value: DNS_REQUEST_OPTIONS.LOAD_BALANCING,
-    },
-    {
-        label: 'parallel_requests',
-        desc: (t) => <Trans components={{ br: <br />, b: <b /> }}>{t('upstream_parallel')}</Trans>,
-        value: DNS_REQUEST_OPTIONS.PARALLEL,
-    },
-    {
-        label: 'fastest_addr',
-        desc: (t) => <Trans components={{ br: <br />, b: <b /> }}>{t('fastest_addr_desc')}</Trans>,
-        value: DNS_REQUEST_OPTIONS.FASTEST_ADDR,
-    },
-];
-
 const Form = ({ initialValues, onSubmit }: FormProps) => {
     const { t } = useTranslation();
     const dispatch = useDispatch();
@@ -97,6 +75,24 @@ const Form = ({ initialValues, onSubmit }: FormProps) => {
         };
         dispatch(testUpstreamWithFormValues(formValues));
     };
+
+    const upstreamModeOptions = [
+        {
+            label: 'load_balancing',
+            desc: <Trans components={{ br: <br />, b: <b /> }}>load_balancing_desc</Trans>,
+            value: DNS_REQUEST_OPTIONS.LOAD_BALANCING,
+        },
+        {
+            label: 'parallel_requests',
+            desc: <Trans components={{ br: <br />, b: <b /> }}>upstream_parallel</Trans>,
+            value: DNS_REQUEST_OPTIONS.PARALLEL,
+        },
+        {
+            label: 'fastest_addr',
+            desc: <Trans components={{ br: <br />, b: <b /> }}>fastest_addr_desc</Trans>,
+            value: DNS_REQUEST_OPTIONS.FASTEST_ADDR,
+        },
+    ];
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="form--upstream">

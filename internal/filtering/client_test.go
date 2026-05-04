@@ -16,13 +16,13 @@ func TestInitForClient_Rebuild(t *testing.T) {
 
 	// First initialization
 	d.InitForClient(clientName, nil, nil, rules1)
-	
+
 	setts := &Settings{
-		ClientName:        clientName,
-		FilteringEnabled:  true,
-		ProtectionEnabled: true,
-		UseGlobalFilters:  false,
-		ClientFilters:     []FilterYAML{},
+		ClientName:             clientName,
+		FilteringEnabled:       true,
+		ProtectionEnabled:      true,
+		UseGlobalFilters:       false,
+		ClientFilters:          []FilterYAML{},
 		ClientWhiteListFilters: []FilterYAML{},
 	}
 

@@ -317,13 +317,11 @@ func (d *DNSFilter) loadRuleStorage(ctx context.Context, blockFilters, allowFilt
 }
 
 func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters []FilterYAML, userRules []string) {
+	d.DeleteClientFtlEngine(clientName)
+
 	d.clientEngineLock.Lock()
 	defer d.clientEngineLock.Unlock()
-	_, ok := d.ClientsFilteringEngine[clientName]
-	if ok {
-		d.logger.InfoContext(context.TODO(), "filtering: client filtering of client already initiated", "client", clientName)
-		return
-	}
+
 	ctx := context.TODO()
 	d.logger.InfoContext(ctx, "filtering: start init client filtering for client", "client", clientName)
 	d.LoadFilters(ctx, whiteListFilters)

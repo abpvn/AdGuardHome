@@ -32,6 +32,7 @@ func TestInitForClient_Rebuild(t *testing.T) {
 	assert.True(t, res1.Reason.Matched(), "example.com should be blocked by rules1")
 
 	// Second initialization with different rules
+	d.DeleteClientFtlEngine(clientName)
 	d.InitForClient(clientName, nil, nil, rules2)
 
 	// Check if example.net is blocked

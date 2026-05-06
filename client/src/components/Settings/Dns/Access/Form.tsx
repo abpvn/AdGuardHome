@@ -59,6 +59,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
         id: keyof FormData;
         title: string;
         subtitle: ReactNode;
+        placeholder?: string;
         normalizeOnBlur: (value: string) => string;
     }[] = [
         {

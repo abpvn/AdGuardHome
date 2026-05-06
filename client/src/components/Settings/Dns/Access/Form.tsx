@@ -88,6 +88,20 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
             normalizeOnBlur: trimMultilineString,
         },
         {
+            id: 'allowed_countries',
+            title: t('access_allowed_countries_title'),
+            subtitle: t('access_allowed_countries_desc'),
+            placeholder: 'example_countries_placeholder',
+            normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
+        },
+        {
+            id: 'blocked_countries',
+            title: t('access_blocked_countries_title'),
+            subtitle: t('access_blocked_countries_desc'),
+            placeholder: 'example_countries_placeholder',
+            normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
+        },
+        {
             id: 'blocked_hosts',
             title: t('access_blocked_title'),
             subtitle: t('access_blocked_desc'),

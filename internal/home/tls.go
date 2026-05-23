@@ -355,29 +355,32 @@ func (m *tlsManager) loadTLSConfig(
 }
 
 // loadCertificateChainData loads PEM-encoded certificates chain data to the
-// TLS configuration. tlsConf must be not nil. tlsConf.CertificateChainData
-// struct field will be modified in case tlsConfig.CertificatePath is not an
-// empty string.  extTLSConf must not be nil.
+// loadCertificateChainData loads PEM-encoded certificates chain data to the
+// TLS configuration.  extTLSConf must not be nil.  The
+// [tlsConfigSettings.CertificateChainData] field will be modified if
+// [tlsConfigSettings.CertificatePath] is not an empty string.
 func loadCertificateChainData(extTLSConf *tlsConfigSettings) (err error) {
 	extTLSConf.CertificateChainData = []byte(extTLSConf.CertificateChain)
 	if extTLSConf.CertificatePath != "" {
 		if extTLSConf.CertificateChain != "" {
-			return errors.Error("certificate data and file can't be set together")
+			return errors.Error("certificate chain data and file can't be set together")
 		}
 
 		extTLSConf.CertificateChainData, err = os.ReadFile(extTLSConf.CertificatePath)
 		if err != nil {
-			return fmt.Errorf("reading cert file: %w", err)
+			return fmt.Errorf("reading certificate file: %w", err)
 		}
+	} else if extTLSConf.CertificateChain == "" {
+		return errors.Error("certificate chain is empty")
 	}
 
 	return nil
 }
 
 // loadPrivateKeyData loads PEM-encoded private key data to the TLS
-// configuration. tlsConf must be not nil. tlsConf.PrivateKeyData struct field
-// will be modified in case tlsConfig.PrivateKeyPath is not an empty string.
-// extTLSConf must not be nil.
+// configuration.  extTLSConf must not be nil.  The
+// [tlsConfigSettings.PrivateKeyData] field will be modified if
+// [tlsConfigSettings.PrivateKeyPath] is not an empty string.
 func loadPrivateKeyData(extTLSConf *tlsConfigSettings) (err error) {
 	extTLSConf.PrivateKeyData = []byte(extTLSConf.PrivateKey)
 	if extTLSConf.PrivateKeyPath != "" {
@@ -389,7 +392,7 @@ func loadPrivateKeyData(extTLSConf *tlsConfigSettings) (err error) {
 		if err != nil {
 			return fmt.Errorf("reading key file: %w", err)
 		}
-	} else if tlsConf.PrivateKey == "" {
+	} else if extTLSConf.PrivateKey == "" {
 		return errors.Error("private key is empty")
 	}
 

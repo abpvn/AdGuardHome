@@ -6,8 +6,8 @@
 # See https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions.
 'permissions': {}
 'env':
-  'NODE_VERSION': '24.14.1'
-  'GO_VERSION': '1.26.3'
+  'NODE_VERSION': '24.15.0'
+  'GO_VERSION': '1.26.4'
 'on':
   'push':
     'tags':

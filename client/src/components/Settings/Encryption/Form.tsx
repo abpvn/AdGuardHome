@@ -10,7 +10,7 @@ import {
     validatePortQuic,
     validatePortTLS,
     validatePlainDns,
-    validateAllowUnencryptedDoh,
+    validateInsecureEnabled,
 } from '../../../helpers/validators';
 
 import KeyStatus from './KeyStatus';
@@ -76,7 +76,7 @@ const validationMessage = (warningValidation: string, isWarning: boolean) => {
 export type EncryptionFormValues = {
     enabled?: boolean;
     serve_plain_dns?: boolean;
-    allow_unencrypted_doh?: boolean;
+    insecure_enabled?: boolean;
     server_names?: string[];
     force_https?: boolean;
     port_https?: number;
@@ -259,17 +259,17 @@ export const Form = ({
 
                     <div className="form__group mb-3 mt-5">
                         <Controller
-                            name="allow_unencrypted_doh"
+                            name="insecure_enabled"
                             control={control}
                             rules={{
-                                validate: (value) => validateAllowUnencryptedDoh(value, getValues()),
+                                validate: (value) => validateInsecureEnabled(value, getValues()),
                             }}
-                            render={({ field }) => <Checkbox {...field} title={t('encryption_allow_unencrypted_doh_enable')} onBlur={handleBlur(field.onBlur)}/>}
+                            render={({ field }) => <Checkbox {...field} title={t('encryption_insecure_enabled_enable')} onBlur={handleBlur(field.onBlur)}/>}
                         />
                     </div>
 
                     <div className="form__desc">
-                        <Trans>allow_unencrypted_doh_desc</Trans>
+                        <Trans>insecure_enabled_desc</Trans>
                     </div>
 
                     <hr />

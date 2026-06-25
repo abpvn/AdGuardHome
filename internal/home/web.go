@@ -481,10 +481,18 @@ func (web *webAPI) registerTLSHandlers() {
 func (web *webAPI) handleTLSStatus(w http.ResponseWriter, r *http.Request) {
 	tlsConf := web.tlsManager.extendedTLSConfig()
 
+	var insecureEnabled bool
+	func() {
+		config.Lock()
+		defer config.Unlock()
+		insecureEnabled = config.HTTPConfig.DoH.InsecureEnabled
+	}()
+
 	data := &tlsConfig{
 		tlsConfigSettingsExt: tlsConfigSettingsExt{
 			tlsConfigSettings: *tlsConf,
 			ServePlainDNS:     aghalg.BoolToNullBool(tlsConf.ServePlainDNS),
+			InsecureEnabled:   aghalg.BoolToNullBool(insecureEnabled),
 		},
 		tlsConfigStatus: &tlsConf.Status,
 	}
@@ -731,6 +739,9 @@ func (web *webAPI) handleTLSConfigure(w http.ResponseWriter, r *http.Request) {
 	newTLSConf.Status = *status
 
 	restartHTTPS = web.tlsManager.setConfig(ctx, newTLSConf, req.ServePlainDNS)
+	if web.updateInsecureEnabled(req.InsecureEnabled) {
+		restartHTTPS = true
+	}
 
 	err = web.reconfigureDNSServer(ctx, newTLSConf)
 	if err != nil {
@@ -760,6 +771,26 @@ func (web *webAPI) handleTLSConfigure(w http.ResponseWriter, r *http.Request) {
 	if restartHTTPS {
 		go web.tlsConfigChanged(context.Background(), &req.tlsConfigSettings)
 	}
+}
+
+// updateInsecureEnabled updates the HTTP DoH InsecureEnabled setting and returns
+// true if it was changed.
+func (web *webAPI) updateInsecureEnabled(insecureEnabled aghalg.NullBool) (changed bool) {
+	if insecureEnabled == aghalg.NBNull {
+		return false
+	}
+
+	config.Lock()
+	defer config.Unlock()
+
+	target := insecureEnabled == aghalg.NBTrue
+	if config.HTTPConfig.DoH.InsecureEnabled != target {
+		config.HTTPConfig.DoH.InsecureEnabled = target
+
+		return true
+	}
+
+	return false
 }
 
 // reconfigureDNSServer updates the DNS server configuration using extTLSConf.

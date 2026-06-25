@@ -73,7 +73,7 @@ export type EncryptionData = {
     certificate_path: string;
     private_key_path: string;
     private_key_saved: boolean;
-    allow_unencrypted_doh?: boolean;
+    insecure_enabled?: boolean;
     dnscrypt_config_file?: string;
 };
 

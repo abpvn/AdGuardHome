@@ -22,7 +22,7 @@ export const Encryption = ({ encryption, setTlsConfig, validateTlsConfig }: Prop
         const {
             enabled,
             serve_plain_dns,
-            allow_unencrypted_doh,
+            insecure_enabled,
             server_names,
             force_https,
             port_https,
@@ -40,7 +40,7 @@ export const Encryption = ({ encryption, setTlsConfig, validateTlsConfig }: Prop
         return {
             enabled,
             serve_plain_dns,
-            allow_unencrypted_doh,
+            insecure_enabled,
             server_names,
             force_https,
             port_https,

@@ -426,6 +426,11 @@ type tlsConfigSettingsExt struct {
 	// is an [aghalg.NullBool] to be able to tell when it's set without using
 	// pointers.
 	ServePlainDNS aghalg.NullBool `yaml:"-" json:"serve_plain_dns"`
+
+	// InsecureEnabled allows DoH queries via unencrypted HTTP.  It is an
+	// [aghalg.NullBool] to be able to tell when it's set without using
+	// pointers.
+	InsecureEnabled aghalg.NullBool `yaml:"-" json:"insecure_enabled"`
 }
 
 // setConfig updates manager TLS configuration with the given one.  newConf must

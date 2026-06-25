@@ -422,11 +422,11 @@ export const validatePlainDns = (value: any, allValues: any) => {
  * @param value
  * @param allValues
  */
-export const validateAllowUnencryptedDoh = (value: any, allValues: any) => {
+export const validateInsecureEnabled = (value: any, allValues: any) => {
     const { enabled } = allValues;
 
     if (!enabled && !value) {
-        return i18next.t('allow_unencrypted_doh_error');
+        return i18next.t('insecure_enabled_error');
     }
 
     return undefined;

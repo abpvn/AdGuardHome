@@ -26,14 +26,14 @@
     'permissions':
       'contents': 'read'
     'steps':
-      - 'uses': 'actions/checkout@v2'
+      - 'uses': 'actions/checkout@v7'
         'with':
           # Set to false to avoid  GITHUB_TOKEN leaking.
           #
           # See https://github.com/actions/checkout/issues/485#issuecomment-934422611.
           'persist-credentials': false
       - 'name': 'Set up Go'
-        'uses': 'actions/setup-go@v3'
+        'uses': 'actions/setup-go@v6'
         'with':
           'go-version': '${{ env.GO_VERSION }}'
       - 'name': 'run-lint'
@@ -45,7 +45,7 @@
     'permissions':
       'contents': 'read'
     'steps':
-      - 'uses': 'actions/checkout@v2'
+      - 'uses': 'actions/checkout@v7'
         'with':
           # Set to false to avoid  GITHUB_TOKEN leaking.
           #

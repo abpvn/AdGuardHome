@@ -411,8 +411,15 @@ func (c *tlsConfigSettings) setPrivateFieldsAndCompare(conf *tlsConfigSettings) 
 	conf.DNSCryptConfigFile = c.DNSCryptConfigFile
 	conf.PortDNSCrypt = c.PortDNSCrypt
 
-	// TODO(a.garipov): Define a custom comparer.
-	return cmp.Equal(c, conf)
+	// Zero out the Status field during comparison since it represents
+	// computed validation status, not actual configuration.
+	cCopy := *c
+	cCopy.Status = tlsConfigStatus{}
+
+	confCopy := *conf
+	confCopy.Status = tlsConfigStatus{}
+
+	return cmp.Equal(&cCopy, &confCopy)
 }
 
 type queryLogConfig struct {

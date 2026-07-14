@@ -335,12 +335,21 @@ func TestServer_ProcessDDRQuery(t *testing.T) {
 				&filtering.Config{
 					BlockingMode: filtering.BlockingModeDefault,
 				},
-				TLSConf: &TLSConfig{
-					ServerNames:      []string{ddrTestDomainName},
-					Cert:             &cert,
-					TLSListenAddrs:   tc.addrsDoT,
-					HTTPSListenAddrs: tc.addrsDoH,
-					QUICListenAddrs:  tc.addrsDoQ,
+				ServerConfig{
+					Config: Config{
+						HandleDDR:        tc.ddrEnabled,
+						UpstreamMode:     UpstreamModeLoadBalance,
+						EDNSClientSubnet: &EDNSClientSubnet{Enabled: false},
+						ClientsContainer: EmptyClientsContainer{},
+					},
+					TLSConf: &TLSConfig{
+						ServerNames:      []string{ddrTestDomainName},
+						Cert:             &cert,
+						TLSListenAddrs:   tc.addrsDoT,
+						HTTPSListenAddrs: tc.addrsDoH,
+						QUICListenAddrs:  tc.addrsDoQ,
+					},
+					ServePlainDNS: true,
 				},
 			)
 			// TODO(e.burkov):  Generate a certificate actually containing the

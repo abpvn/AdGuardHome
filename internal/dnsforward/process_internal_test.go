@@ -86,9 +86,11 @@ func TestServer_ProcessInitial(t *testing.T) {
 				ServePlainDNS: true,
 			}
 
-			s := createTestServer(t, &filtering.Config{
-				BlockingMode: filtering.BlockingModeDefault,
-			}, c)
+			s := createTestServer(
+				t,
+				&filtering.Config{BlockingMode: filtering.BlockingModeDefault},
+				c,
+			)
 
 			var gotAddr netip.Addr
 			s.addrProc = &aghtest.AddressProcessor{
@@ -187,9 +189,11 @@ func TestServer_ProcessFilteringAfterResponse(t *testing.T) {
 				ServePlainDNS: true,
 			}
 
-			s := createTestServer(t, &filtering.Config{
-				BlockingMode: filtering.BlockingModeDefault,
-			}, c)
+			s := createTestServer(
+				t,
+				&filtering.Config{BlockingMode: filtering.BlockingModeDefault},
+				c,
+			)
 
 			resp := newResp(dns.RcodeSuccess, tc.req, tc.respAns)
 			dctx := &dnsContext{
@@ -326,14 +330,10 @@ func TestServer_ProcessDDRQuery(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			s := createTestServer(t, &filtering.Config{
-				BlockingMode: filtering.BlockingModeDefault,
-			}, ServerConfig{
-				Config: Config{
-					HandleDDR:        tc.ddrEnabled,
-					UpstreamMode:     UpstreamModeLoadBalance,
-					EDNSClientSubnet: &EDNSClientSubnet{Enabled: false},
-					ClientsContainer: EmptyClientsContainer{},
+			s := createTestServer(
+				t,
+				&filtering.Config{
+					BlockingMode: filtering.BlockingModeDefault,
 				},
 				TLSConf: &TLSConfig{
 					ServerNames:      []string{ddrTestDomainName},
@@ -342,8 +342,7 @@ func TestServer_ProcessDDRQuery(t *testing.T) {
 					HTTPSListenAddrs: tc.addrsDoH,
 					QUICListenAddrs:  tc.addrsDoQ,
 				},
-				ServePlainDNS: true,
-			})
+			)
 			// TODO(e.burkov):  Generate a certificate actually containing the
 			// IP addresses.
 			s.hasIPAddrs = true

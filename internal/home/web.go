@@ -841,6 +841,19 @@ func (web *webAPI) handleTLSConfigure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	web.respondAndRestartTLS(ctx, w, r, req, status, restartHTTPS)
+}
+
+// respondAndRestartTLS sends the TLS config response, flushes the response
+// writer, and restarts the HTTPS server if needed.
+func (web *webAPI) respondAndRestartTLS(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	req tlsConfigSettingsExt,
+	status *tlsConfigStatus,
+	restartHTTPS bool,
+) {
 	resp := &tlsConfig{
 		tlsConfigSettingsExt: req,
 		tlsConfigStatus:      status,
@@ -848,7 +861,7 @@ func (web *webAPI) handleTLSConfigure(w http.ResponseWriter, r *http.Request) {
 
 	web.tlsManager.marshalTLS(ctx, w, r, resp)
 	rc := http.NewResponseController(w)
-	err = rc.Flush()
+	err := rc.Flush()
 	if err != nil {
 		web.logger.ErrorContext(ctx, "flushing response", slogutil.KeyError, err)
 	}

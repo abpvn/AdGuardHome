@@ -192,6 +192,29 @@ export const PersistentClientsTable = (props: Props) => {
                 ),
             },
             {
+                key: 'filters',
+                header: {
+                    text: intl.getMessage('filters'),
+                    className: s.headerCell,
+                },
+                accessor: 'use_global_filters',
+                sortable: true,
+                minWidth: 120,
+                render: (value: boolean) => (
+                    <div class={theme.table.cell}>
+                        <span class={theme.table.cellLabel}>{intl.getMessage('filters')}</span>
+
+                        <div class={theme.table.cellValueText}>
+                            <span class={theme.common.textOverflow}>
+                                {value
+                                    ? intl.getMessage('settings_global')
+                                    : intl.getMessage('settings_custom')}
+                            </span>
+                        </div>
+                    </div>
+                ),
+            },
+            {
                 key: 'upstreams',
                 header: {
                     text: intl.getMessage('upstreams'),

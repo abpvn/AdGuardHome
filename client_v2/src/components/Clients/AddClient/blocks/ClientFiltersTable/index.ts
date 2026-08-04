@@ -1,0 +1,1 @@
+export { ClientFiltersTable } from './ClientFiltersTable';

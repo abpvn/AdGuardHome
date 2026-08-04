@@ -255,6 +255,7 @@ export const QueryLog = () => {
                         filters={filteringState.filters || []}
                         services={servicesState.allServices || []}
                         whitelistFilters={filteringState.whitelistFilters || []}
+                        clientsFilters={filteringState.clientsFilters || []}
                         persistentClientIds={persistentClientIds()}
                         persistentClientsLoaded={!dashboardState.processingClients}
                     />
@@ -288,6 +289,9 @@ export const QueryLog = () => {
                                                         services={servicesState.allServices || []}
                                                         whitelistFilters={
                                                             filteringState.whitelistFilters || []
+                                                        }
+                                                        clientsFilters={
+                                                            filteringState.clientsFilters || []
                                                         }
                                                         persistentClientIds={persistentClientIds()}
                                                         persistentClientsLoaded={
@@ -325,6 +329,7 @@ export const QueryLog = () => {
                         filters={filteringState.filters || []}
                         services={servicesState.allServices || []}
                         whitelistFilters={filteringState.whitelistFilters || []}
+                        clientsFilters={filteringState.clientsFilters || []}
                         onClose={handleCloseDetail}
                         onBlock={handleBlockDomain}
                         onAddToAllowlist={handleUnblockDomain}

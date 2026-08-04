@@ -1,11 +1,11 @@
-import { Show } from 'solid-js';
+import { Show, createMemo } from 'solid-js';
 import cn from 'clsx';
 
 import theme from 'panel/lib/theme';
 import { Icon } from 'panel/common/ui/Icon';
 
 import intl from 'panel/common/intl';
-import { Filter } from 'panel/helpers/helpers';
+import { Filter, clientsFiltersByClient } from 'panel/helpers/helpers';
 import {
     formatLogDate,
     formatLogTime,
@@ -31,6 +31,7 @@ type Props = {
     filters: Filter[];
     services: Service[];
     whitelistFilters: Filter[];
+    clientsFilters: Filter[];
     onRowClick: (entry: NormalizedQueryLogItem) => void;
     onBlock: (domain: string) => void;
     onUnblock: (domain: string) => void;
@@ -49,6 +50,12 @@ export const LogCard = (props: Props) => {
     const statusKey = () =>
         getQueryStatusKey(props.entry.reason, props.entry.originalResponse ?? []);
     const reasonKey = () => getQueryReasonKey(props.entry.reason, props.entry.rules ?? []);
+    const resolvedClientsFilters = createMemo(() =>
+        clientsFiltersByClient(
+            props.entry.client_info?.name || props.entry.client,
+            props.clientsFilters,
+        ),
+    );
     const reasonDetails = () =>
         getQueryReasonDetails({
             elapsedMs: props.entry.elapsedMs,
@@ -58,6 +65,8 @@ export const LogCard = (props: Props) => {
             serviceName: props.entry.service_name || props.entry.serviceName,
             services: props.services,
             whitelistFilters: props.whitelistFilters,
+            clientsFilters: resolvedClientsFilters(),
+            isClientsFiltered: props.entry.isClientsFiltered,
         });
     const statusLabel = () => getQueryStatusLabel(statusKey());
     const reasonLabel = () => getQueryReasonLabel(reasonKey());

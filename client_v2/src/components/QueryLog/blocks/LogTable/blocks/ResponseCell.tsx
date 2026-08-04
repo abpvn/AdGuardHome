@@ -1,4 +1,5 @@
 import cn from 'clsx';
+import { createMemo } from 'solid-js';
 
 import theme from 'panel/lib/theme';
 
@@ -8,7 +9,7 @@ import {
     getStatusClassName,
     getStatusLabel,
 } from 'panel/components/QueryLog/helpers';
-import { Filter } from 'panel/helpers/helpers';
+import { Filter, clientsFiltersByClient } from 'panel/helpers/helpers';
 import s from '../LogTable.module.pcss';
 
 type Props = {
@@ -16,11 +17,18 @@ type Props = {
     filters: Filter[];
     services: Service[];
     whitelistFilters: Filter[];
+    clientsFilters: Filter[];
 };
 
 export const ResponseCell = (props: Props) => {
     const statusClassName = () => getStatusClassName(props.row.reason);
     const statusLabel = () => getStatusLabel(props.row.reason, props.row.originalResponse, false);
+    const resolvedClientsFilters = createMemo(() =>
+        clientsFiltersByClient(
+            props.row.client_info?.name || props.row.client,
+            props.clientsFilters,
+        ),
+    );
     const responseDetails = () =>
         getResponseDetails({
             elapsedMs: props.row.elapsedMs,
@@ -30,6 +38,8 @@ export const ResponseCell = (props: Props) => {
             serviceName: props.row.service_name,
             services: props.services,
             whitelistFilters: props.whitelistFilters,
+            clientsFilters: resolvedClientsFilters(),
+            isClientsFiltered: props.row.isClientsFiltered,
         });
 
     return (

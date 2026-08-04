@@ -35,6 +35,9 @@ import { AddClient } from '../Clients/AddClient';
 import { Protection } from '../Clients/AddClient/blocks/Protection/Protection';
 import { ClientBlockedServices } from '../Clients/AddClient/blocks/ClientBlockedServices';
 import { ClientSchedule } from '../Clients/AddClient/blocks/ClientSchedule';
+import { DnsBlocklists } from '../Clients/AddClient/blocks/DnsBlocklists/DnsBlocklists';
+import { DnsAllowlists } from '../Clients/AddClient/blocks/DnsAllowlists/DnsAllowlists';
+import { CustomRules } from '../Clients/AddClient/blocks/CustomRules/CustomRules';
 import { Paths } from '../Routes/Paths';
 
 const SetupGuideRoute = () => <SetupGuide />;
@@ -43,6 +46,9 @@ const InactivityScheduleRoute = () => <InactivitySchedule />;
 const ClientScheduleRoute = () => <ClientSchedule />;
 const ClientBlockedServicesRoute = () => <ClientBlockedServices />;
 const ProtectionRoute = () => <Protection />;
+const ClientDnsBlocklistsRoute = () => <DnsBlocklists />;
+const ClientDnsAllowlistsRoute = () => <DnsAllowlists />;
+const ClientCustomRulesRoute = () => <CustomRules />;
 const AddClientRoute = () => <AddClient />;
 
 const App = () => {
@@ -144,10 +150,16 @@ const App = () => {
             <Route path={Paths.ClientsSchedule} component={ClientScheduleRoute} />
             <Route path={Paths.ClientsBlockedServices} component={ClientBlockedServicesRoute} />
             <Route path={Paths.ClientsProtection} component={ProtectionRoute} />
+            <Route path={Paths.ClientsDnsBlocklists} component={ClientDnsBlocklistsRoute} />
+            <Route path={Paths.ClientsDnsAllowlists} component={ClientDnsAllowlistsRoute} />
+            <Route path={Paths.ClientsCustomRules} component={ClientCustomRulesRoute} />
             <Route path={Paths.ClientsAdd} component={AddClientRoute} />
             <Route path={Paths.ClientsEditSchedule} component={ClientScheduleRoute} />
             <Route path={Paths.ClientsEditBlockedServices} component={ClientBlockedServicesRoute} />
             <Route path={Paths.ClientsEditProtection} component={ProtectionRoute} />
+            <Route path={Paths.ClientsEditDnsBlocklists} component={ClientDnsBlocklistsRoute} />
+            <Route path={Paths.ClientsEditDnsAllowlists} component={ClientDnsAllowlistsRoute} />
+            <Route path={Paths.ClientsEditCustomRules} component={ClientCustomRulesRoute} />
             <Route path={Paths.ClientsEdit} component={AddClientRoute} />
             <Route path={Paths.Clients} component={Clients} />
             <Route path="/" component={() => <Navigate href="/dashboard" />} />

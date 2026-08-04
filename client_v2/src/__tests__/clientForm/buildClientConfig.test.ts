@@ -60,6 +60,7 @@ describe('buildClientConfig', () => {
             'blocked_services',
             'blocked_services_schedule',
             'filtering_enabled',
+            'filters',
             'ids',
             'ignore_querylog',
             'ignore_statistics',
@@ -72,7 +73,44 @@ describe('buildClientConfig', () => {
             'upstreams_cache_enabled',
             'upstreams_cache_size',
             'use_global_blocked_services',
+            'use_global_filters',
             'use_global_settings',
+            'user_rules',
+            'whitelist_filters',
         ]);
+    });
+
+    it('splits user_rules by newline and filters blank lines', () => {
+        const form = {
+            ...getInitialClientFormState(),
+            user_rules: '||example.org^\n\n@@||allowed.org^\n  \n',
+        };
+        const config = buildClientConfig(form);
+        expect(config.user_rules).toEqual(['||example.org^', '@@||allowed.org^']);
+    });
+
+    it('returns empty array when user_rules is empty string', () => {
+        const form = {
+            ...getInitialClientFormState(),
+            user_rules: '',
+        };
+        const config = buildClientConfig(form);
+        expect(config.user_rules).toEqual([]);
+    });
+
+    it('passes through client filters and use_global_filters', () => {
+        const filters = [
+            { id: 1, url: 'http://example.com/list.txt', enabled: true, name: 'List', rules_count: 0 },
+        ];
+        const form = {
+            ...getInitialClientFormState(),
+            use_global_filters: false,
+            filters,
+            whitelist_filters: filters,
+        };
+        const config = buildClientConfig(form);
+        expect(config.use_global_filters).toBe(false);
+        expect(config.filters).toEqual(filters);
+        expect(config.whitelist_filters).toEqual(filters);
     });
 });

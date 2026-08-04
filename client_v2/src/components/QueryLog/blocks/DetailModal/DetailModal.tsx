@@ -1,4 +1,4 @@
-import { Show, For } from 'solid-js';
+import { Show, For, createMemo } from 'solid-js';
 import cn from 'clsx';
 
 import intl from 'panel/common/intl';
@@ -10,6 +10,7 @@ import {
     checkBlockedService,
     formatElapsedMs,
     getServiceName,
+    clientsFiltersByClient,
     type Filter,
 } from 'panel/helpers/helpers';
 import { FILTERED_STATUS } from 'panel/helpers/constants';
@@ -35,6 +36,7 @@ type Props = {
     filters: Filter[];
     services: Service[];
     whitelistFilters: Filter[];
+    clientsFilters: Filter[];
     onClose: () => void;
     onBlock: (domain: string) => void;
     onAddToAllowlist: (domain: string) => void;
@@ -74,6 +76,12 @@ export const DetailModal = (props: Props) => {
         props.entry.reason === FILTERED_STATUS.REWRITE_RULE;
     const showBlock = () => !isBlocked() && !isRewrite() && !isSafeSearch();
     const showAllowlist = () => isBlocked() || isSafeSearch();
+    const resolvedClientsFilters = createMemo(() =>
+        clientsFiltersByClient(
+            props.entry.client_info?.name || props.entry.client,
+            props.clientsFilters,
+        ),
+    );
     const reasonDetails = () =>
         getQueryReasonDetails({
             elapsedMs: props.entry.elapsedMs,
@@ -83,6 +91,8 @@ export const DetailModal = (props: Props) => {
             serviceName: props.entry.service_name || props.entry.serviceName,
             services: props.services,
             whitelistFilters: props.whitelistFilters,
+            clientsFilters: resolvedClientsFilters(),
+            isClientsFiltered: props.entry.isClientsFiltered,
         });
     const statusClassName = () => getStatusClassName(props.entry.reason);
     const clientName = () => props.entry.client_info?.name || '';

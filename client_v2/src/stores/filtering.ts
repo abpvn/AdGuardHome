@@ -34,6 +34,7 @@ type FilteringState = {
     isFilterEdited: boolean;
     filters: Filter[];
     whitelistFilters: Filter[];
+    clientsFilters: Filter[];
     userRules: string;
     interval: number;
     enabled: boolean;
@@ -57,6 +58,7 @@ const initialState: FilteringState = {
     isFilterEdited: false,
     filters: [],
     whitelistFilters: [],
+    clientsFilters: [],
     userRules: '',
     interval: 24,
     enabled: true,

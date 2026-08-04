@@ -1,7 +1,8 @@
 import cn from 'clsx';
+import { createMemo } from 'solid-js';
 
 import theme from 'panel/lib/theme';
-import { Filter } from 'panel/helpers/helpers';
+import { Filter, clientsFiltersByClient } from 'panel/helpers/helpers';
 import type { NormalizedQueryLogItem } from 'panel/helpers/helpers';
 import { Service } from 'panel/components/QueryLog/types';
 import {
@@ -17,11 +18,18 @@ type Props = {
     filters: Filter[];
     services: Service[];
     whitelistFilters: Filter[];
+    clientsFilters: Filter[];
 };
 
 export const ReasonCell = (props: Props) => {
     const rules = () => props.row.rules ?? [];
     const reasonKey = () => getQueryReasonKey(props.row.reason, rules());
+    const resolvedClientsFilters = createMemo(() =>
+        clientsFiltersByClient(
+            props.row.client_info?.name || props.row.client,
+            props.clientsFilters,
+        ),
+    );
     const reasonDetails = () =>
         getQueryReasonDetails({
             elapsedMs: props.row.elapsedMs,
@@ -31,6 +39,8 @@ export const ReasonCell = (props: Props) => {
             serviceName: props.row.service_name || props.row.serviceName,
             services: props.services,
             whitelistFilters: props.whitelistFilters,
+            clientsFilters: resolvedClientsFilters(),
+            isClientsFiltered: props.row.isClientsFiltered,
         });
     const reasonLabel = () => getQueryReasonLabel(reasonKey());
 

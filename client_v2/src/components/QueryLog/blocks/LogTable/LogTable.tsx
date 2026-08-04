@@ -36,6 +36,7 @@ type Props = {
     filters: Filter[];
     services: Service[];
     whitelistFilters: Filter[];
+    clientsFilters: Filter[];
     persistentClientIds: string[];
     persistentClientsLoaded: boolean;
 };
@@ -77,6 +78,7 @@ export const LogTable = (props: Props) => {
                         filters={props.filters}
                         services={props.services}
                         whitelistFilters={props.whitelistFilters}
+                        clientsFilters={props.clientsFilters}
                     />
                 );
             },

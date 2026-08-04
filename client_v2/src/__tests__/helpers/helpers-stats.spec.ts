@@ -14,6 +14,7 @@ import {
     getServiceName,
     normalizeWhois,
     normalizeLogs,
+    clientsFiltersByClient,
 } from '../../helpers/helpers';
 import type { ClientsFindEntry } from '../../api/model/clientsFindEntry';
 import type { FilteringReason } from '../../api/model/filteringReason';
@@ -68,11 +69,59 @@ describe('normalizeFilters', () => {
                 lastUpdated: '2024-01-01',
                 name: 'My List',
                 rulesCount: 100,
+                names: undefined,
             },
         ]);
     });
     it('returns [] for falsy input', () => {
         expect(normalizeFilters(undefined)).toStrictEqual([]);
+    });
+    it('maps per-client names from clients filters', () => {
+        expect(
+            normalizeFilters([
+                {
+                    id: 1,
+                    url: 'http://example.com/list.txt',
+                    enabled: true,
+                    name: 'My List',
+                    rules_count: 100,
+                    names: { 'My Client': 'My Client List' },
+                },
+            ]),
+        ).toStrictEqual([
+            {
+                id: 1,
+                url: 'http://example.com/list.txt',
+                enabled: true,
+                lastUpdated: undefined,
+                name: 'My List',
+                rulesCount: 100,
+                names: { 'My Client': 'My Client List' },
+            },
+        ]);
+    });
+});
+
+describe('clientsFiltersByClient', () => {
+    it('returns filters unchanged when no client name', () => {
+        const filters = [{ id: 1, name: 'List' } as never];
+        expect(clientsFiltersByClient(undefined, filters)).toBe(filters);
+    });
+
+    it('overrides the name with the per-client name', () => {
+        const filters = [
+            { id: 1, name: 'List', names: { MyClient: 'My Client List' } } as never,
+        ];
+        expect(clientsFiltersByClient('MyClient', filters)).toStrictEqual([
+            { id: 1, name: 'My Client List', names: { MyClient: 'My Client List' } },
+        ]);
+    });
+
+    it('keeps the default name when no per-client name exists', () => {
+        const filters = [{ id: 1, name: 'List', names: {} } as never];
+        expect(clientsFiltersByClient('MyClient', filters)).toStrictEqual([
+            { id: 1, name: 'List', names: {} },
+        ]);
     });
 });
 

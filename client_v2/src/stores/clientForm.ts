@@ -7,6 +7,7 @@ import { validateIdentifier, validateCacheSize } from 'panel/helpers/validators'
 import { DEFAULT_DNS_CACHE_SIZE } from 'panel/helpers/constants';
 import { addErrorToast, addSuccessToast } from './toasts';
 import { getClients, dashboardState } from './dashboard';
+import { getFilteringStatus } from './filtering';
 
 const getInitialClientFormState = (): ClientFormState => ({
     mode: 'add',
@@ -32,6 +33,10 @@ const getInitialClientFormState = (): ClientFormState => ({
     ignore_statistics: false,
     blocked_services: [],
     use_global_blocked_services: false,
+    use_global_filters: true,
+    filters: [],
+    whitelist_filters: [],
+    user_rules: '',
     blocked_services_schedule: {
         time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
@@ -115,6 +120,10 @@ export const buildFormPayload = (client: Client): Partial<ClientFormState> => ({
     ignore_statistics: client.ignore_statistics || false,
     blocked_services: client.blocked_services || [],
     use_global_blocked_services: client.use_global_blocked_services || false,
+    use_global_filters: client.use_global_filters ?? true,
+    filters: client.filters || [],
+    whitelist_filters: client.whitelist_filters || [],
+    user_rules: (client.user_rules || []).join('\n'),
     blocked_services_schedule: {
         time_zone:
             client.blocked_services_schedule?.time_zone ??
@@ -139,6 +148,12 @@ export const buildClientConfig = (form: ClientFormState) => ({
     ignore_statistics: form.ignore_statistics,
     blocked_services: form.blocked_services,
     blocked_services_schedule: form.blocked_services_schedule,
+    use_global_filters: form.use_global_filters,
+    filters: form.filters,
+    whitelist_filters: form.whitelist_filters,
+    user_rules: form.user_rules
+        ? form.user_rules.split('\n').filter((line: string) => line.trim() !== '')
+        : [],
     upstreams: form.upstreams
         ? form.upstreams.split('\n').filter((line: string) => line.trim() !== '')
         : [],
@@ -206,12 +221,25 @@ export const saveClient = async (): Promise<boolean> => {
     clearFormErrors();
     const config = buildClientConfig(state);
 
+    // Refresh the filtering status so per-client filter lists and query-log
+    // reasons reflect the saved client filters.
+    const hasClientFilters =
+        !config.use_global_filters &&
+        ((config.filters && config.filters.length > 0) ||
+            (config.whitelist_filters && config.whitelist_filters.length > 0));
+    const refreshFiltering = async () => {
+        if (hasClientFilters) {
+            await getFilteringStatus();
+        }
+    };
+
     if (state.mode === 'edit') {
         setProcessingSave(true);
         try {
             await clientsUpdate({ name: state.originalName, data: config });
             clearClientForm();
             await getClients();
+            await refreshFiltering();
             return true;
         } catch (error) {
             addErrorToast({ error });
@@ -225,6 +253,7 @@ export const saveClient = async (): Promise<boolean> => {
             await clientsAdd(config);
             clearClientForm();
             await getClients();
+            await refreshFiltering();
             addSuccessToast({ message: intl.getMessage('client_added') });
             return true;
         } catch (error) {

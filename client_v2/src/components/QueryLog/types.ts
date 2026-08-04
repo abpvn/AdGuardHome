@@ -67,4 +67,5 @@ export type LogEntry = {
     client_id: string;
     ecs: string;
     cached: boolean;
+    isClientsFiltered?: boolean;
 };

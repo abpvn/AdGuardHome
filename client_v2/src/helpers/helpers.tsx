@@ -66,6 +66,7 @@ export type NormalizedQueryLogItem = {
     upstream?: string;
     cached?: boolean;
     ecs?: string;
+    isClientsFiltered?: boolean;
 };
 
 /**
@@ -122,6 +123,7 @@ export const normalizeLogs = (logs: QueryLogItem[]): NormalizedQueryLogItem[] =>
             upstream,
             cached,
             ecs,
+            is_clients_filtered,
         } = log;
 
         const { name: domain, unicode_name: unicodeName, type } = question || {};
@@ -181,6 +183,7 @@ export const normalizeLogs = (logs: QueryLogItem[]): NormalizedQueryLogItem[] =>
             upstream,
             cached,
             ecs,
+            isClientsFiltered: is_clients_filtered,
         };
     });
 
@@ -214,7 +217,9 @@ export const addClientInfo = (
         };
     });
 
-export const normalizeFilters = (filters: FilterStatus['filters']) =>
+export const normalizeFilters = (
+    filters: FilterStatus['filters'] | FilterStatus['clients_filters'],
+) =>
     filters
         ? filters.map((filter) => {
               const {
@@ -225,6 +230,7 @@ export const normalizeFilters = (filters: FilterStatus['filters']) =>
                   name = 'Default name',
                   rules_count = 0,
               } = filter;
+              const names = 'names' in filter ? filter.names : undefined;
 
               return {
                   id,
@@ -233,6 +239,7 @@ export const normalizeFilters = (filters: FilterStatus['filters']) =>
                   lastUpdated: last_updated,
                   name,
                   rulesCount: rules_count,
+                  names: names as Record<string, string> | undefined,
               };
           })
         : [];
@@ -244,6 +251,7 @@ export const normalizeFilteringStatus = (
     userRules: string;
     filters: Filter[];
     whitelistFilters: Filter[];
+    clientsFilters: Filter[];
     interval: number | undefined;
 } => {
     const {
@@ -252,6 +260,7 @@ export const normalizeFilteringStatus = (
         user_rules: userRules,
         interval,
         whitelist_filters,
+        clients_filters,
     } = filteringStatus;
     const newUserRules = Array.isArray(userRules) ? userRules.join('\n') : '';
 
@@ -260,6 +269,7 @@ export const normalizeFilteringStatus = (
         userRules: newUserRules,
         filters: normalizeFilters(filters),
         whitelistFilters: normalizeFilters(whitelist_filters),
+        clientsFilters: normalizeFilters(clients_filters),
         interval,
     };
 };
@@ -929,6 +939,7 @@ export type Filter = {
     name: string;
     rulesCount: number;
     url: string;
+    names?: Record<string, string>;
 };
 
 export type Rule = {
@@ -936,12 +947,44 @@ export type Rule = {
     text?: string;
 };
 
+/**
+ * Resolves the per-client names of the given client filters.  When a client
+ * filter defines a name for the given client (in `names[clientName]`), that
+ * name overrides the default filter name.
+ *
+ * @param clientName The client name, or `undefined` when not applicable.
+ * @param clientsFilters The client filters from the filtering status.
+ */
+export const clientsFiltersByClient = (
+    clientName: string | undefined,
+    clientsFilters: Filter[],
+): Filter[] => {
+    if (!clientName) {
+        return clientsFilters;
+    }
+
+    return clientsFilters.map((clientsFilter) => {
+        const clientFilterClone = { ...clientsFilter };
+        if (clientFilterClone.names && clientFilterClone.names[clientName]) {
+            clientFilterClone.name = clientFilterClone.names[clientName];
+        }
+        return clientFilterClone;
+    });
+};
+
 export const getFilterName = (
     filters: Filter[],
     whitelistFilters: Filter[],
     filterId: number,
-    resolveFilterName = (filter: Filter) =>
-        filter ? filter.name : intl.getMessage('unknown_filter', { filterId }),
+    clientsFilters?: Filter[],
+    resolveFilterName = (filter: Filter | undefined, isClientsFilter = false) => {
+        if (!filter) {
+            return intl.getMessage('unknown_filter', { filterId });
+        }
+        return isClientsFilter
+            ? intl.getMessage('clients_filters_name', { name: filter.name })
+            : filter.name;
+    },
 ) => {
     const specialFilterIds = Object.values(SPECIAL_FILTER_ID);
     if (specialFilterIds.includes(filterId)) {
@@ -949,14 +992,24 @@ export const getFilterName = (
     }
 
     const matchIdPredicate = (filter: Filter) => filter.id === filterId;
+    if (clientsFilters !== undefined) {
+        return resolveFilterName(clientsFilters.find(matchIdPredicate), true);
+    }
     const filter = filters.find(matchIdPredicate) || whitelistFilters.find(matchIdPredicate);
     return resolveFilterName(filter);
 };
 
-export const getFilterNames = (rules: Rule[], filters: Filter[], whitelistFilters: Filter[]) =>
+export const getFilterNames = (
+    rules: Rule[],
+    filters: Filter[],
+    whitelistFilters: Filter[],
+    clientsFilters?: Filter[],
+) =>
     rules
         .filter((r): r is Required<Rule> => r.filter_list_id != null)
-        .map(({ filter_list_id }) => getFilterName(filters, whitelistFilters, filter_list_id));
+        .map(({ filter_list_id }) =>
+            getFilterName(filters, whitelistFilters, filter_list_id, clientsFilters),
+        );
 
 /**
  * @param {string[]} lines

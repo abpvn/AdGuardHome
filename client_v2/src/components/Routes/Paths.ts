@@ -25,10 +25,16 @@ export const RoutePath = {
     ClientsProtection: 'ClientsProtection',
     ClientsBlockedServices: 'ClientsBlockedServices',
     ClientsSchedule: 'ClientsSchedule',
+    ClientsDnsBlocklists: 'ClientsDnsBlocklists',
+    ClientsDnsAllowlists: 'ClientsDnsAllowlists',
+    ClientsCustomRules: 'ClientsCustomRules',
     ClientsEdit: 'ClientsEdit',
     ClientsEditProtection: 'ClientsEditProtection',
     ClientsEditBlockedServices: 'ClientsEditBlockedServices',
     ClientsEditSchedule: 'ClientsEditSchedule',
+    ClientsEditDnsBlocklists: 'ClientsEditDnsBlocklists',
+    ClientsEditDnsAllowlists: 'ClientsEditDnsAllowlists',
+    ClientsEditCustomRules: 'ClientsEditCustomRules',
 } as const;
 
 export type RoutePathKey = keyof typeof RoutePath;
@@ -58,10 +64,16 @@ export const Paths: Record<RoutePathKey, string> = {
     ClientsProtection: pathBuilder('clients/add/protection'),
     ClientsBlockedServices: pathBuilder('clients/add/blocked_services'),
     ClientsSchedule: pathBuilder('clients/add/blocked_services/schedule'),
+    ClientsDnsBlocklists: pathBuilder('clients/add/blocklists'),
+    ClientsDnsAllowlists: pathBuilder('clients/add/allowlists'),
+    ClientsCustomRules: pathBuilder('clients/add/custom_rules'),
     ClientsEdit: pathBuilder('clients/edit/:clientName'),
     ClientsEditProtection: pathBuilder('clients/edit/:clientName/protection'),
     ClientsEditBlockedServices: pathBuilder('clients/edit/:clientName/blocked_services'),
     ClientsEditSchedule: pathBuilder('clients/edit/:clientName/blocked_services/schedule'),
+    ClientsEditDnsBlocklists: pathBuilder('clients/edit/:clientName/blocklists'),
+    ClientsEditDnsAllowlists: pathBuilder('clients/edit/:clientName/allowlists'),
+    ClientsEditCustomRules: pathBuilder('clients/edit/:clientName/custom_rules'),
 };
 
 export type LinkParams = Partial<Record<string, string | number>>;

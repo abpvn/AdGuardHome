@@ -191,6 +191,8 @@ type ResponseDetailsParams = {
     serviceName?: string;
     services?: { id: string; name: string }[];
     whitelistFilters: Filter[];
+    clientsFilters?: Filter[];
+    isClientsFiltered?: boolean;
 };
 
 export const getQueryStatusKey = (
@@ -268,6 +270,8 @@ export const getQueryReasonDetails = ({
     serviceName,
     services,
     whitelistFilters,
+    clientsFilters,
+    isClientsFiltered,
 }: ResponseDetailsParams): string => {
     switch (getQueryReasonKey(reason, rules)) {
         case 'blocked_services':
@@ -278,7 +282,14 @@ export const getQueryReasonDetails = ({
             );
         case 'blocked_by_filter':
         case 'allowlists':
-            return getFilterNames(rules, filters, whitelistFilters).filter(Boolean).join(', ');
+            return getFilterNames(
+                rules,
+                filters,
+                whitelistFilters,
+                isClientsFiltered ? clientsFilters : undefined,
+            )
+                .filter(Boolean)
+                .join(', ');
         default:
             return '';
     }
@@ -318,6 +329,8 @@ export const getResponseDetails = ({
     serviceName,
     services,
     whitelistFilters,
+    clientsFilters,
+    isClientsFiltered,
 }: ResponseDetailsParams): string => {
     const formattedElapsedMs = formatElapsedMs(
         elapsedMs || '',
@@ -333,7 +346,12 @@ export const getResponseDetails = ({
             );
         case FILTERED_STATUS.FILTERED_BLACK_LIST:
         case FILTERED_STATUS.NOT_FILTERED_WHITE_LIST: {
-            const filterNames = getFilterNames(rules, filters, whitelistFilters)
+            const filterNames = getFilterNames(
+                rules,
+                filters,
+                whitelistFilters,
+                isClientsFiltered ? clientsFilters : undefined,
+            )
                 .filter(Boolean)
                 .join(', ');
 

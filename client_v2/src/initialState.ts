@@ -280,6 +280,7 @@ export type FilteringData = Omit<FilterStatus, 'filters' | 'whitelist_filters' |
     // Normalized fields (camelCase from normalizeFilteringStatus):
     filters: Filter[];
     whitelistFilters: Filter[]; // Note: whitelist (no underscore) — matches store
+    clientsFilters: Filter[];
     userRules: string;
 };
 
@@ -335,6 +336,10 @@ export type ClientFormState = {
     ignore_statistics: boolean;
     blocked_services: string[];
     use_global_blocked_services: boolean;
+    use_global_filters: boolean;
+    filters: FilterStatus['filters'];
+    whitelist_filters: FilterStatus['filters'];
+    user_rules: string;
     blocked_services_schedule: {
         time_zone: string;
         sun?: { start: number; end: number };
@@ -376,6 +381,10 @@ export const getInitialClientFormState = (): ClientFormState => ({
     ignore_statistics: false,
     blocked_services: [],
     use_global_blocked_services: false,
+    use_global_filters: true,
+    filters: [],
+    whitelist_filters: [],
+    user_rules: '',
     blocked_services_schedule: {
         time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
@@ -563,6 +572,7 @@ export const initialState: RootState = {
         isFilterEdited: false,
         filters: [],
         whitelistFilters: [],
+        clientsFilters: [],
         userRules: '',
         interval: 24,
         enabled: true,

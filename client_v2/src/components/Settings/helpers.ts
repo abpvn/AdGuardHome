@@ -70,6 +70,7 @@ export type QueryLogConfig = {
     interval: number;
     ignored: string[];
     ignored_enabled: boolean;
+    ignore_non_client_log: boolean;
 };
 
 export type StatsConfig = {
@@ -92,6 +93,7 @@ export const buildQueryLogConfig = (
     interval: state.interval,
     ignored: state.ignored,
     ignored_enabled: state.ignored_enabled,
+    ignore_non_client_log: state.ignore_non_client_log,
     ...overrides,
 });
 

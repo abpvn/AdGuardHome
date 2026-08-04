@@ -13,6 +13,7 @@ import { ENCRYPTION_SOURCE } from 'panel/helpers/constants';
 
 import { createDebouncedValidator } from './blocks/helpers';
 import { PlainDnsToggle } from './blocks/PlainDnsToggle';
+import { InsecureToggle } from './blocks/InsecureToggle';
 import { TlsCertSection } from './blocks/TlsCertSection';
 import { ServerSettingsRow } from './blocks/ServerSettingsRow';
 import { RedirectToggle } from './blocks/RedirectToggle';
@@ -79,7 +80,7 @@ export const Encryption = () => {
             encryptionState.private_key_path ||
             encryptionState.private_key_saved
         );
-        const hasServerName = !!encryptionState.server_name;
+        const hasServerName = (encryptionState.server_names || []).some((name) => !!name);
 
         // Everything is set up — save the change.
         // Native input already shows ON from the click; sync effect
@@ -130,7 +131,8 @@ export const Encryption = () => {
         validateConfig({
             enabled: encryptionState.enabled,
             serve_plain_dns: encryptionState.serve_plain_dns,
-            server_name: encryptionState.server_name,
+            insecure_enabled: encryptionState.insecure_enabled,
+            server_names: encryptionState.server_names,
             force_https: encryptionState.force_https,
             port_https: Number(encryptionState.port_https) || 0,
             port_dns_over_tls: Number(encryptionState.port_dns_over_tls) || 0,
@@ -212,19 +214,21 @@ export const Encryption = () => {
                         onChange={handleEncryptedDnsChange}
                     />
 
-                    <Show when={!certConfigured()}>
-                        <div class={s.plusButton}>
-                            <PlusButton onClick={() => setAddCertOpen(true)} weight="semi">
-                                {intl.getMessage('add_tls_certificate')}
-                            </PlusButton>
-                        </div>
-                    </Show>
+                <Show when={!certConfigured()}>
+                    <div class={s.plusButton}>
+                        <PlusButton onClick={() => setAddCertOpen(true)} weight="semi">
+                            {intl.getMessage('add_tls_certificate')}
+                        </PlusButton>
+                    </div>
+                </Show>
 
-                    <Show when={certConfigured()}>
-                        <TlsCertSection />
-                    </Show>
+                <Show when={certConfigured()}>
+                    <TlsCertSection />
+                </Show>
 
-                    <ServerSettingsRow onOpen={() => setServerSettingsOpen(true)} />
+                <InsecureToggle />
+
+                <ServerSettingsRow onOpen={() => setServerSettingsOpen(true)} />
 
                     <RedirectToggle />
                 </Show>

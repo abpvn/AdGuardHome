@@ -9,11 +9,14 @@ import type {
     CheckConfigResponse,
     Client,
     ClientDelete,
+    ClientDetailParams,
     ClientUpdate,
     Clients,
     ClientsFindParams,
     ClientsFindResponse,
     ClientsSearchRequest,
+    ClientsStats200,
+    ClientsStatsParams,
     DHCPNetInterfaces,
     DNSConfig,
     DhcpConfig,
@@ -959,6 +962,35 @@ export const clientsStatus = async (options?: RequestInit): Promise<Clients> => 
     });
 };
 
+export const getClientDetailUrl = (params?: ClientDetailParams) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? 'null' : String(value));
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `control/clients/detail?${stringifiedParams}`
+        : `control/clients/detail`;
+};
+
+/**
+ * @summary Get information about single client
+ */
+export const clientDetail = async (
+    params?: ClientDetailParams,
+    options?: RequestInit,
+): Promise<Client> => {
+    return customFetch<Client>(getClientDetailUrl(params), {
+        ...options,
+        method: 'GET',
+    });
+};
+
 export const getClientsAddUrl = () => {
     return `control/clients/add`;
 };
@@ -1062,6 +1094,54 @@ export const clientsSearch = async (
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...options?.headers },
         body: JSON.stringify(clientsSearchRequest),
+    });
+};
+
+export const getClientsStatsUrl = (params: ClientsStatsParams) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? 'null' : String(value));
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `control/clients/stats?${stringifiedParams}`
+        : `control/clients/stats`;
+};
+
+/**
+ * @summary Get DNS query statistics for a specific client
+ */
+export const clientsStats = async (
+    params: ClientsStatsParams,
+    options?: RequestInit,
+): Promise<ClientsStats200> => {
+    return customFetch<ClientsStats200>(getClientsStatsUrl(params), {
+        ...options,
+        method: 'GET',
+    });
+};
+
+export const getClientsCacheClearUrl = () => {
+    return `control/clients/cache_clear`;
+};
+
+/**
+ * @summary Clear custom upstream DNS cache for a specific client
+ */
+export const clientsCacheClear = async (
+    clientDelete: ClientDelete,
+    options?: RequestInit,
+): Promise<void> => {
+    return customFetch<void>(getClientsCacheClearUrl(), {
+        ...options,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...options?.headers },
+        body: JSON.stringify(clientDelete),
     });
 };
 

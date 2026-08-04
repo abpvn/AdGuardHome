@@ -84,7 +84,7 @@ export type EncryptionData = Partial<
     processingValidate: boolean;
     status_cert: string; // UI concatenation
     status_key: string; // UI concatenation
-    allow_unencrypted_doh: boolean;
+    insecure_enabled: boolean;
     // Port fields: number from API, string from form input (initialized as ''):
     port_https: number | string;
     port_dns_over_tls: number | string;
@@ -536,13 +536,12 @@ export const initialState: RootState = {
         valid_pair: false,
         status_cert: '',
         status_key: '',
-        allow_unencrypted_doh: false,
+        insecure_enabled: false,
         certificate_chain: '',
         private_key: '',
-        server_name: '',
+        server_names: [''],
         warning_validation: '',
-        certificate_path: '',
-        private_key_path: '',
+        certificate_path: '',        private_key_path: '',
         private_key_saved: false,
         port_https: '',
         port_dns_over_tls: '',
@@ -584,6 +583,7 @@ export const initialState: RootState = {
         filter: DEFAULT_LOGS_FILTER,
         isFiltered: false,
         anonymize_client_ip: false,
+        ignore_non_client_log: false,
         isDetailed: true,
         isEntireLog: false,
         customInterval: null,

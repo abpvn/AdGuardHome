@@ -1,3 +1,4 @@
+import type { Filter } from './filter';
 import type { SafeSearchConfig } from './safeSearchConfig';
 import type { Schedule } from './schedule';
 
@@ -10,6 +11,7 @@ export interface Client {
     /** IP, CIDR, MAC, or ClientID. */
     ids?: string[];
     use_global_settings?: boolean;
+    use_global_filters?: boolean;
     filtering_enabled?: boolean;
     parental_enabled?: boolean;
     safebrowsing_enabled?: boolean;
@@ -21,6 +23,9 @@ export interface Client {
     blocked_services?: string[];
     upstreams?: string[];
     tags?: string[];
+    filters?: Filter[];
+    whitelist_filters?: Filter[];
+    user_rules?: string[];
     /**
      * NOTE: If `ignore_querylog` is not set in HTTP API `GET /clients/add`
      * request then default value (false) will be used.

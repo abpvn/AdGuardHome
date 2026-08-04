@@ -1,6 +1,9 @@
-import { createEffect, createSignal, on } from 'solid-js';
+import { createEffect, createSignal, For, on } from 'solid-js';
+
 import { ConfigDialog } from 'panel/common/ui/ConfigDialog';
 import { Input } from 'panel/common/controls/Input';
+import { Button } from 'panel/common/ui/Button';
+import { Icon } from 'panel/common/ui/Icon';
 import { FaqTooltip } from 'panel/common/ui/FaqTooltip';
 import intl from 'panel/common/intl';
 import { encryptionState, setTlsConfig } from 'panel/stores/encryption';
@@ -15,7 +18,7 @@ type Props = {
 };
 
 export const ServerSettingsModal = (props: Props) => {
-    const [serverName, setServerName] = createSignal('');
+    const [serverNames, setServerNames] = createSignal<string[]>(['']);
     const [portHttps, setPortHttps] = createSignal(0);
     const [portDot, setPortDot] = createSignal(0);
     const [portDoq, setPortDoq] = createSignal(0);
@@ -26,7 +29,8 @@ export const ServerSettingsModal = (props: Props) => {
             () => props.open,
             (open) => {
                 if (open) {
-                    setServerName(encryptionState.server_name || '');
+                    const names = (encryptionState.server_names || []).filter((name) => !!name);
+                    setServerNames(names.length > 0 ? [...names] : ['']);
                     setPortHttps(Number(encryptionState.port_https) || 0);
                     setPortDot(Number(encryptionState.port_dns_over_tls) || 0);
                     setPortDoq(Number(encryptionState.port_dns_over_quic) || 0);
@@ -46,9 +50,34 @@ export const ServerSettingsModal = (props: Props) => {
 
     const hasErrors = () => Object.values(errors()).some(Boolean);
 
-    const handleServerNameChange = (e: Event) => {
-        setServerName((e.target as HTMLInputElement).value);
-        clearError('server_name');
+    const handleServerNameChange = (index: number) => (e: Event) => {
+        const value = (e.target as HTMLInputElement).value;
+        setServerNames((prev) => prev.map((name, i) => (i === index ? value : name)));
+        clearError(`server_name_${index}`);
+    };
+
+    const handleServerNameBlur = (index: number) => (e: FocusEvent) => {
+        const normalized = normalizeServerName((e.target as HTMLInputElement).value);
+        setServerNames((prev) => prev.map((name, i) => (i === index ? normalized : name)));
+        const err = validateServerName(normalized);
+        setErrors((prev) => {
+            const next = { ...prev };
+            if (err) {
+                next[`server_name_${index}`] = err;
+            } else {
+                delete next[`server_name_${index}`];
+            }
+            return next;
+        });
+    };
+
+    const addServerName = () => {
+        setServerNames((prev) => [...prev, '']);
+    };
+
+    const removeServerName = (index: number) => () => {
+        setServerNames((prev) => prev.filter((_, i) => i !== index));
+        clearError(`server_name_${index}`);
     };
 
     const handlePortHttpsChange = (e: Event) => {
@@ -64,22 +93,6 @@ export const ServerSettingsModal = (props: Props) => {
     const handlePortDoqChange = (e: Event) => {
         setPortDoq(toNumber((e.target as HTMLInputElement).value));
         clearError('port_dns_over_quic');
-    };
-
-    const handleServerNameBlur = () => {
-        const normalized = normalizeServerName(serverName());
-        setServerName(normalized);
-
-        const err = validateServerName(normalized);
-        setErrors((prev) => {
-            const next = { ...prev };
-            if (err) {
-                next.server_name = err;
-            } else {
-                delete next.server_name;
-            }
-            return next;
-        });
     };
 
     const handlePortHttpsBlur = () => {
@@ -123,7 +136,7 @@ export const ServerSettingsModal = (props: Props) => {
 
     const save = () => {
         setTlsConfig({
-            server_name: serverName(),
+            server_names: serverNames().filter((name) => !!name),
             port_https: portHttps(),
             port_dns_over_tls: portDot(),
             port_dns_over_quic: portDoq(),
@@ -140,37 +153,73 @@ export const ServerSettingsModal = (props: Props) => {
             onClose={props.onClose}
             onSubmit={save}
             processing={processing()}
-            submitDisabled={processing() || hasErrors()}
+            submitDisabled={processing() || hasErrors() || serverNames().length === 0}
         >
             <div class={theme.form.input}>
-                <Input
-                    id="server_name"
-                    name="server_name"
-                    value={serverName()}
-                    onChange={handleServerNameChange}
-                    onBlur={handleServerNameBlur}
-                    label={
-                        <>
-                            {intl.getMessage('encryption_server')}
-                            <FaqTooltip
-                                menuSize="large"
-                                text={
-                                    <>
-                                        <div class={s.tooltipText}>
-                                            {intl.getMessage('encryption_server_tooltip_1')}
-                                        </div>
-                                        <div class={s.tooltipText}>
-                                            {intl.getMessage('encryption_server_tooltip_2')}
-                                        </div>
-                                    </>
-                                }
-                            />
-                        </>
-                    }
-                    placeholder={intl.getMessage('encryption_server_enter')}
-                    errorMessage={errors().server_name}
-                    size="large"
-                />
+                <div class={s.serverNameList}>
+                    <For each={serverNames()}>
+                        {(name, index) => (
+                            <div class={s.serverNameRow}>
+                                <div class={s.serverNameField}>
+                                    <Input
+                                        id={`server_name_${index()}`}
+                                        name={`server_name_${index()}`}
+                                        value={name}
+                                        onChange={handleServerNameChange(index())}
+                                        onBlur={handleServerNameBlur(index())}
+                                        label={
+                                            index() === 0 ? (
+                                                <>
+                                                    {intl.getMessage('encryption_server')}
+                                                    <FaqTooltip
+                                                        menuSize="large"
+                                                        text={
+                                                            <>
+                                                                <div class={s.tooltipText}>
+                                                                    {intl.getMessage(
+                                                                        'encryption_server_tooltip_1',
+                                                                    )}
+                                                                </div>
+                                                                <div class={s.tooltipText}>
+                                                                    {intl.getMessage(
+                                                                        'encryption_server_tooltip_2',
+                                                                    )}
+                                                                </div>
+                                                            </>
+                                                        }
+                                                    />
+                                                </>
+                                            ) : undefined
+                                        }
+                                        placeholder={intl.getMessage('encryption_server_enter')}
+                                        errorMessage={errors()[`server_name_${index()}`]}
+                                        size="large"
+                                    />
+                                </div>
+                                {index() > 0 && (
+                                    <button
+                                        type="button"
+                                        class={s.removeServerNameButton}
+                                        onClick={removeServerName(index())}
+                                        aria-label={intl.getMessage('remove_server_name')}
+                                        title={intl.getMessage('remove_server_name')}
+                                    >
+                                        <Icon icon="cross" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </For>
+                </div>
+                <Button
+                    variant="primary"
+                    size="small"
+                    onClick={addServerName}
+                    class={s.addServerNameButton}
+                >
+                    <Icon icon="plus" />
+                    {intl.getMessage('add_server_name')}
+                </Button>
             </div>
             <div class={theme.form.input}>
                 <Input

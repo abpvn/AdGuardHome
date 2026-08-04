@@ -8,13 +8,14 @@ import {
 } from 'panel/components/Settings/helpers';
 
 describe('buildQueryLogConfig', () => {
-    it('returns only the five config fields', () => {
+    it('returns only the six config fields', () => {
         const state: QueryLogConfig & Record<string, unknown> = {
             enabled: true,
             anonymize_client_ip: false,
             interval: 86400000,
             ignored: ['example.org'],
             ignored_enabled: true,
+            ignore_non_client_log: false,
             // runtime fields that must NOT appear in the result
             processingGetLogs: true,
             processingClear: false,
@@ -36,6 +37,7 @@ describe('buildQueryLogConfig', () => {
             interval: 86400000,
             ignored: ['example.org'],
             ignored_enabled: true,
+            ignore_non_client_log: false,
         });
     });
 
@@ -46,6 +48,7 @@ describe('buildQueryLogConfig', () => {
             interval: 86400000,
             ignored: [],
             ignored_enabled: false,
+            ignore_non_client_log: false,
         };
         const result = buildQueryLogConfig(state, {
             enabled: false,
@@ -57,6 +60,7 @@ describe('buildQueryLogConfig', () => {
             interval: 86400000,
             ignored: ['a', 'b'],
             ignored_enabled: false,
+            ignore_non_client_log: false,
         });
     });
 });

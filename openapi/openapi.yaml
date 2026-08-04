@@ -2624,6 +2624,11 @@
           'items':
             'type': 'string'
             'example': 'example.org'
+        'insecure_enabled':
+          'type': 'boolean'
+          'example': true
+          'description': >
+            insecure_enabled allows DoH queries via unencrypted HTTP.
         'force_https':
           'type': 'boolean'
           'example': true
@@ -3150,6 +3155,18 @@
           'type': 'array'
         'blocked_hosts':
           'description': 'The blocklist of hosts.'
+          'items':
+            'type': 'string'
+          'type': 'array'
+        'allowed_countries':
+          'description': >
+            The allowlist of countries: ISO 3166-1 alpha-2 country codes.
+          'items':
+            'type': 'string'
+          'type': 'array'
+        'blocked_countries':
+          'description': >
+            The blocklist of countries: ISO 3166-1 alpha-2 country codes.
           'items':
             'type': 'string'
           'type': 'array'

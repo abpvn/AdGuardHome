@@ -19,6 +19,10 @@ export type QueryLogParams = {
      */
     search?: string;
     /**
+     * Filter by client IP or client Name
+     */
+    client?: string;
+    /**
      * Deprecated: Use 'reason' parameter instead Filter by response status
      * NOTE: This parameter cannot be used with 'reason' parameter.
      */

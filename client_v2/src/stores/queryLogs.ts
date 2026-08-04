@@ -28,6 +28,7 @@ type QueryLogsState = {
     filter: QueryLogFilter;
     isFiltered: boolean;
     anonymize_client_ip: boolean;
+    ignore_non_client_log: boolean;
     isDetailed: boolean;
     isEntireLog: boolean;
     customInterval: number | null;
@@ -48,6 +49,7 @@ const initialState: QueryLogsState = {
     filter: DEFAULT_LOGS_FILTER,
     isFiltered: false,
     anonymize_client_ip: false,
+    ignore_non_client_log: false,
     isDetailed: true,
     isEntireLog: false,
     customInterval: null,
@@ -207,6 +209,7 @@ export const getLogsConfig = async () => {
             interval: data.interval || DAY,
             enabled: data.enabled ?? true,
             anonymize_client_ip: data.anonymize_client_ip ?? false,
+            ignore_non_client_log: data.ignore_non_client_log ?? false,
             customInterval: !QUERY_LOG_INTERVALS_DAYS.includes(data.interval)
                 ? data.interval / HOUR
                 : null,

@@ -420,7 +420,7 @@ type Props = {
 };
 
 export const Guide = (props: Props) => {
-    const serverName = () => encryptionState.server_name;
+    const serverName = () => encryptionState.server_names?.find((name: string) => !!name) || '';
     const portHttps = () => Number(encryptionState.port_https) || 0;
 
     const [activeTabLabel, setActiveTabLabel] = createSignal('Router');

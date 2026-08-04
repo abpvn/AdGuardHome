@@ -584,6 +584,28 @@ export const validatePlainDns = (
 };
 
 /**
+ * Validates the insecure (unencrypted) DoH setting.
+ * When encryption is disabled, insecure DoH must stay enabled so that plain
+ * DNS is not accidentally turned off.
+ *
+ * @example validateInsecureEnabled(true, { enabled: false })  // undefined
+ * @example validateInsecureEnabled(false, { enabled: true })  // undefined
+ * @example validateInsecureEnabled(false, { enabled: false }) // error string
+ */
+export const validateInsecureEnabled = (
+    value: boolean | undefined,
+    allValues: { enabled?: boolean },
+): ValidationResult => {
+    const { enabled } = allValues;
+
+    if (!enabled && !value) {
+        return intl.getMessage('insecure_enabled_error');
+    }
+
+    return undefined;
+};
+
+/**
  * Validates a single client identifier value.
  * Returns undefined if valid, or an i18n error message string if invalid.
  *

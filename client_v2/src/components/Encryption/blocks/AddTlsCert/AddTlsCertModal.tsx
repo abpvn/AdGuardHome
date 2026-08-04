@@ -68,7 +68,8 @@ export const AddTlsCertModal = (props: Props) => {
     const buildValues = (): EncryptionFormValues => ({
         enabled: encryptionState.enabled,
         serve_plain_dns: encryptionState.serve_plain_dns,
-        server_name: encryptionState.server_name,
+        insecure_enabled: encryptionState.insecure_enabled,
+        server_names: encryptionState.server_names,
         port_https: Number(encryptionState.port_https) || 0,
         port_dns_over_tls: Number(encryptionState.port_dns_over_tls) || 0,
         port_dns_over_quic: Number(encryptionState.port_dns_over_quic) || 0,

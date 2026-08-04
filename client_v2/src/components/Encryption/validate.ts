@@ -5,6 +5,7 @@ import {
     validatePort,
     validateIsSafePort,
     validatePlainDns,
+    validateInsecureEnabled,
     validateRequiredValue,
     validatePath,
     validatePemContent,
@@ -13,7 +14,8 @@ import {
 export type EncryptionFormValues = {
     enabled?: boolean;
     serve_plain_dns?: boolean;
-    server_name?: string;
+    insecure_enabled?: boolean;
+    server_names?: string[];
     force_https?: boolean;
     port_https?: number;
     port_dns_over_tls?: number;
@@ -108,9 +110,16 @@ export const validateEncryptionForm = (values: EncryptionFormValues): Record<str
     // Delegate cert/key validation to the shared helper.
     Object.assign(errs, validateCertKeyFields(values));
 
-    // Server name — optional, format only.
-    const serverNameErr = validateServerName(values.server_name);
-    if (serverNameErr) errs.server_name = serverNameErr;
+    // Server names — optional, format only.
+    const serverNames = values.server_names || [];
+    const invalidServerName = serverNames.find((name) => validateServerName(name));
+    if (invalidServerName !== undefined) {
+        errs.server_names = intl.getMessage('form_error_server_name');
+    }
+
+    // Insecure (unencrypted) DoH — must stay enabled when encryption is off.
+    const insecureEnabledErr = validateInsecureEnabled(values.insecure_enabled, values);
+    if (insecureEnabledErr) errs.insecure_enabled = insecureEnabledErr;
 
     // Ports — range, unsafe, and equality are checked fully client-side so
     // invalid ports never reach the backend validate request.

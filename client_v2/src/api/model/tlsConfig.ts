@@ -6,8 +6,10 @@ import type { TlsConfigKeyType } from './tlsConfigKeyType';
 export interface TlsConfig {
     /** enabled is the encryption (DoT/DoH/HTTPS) status */
     enabled?: boolean;
-    /** server_name is the hostname of your HTTPS/TLS server */
-    server_name?: string;
+    /** server_names is the hostnames of your HTTPS/TLS server */
+    server_names?: string[];
+    /** insecure_enabled allows DoH queries via unencrypted HTTP. */
+    insecure_enabled?: boolean;
     /** if true, forces HTTP->HTTPS redirect */
     force_https?: boolean;
     /** HTTPS port. If 0, HTTPS will be disabled. */

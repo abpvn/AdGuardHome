@@ -11,7 +11,8 @@ import { ENCRYPTION_SOURCE } from 'panel/helpers/constants';
 const valid = {
     enabled: true,
     serve_plain_dns: true,
-    server_name: 'dns.example.com',
+    insecure_enabled: false,
+    server_names: ['dns.example.com'],
     force_https: false,
     port_https: 443,
     port_dns_over_tls: 853,
@@ -123,9 +124,21 @@ describe('validateEncryptionForm', () => {
     it('flags an invalid server name', () => {
         const errs = validateEncryptionForm({
             ...valid,
-            server_name: 'not valid!',
+            server_names: ['not valid!'],
         });
-        expect(errs.server_name).toBeTruthy();
+        expect(errs.server_names).toBeTruthy();
+    });
+
+    it('flags insecure_enabled when encryption is disabled', () => {
+        const errs = validateEncryptionForm({
+            ...valid,
+            enabled: false,
+            serve_plain_dns: false,
+            insecure_enabled: false,
+            certificate_chain: '',
+            private_key: '',
+        });
+        expect(errs.insecure_enabled).toBeTruthy();
     });
 });
 

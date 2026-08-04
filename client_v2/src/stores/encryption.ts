@@ -19,7 +19,6 @@ type EncryptionState = Partial<
     processingValidate: boolean;
     status_cert: string;
     status_key: string;
-    allow_unencrypted_doh: boolean;
     // All four port fields: number from API, string from form input (initialized as ''):
     port_https: number | string;
     port_dns_over_tls: number | string;
@@ -54,12 +53,12 @@ const initialState: EncryptionState = {
     status_key: '',
     certificate_chain: '',
     private_key: '',
-    server_name: '',
+    server_names: [''],
     warning_validation: '',
     certificate_path: '',
     private_key_path: '',
     private_key_saved: false,
-    allow_unencrypted_doh: false,
+    insecure_enabled: false,
 };
 
 const [state, setState] = createStore<EncryptionState>(initialState);
@@ -111,7 +110,8 @@ export const setTlsConfig = async (values: TlsConfigBody, opts?: { silent?: bool
         const fullValues: TlsConfig = {
             enabled: state.enabled,
             serve_plain_dns: state.serve_plain_dns,
-            server_name: state.server_name,
+            server_names: state.server_names,
+            insecure_enabled: state.insecure_enabled,
             force_https: state.force_https,
             port_https: Number(state.port_https) || 0,
             port_dns_over_tls: Number(state.port_dns_over_tls) || 0,
@@ -123,6 +123,10 @@ export const setTlsConfig = async (values: TlsConfigBody, opts?: { silent?: bool
             private_key_saved: state.private_key_saved,
             ...Object.fromEntries(Object.entries(values).filter(([, v]) => v !== undefined)),
         };
+
+        if (Array.isArray(fullValues.server_names)) {
+            fullValues.server_names = fullValues.server_names.filter((s) => !!s);
+        }
 
         const encoded = encodeRequest(fullValues);
         encoded.port_https = encoded.port_https || 0;

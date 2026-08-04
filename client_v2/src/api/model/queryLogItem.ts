@@ -34,6 +34,7 @@ export interface QueryLogItem {
      * @deprecated
      */
     filterId?: number;
+    is_clients_filtered?: boolean;
     /**
      * Filtering rule applied to the request (if any).
      * Deprecated: use `rules[*].text` instead.

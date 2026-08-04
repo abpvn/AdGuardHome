@@ -18,7 +18,8 @@ export type TlsSubmitValues = Omit<EncryptionFormValues, 'certificate_source' | 
 export const defaultTlsValues: Required<EncryptionFormValues> = {
     enabled: false,
     serve_plain_dns: true,
-    server_name: '',
+    insecure_enabled: false,
+    server_names: [''],
     force_https: false,
     port_https: STANDARD_HTTPS_PORT,
     port_dns_over_tls: DNS_OVER_TLS_PORT,
@@ -48,6 +49,9 @@ export const getSubmitValues = (values: EncryptionFormValues): TlsSubmitValues =
         config.certificate_chain = '';
     } else {
         config.certificate_path = '';
+    }
+    if (Array.isArray(config.server_names)) {
+        config.server_names = (config.server_names as string[]).filter((s) => !!s);
     }
     if (key_source === ENCRYPTION_SOURCE.PATH) {
         config.private_key = '';

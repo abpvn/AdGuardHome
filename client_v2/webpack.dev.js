@@ -11,8 +11,12 @@ const DEFAULT_PORT = 80;
 
 const importConfig = () => {
     try {
-        const doc = yaml.load(fs.readFileSync('../AdguardHome.yaml', 'utf8'));
-        const { bind_host, bind_port } = doc;
+        const doc = yaml.load(fs.readFileSync('../AdGuardHome.yaml', 'utf8'));
+        const { http } = doc;
+        const { address } = http;
+        const splitAddress = address.split(':');
+        const bind_host = splitAddress[0];
+        const bind_port = parseInt(splitAddress[1], 10);
         return {
             bind_host,
             bind_port,
@@ -38,9 +42,10 @@ const getDevServerConfig = (proxyUrl = BASE_URL) => {
         open: true,
         host: devServerHost,
         port: devServerPort,
-        proxy: {
-            [proxyUrl]: `http://${devServerHost}:${port}`,
-        },
+        proxy: [{
+            context: [proxyUrl],
+            target: `http://${devServerHost}:${port}`,
+        }],
     };
 };
 

@@ -198,12 +198,14 @@ export const DEFAULT_LOGS_FILTER = {
     search: '',
     status: 'all',
     reason: 'all',
+    client: '',
 };
 
 export type QueryLogFilter = {
     search: string;
     status: string;
     reason: string;
+    client: string;
 };
 
 export const QUERY_LOGS_PAGE_LIMIT = 20;

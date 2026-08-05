@@ -100,6 +100,7 @@ const fetchLogsWithParams = async (olderThan: string, filter?: QueryLogFilter) =
         search: filter?.search ?? DEFAULT_LOGS_FILTER.search,
         older_than: olderThan,
         limit: QUERY_LOGS_PAGE_LIMIT,
+        client: filter?.client || undefined,
     };
     const reasons = getReasons(filter);
     if (reasons.length > 0) {

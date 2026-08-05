@@ -44,10 +44,12 @@
     @media (min-width: 768px) {
         flex-direction: row;
         gap: 8px;
+        flex-wrap: wrap;
     }
 
     @media (min-width: 1024px) {
         width: auto;
+        flex-wrap: nowrap;
     }
 }
 
@@ -125,6 +127,7 @@
         flex: 0 1 auto;
         width: auto;
         max-width: 100%;
+        min-width: 120px;
     }
 }
 

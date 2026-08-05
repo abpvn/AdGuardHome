@@ -74,14 +74,15 @@ export const QueryLog = () => {
         const search = searchParams.get('search') || DEFAULT_LOGS_FILTER.search;
         const statusParam = searchParams.get('status') || DEFAULT_LOGS_FILTER.status;
         const reasonParam = searchParams.get('reason') || DEFAULT_LOGS_FILTER.reason;
+        const client = searchParams.get('client') || DEFAULT_LOGS_FILTER.client;
         const status = Object.hasOwn(QUERY_LOG_STATUS_FILTER_QUERIES, statusParam)
             ? statusParam
             : DEFAULT_LOGS_FILTER.status;
         const reason = Object.hasOwn(QUERY_LOG_REASON_FILTER_QUERIES, reasonParam)
             ? reasonParam
             : DEFAULT_LOGS_FILTER.reason;
-        const nextFilter = { search, status, reason };
-        const nextSearch = getLogsUrlParams(search, status, reason);
+        const nextFilter = { search, status, reason, client };
+        const nextSearch = getLogsUrlParams(search, status, reason, client);
 
         if (location.search !== nextSearch) {
             navigate(nextSearch, { replace: true });
@@ -103,8 +104,9 @@ export const QueryLog = () => {
     const currentSearch = () => queryLogsState.filter?.search ?? DEFAULT_LOGS_FILTER.search;
     const currentStatus = () => queryLogsState.filter?.status ?? DEFAULT_LOGS_FILTER.status;
     const currentReason = () => queryLogsState.filter?.reason ?? DEFAULT_LOGS_FILTER.reason;
+    const currentClient = () => queryLogsState.filter?.client ?? DEFAULT_LOGS_FILTER.client;
     const infiniteScrollResetToken = () =>
-        `${currentSearch()}:${currentStatus()}:${currentReason()}`;
+        `${currentSearch()}:${currentStatus()}:${currentReason()}:${currentClient()}`;
     const persistentClientIds = () =>
         (dashboardState.clients || []).flatMap(
             (persistentClient: any) => persistentClient.ids ?? [],
@@ -128,21 +130,37 @@ export const QueryLog = () => {
 
     const handleSearch = (search: string) => {
         setIsIncrementalLoad(false);
-        navigate(getLogsUrlParams(search.trim(), currentStatus(), currentReason()), {
-            replace: true,
-        });
+        navigate(
+            getLogsUrlParams(search.trim(), currentStatus(), currentReason(), currentClient()),
+            { replace: true },
+        );
     };
 
     const handleStatusFilterChange = (status: string) => {
         setIsIncrementalLoad(false);
-        navigate(getLogsUrlParams(currentSearch(), status, DEFAULT_LOGS_FILTER.reason), {
-            replace: true,
-        });
+        navigate(
+            getLogsUrlParams(
+                currentSearch(),
+                status,
+                DEFAULT_LOGS_FILTER.reason,
+                currentClient(),
+            ),
+            { replace: true },
+        );
     };
 
     const handleReasonFilterChange = (reason: string) => {
         setIsIncrementalLoad(false);
-        navigate(getLogsUrlParams(currentSearch(), currentStatus(), reason), { replace: true });
+        navigate(getLogsUrlParams(currentSearch(), currentStatus(), reason, currentClient()), {
+            replace: true,
+        });
+    };
+
+    const handleClientFilterChange = (client: string) => {
+        setIsIncrementalLoad(false);
+        navigate(getLogsUrlParams(currentSearch(), currentStatus(), currentReason(), client), {
+            replace: true,
+        });
     };
 
     const handleRefresh = () => {
@@ -228,9 +246,11 @@ export const QueryLog = () => {
                     onRefresh={handleRefresh}
                     onStatusFilterChange={handleStatusFilterChange}
                     onReasonFilterChange={handleReasonFilterChange}
+                    onClientFilterChange={handleClientFilterChange}
                     currentSearch={currentSearch()}
                     currentStatus={currentStatus()}
                     currentReason={currentReason()}
+                    currentClient={currentClient()}
                     isLoading={!!isRequestInFlight()}
                 />
 

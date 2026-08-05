@@ -8,18 +8,28 @@ import {
 import { getLogsUrlParams } from '../helpers/helpers';
 
 describe('Query Log filter model', () => {
-    test('stores search, status, and reason separately', () => {
+    test('stores search, status, reason, and client separately', () => {
         expect(DEFAULT_LOGS_FILTER).toEqual({
             search: '',
             status: 'all',
             reason: 'all',
+            client: '',
         });
     });
 
-    test('serializes all three filter fields into the URL', () => {
+    test('serializes all four filter fields into the URL', () => {
         expect(getLogsUrlParams('example.org', 'blocked', 'FilteredBlockedService')).toBe(
             '?search=example.org&status=blocked&reason=FilteredBlockedService',
         );
+        expect(
+            getLogsUrlParams('example.org', 'blocked', 'FilteredBlockedService', 'My Phone'),
+        ).toBe(
+            '?search=example.org&status=blocked&reason=FilteredBlockedService&client=My%20Phone',
+        );
+    });
+
+    test('drops the client param when empty', () => {
+        expect(getLogsUrlParams('', 'all', 'all', '')).not.toContain('client=');
     });
 
     test('keeps status and reason option sets separate', () => {

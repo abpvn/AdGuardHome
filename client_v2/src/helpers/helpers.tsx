@@ -833,13 +833,20 @@ export const setUITheme = (theme?: string): void => {
  * @param {string} search
  * @param {string} status
  * @param {string} [reason]
+ * @param {string} [client]
  * @returns {string}
  */
-export const getLogsUrlParams = (search: string, status: string, reason: string): string =>
+export const getLogsUrlParams = (
+    search: string,
+    status: string,
+    reason: string,
+    client?: string,
+): string =>
     `?${queryString.stringify({
         search: search || undefined,
         status: status || undefined,
         reason: reason || undefined,
+        client: client || undefined,
     })}`;
 
 /**

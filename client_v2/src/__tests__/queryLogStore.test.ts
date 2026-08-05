@@ -1,9 +1,21 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { getAdditionalLogs, setFilteredLogs, queryLogsState } from 'panel/stores/queryLogs';
-import { queryLog } from 'panel/api/generated';
+import { queryLog, getQueryLogUrl } from 'panel/api/generated';
 
 vi.mock('panel/api/generated', () => ({
     queryLog: vi.fn(),
+    getQueryLogUrl: (params?: Record<string, unknown>) => {
+        const normalizedParams = new URLSearchParams();
+        Object.entries(params || {}).forEach(([key, value]) => {
+            if (value !== undefined) {
+                normalizedParams.append(key, String(value));
+            }
+        });
+        const stringifiedParams = normalizedParams.toString();
+        return stringifiedParams.length > 0
+            ? `control/querylog?${stringifiedParams}`
+            : 'control/querylog';
+    },
 }));
 
 vi.mock('panel/stores/toasts', () => ({
@@ -28,7 +40,7 @@ describe('queryLogs store', () => {
             data: fullPage,
             oldest: 'cur',
         });
-        await setFilteredLogs({ search: '', status: 'rewritten', reason: 'all' });
+        await setFilteredLogs({ search: '', status: 'rewritten', reason: 'all', client: '' });
         expect(queryLogsState.isEntireLog).toBe(false);
         expect(queryLogsState.logs).toHaveLength(20);
 
@@ -68,7 +80,7 @@ describe('queryLogs store', () => {
             oldest: '',
         });
 
-        await setFilteredLogs({ search: '', status: 'blocked', reason: 'all' });
+        await setFilteredLogs({ search: '', status: 'blocked', reason: 'all', client: '' });
 
         const lastCall = (queryLog as any).mock.calls.at(-1)[0];
         expect(queryLog).toHaveBeenLastCalledWith(
@@ -82,6 +94,37 @@ describe('queryLogs store', () => {
             }),
         );
         expect(lastCall).not.toHaveProperty('response_status');
+    });
+
+    it('setFilteredLogs sends the client filter to the API', async () => {
+        (queryLog as any).mockReset();
+        (queryLog as any).mockResolvedValue({
+            data: [{ reason: 'NotFilteredNotFound', question: {} }],
+            oldest: '',
+        });
+
+        await setFilteredLogs({
+            search: '',
+            status: 'all',
+            reason: 'all',
+            client: 'My Phone',
+        });
+
+        const lastCall = (queryLog as any).mock.calls.at(-1)[0];
+        expect(lastCall).toHaveProperty('client', 'My Phone');
+    });
+
+    it('omits the client param when no client filter is active', async () => {
+        (queryLog as any).mockReset();
+        (queryLog as any).mockResolvedValue({
+            data: [{ reason: 'NotFilteredNotFound', question: {} }],
+            oldest: '',
+        });
+
+        await setFilteredLogs({ search: '', status: 'all', reason: 'all', client: '' });
+
+        const lastCall = (queryLog as any).mock.calls.at(-1)[0];
+        expect(getQueryLogUrl(lastCall)).not.toContain('client=');
     });
 
     it('does not mark the log as complete when additional loading stops', async () => {
@@ -109,7 +152,7 @@ describe('queryLogs store', () => {
                 is_entire_log: true,
             });
 
-        await setFilteredLogs({ search: '', status: 'rewritten', reason: 'all' });
+        await setFilteredLogs({ search: '', status: 'rewritten', reason: 'all', client: '' });
         expect(queryLog).toHaveBeenCalledTimes(2);
         expect(queryLogsState.processingGetLogs).toBe(false);
     });
@@ -126,7 +169,7 @@ describe('queryLogs store', () => {
                 oldest: '',
             });
 
-        await setFilteredLogs({ search: '', status: 'rewritten', reason: 'all' });
+        await setFilteredLogs({ search: '', status: 'rewritten', reason: 'all', client: '' });
 
         for (const call of (queryLog as any).mock.calls) {
             expect(call[0]).toHaveProperty('limit', 20);

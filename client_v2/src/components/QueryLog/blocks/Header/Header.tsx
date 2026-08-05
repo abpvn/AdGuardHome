@@ -12,6 +12,7 @@ import { InlineLoader } from 'panel/common/ui/Loader';
 import { IOption } from 'panel/lib/helpers/utils';
 import { DEBOUNCE_FILTER_TIMEOUT } from 'panel/helpers/constants';
 import { useIsMobile } from 'panel/hooks/useIsMobile';
+import { dashboardState } from 'panel/stores/dashboard';
 
 import s from './Header.module.pcss';
 
@@ -20,9 +21,11 @@ type Props = {
     onRefresh: () => void;
     onStatusFilterChange: (status: string) => void;
     onReasonFilterChange: (reason: string) => void;
+    onClientFilterChange: (client: string) => void;
     currentSearch: string;
     currentStatus: string;
     currentReason: string;
+    currentClient: string;
     isLoading: boolean;
 };
 
@@ -150,6 +153,23 @@ export const Header = (props: Props) => {
     const selectedReason = createMemo(
         () => REASON_OPTIONS.find((opt) => opt.value === props.currentReason) || REASON_OPTIONS[0],
     );
+    const clientOptions = createMemo<IOption<string>[]>(() => {
+        const allClients: IOption<string> = {
+            value: '',
+            get label() {
+                return intl.getMessage('all_client');
+            },
+        };
+        const clients = (dashboardState.clients || []).flatMap((client) =>
+            client.name ? [{ value: client.name, label: client.name }] : [],
+        );
+        return [allClients, ...clients];
+    });
+    const selectedClient = createMemo(
+        () =>
+            clientOptions().find((opt) => opt.value === props.currentClient) ||
+            clientOptions()[0],
+    );
 
     return (
         <div class={s.header}>
@@ -233,6 +253,22 @@ export const Header = (props: Props) => {
                             optionTestIdPrefix="query-log-reason-option"
                             onChange={(option: IOption<string>) =>
                                 props.onReasonFilterChange(option.value)
+                            }
+                            menuSize="big"
+                            menuPosition="right"
+                            borderless={!isMobile()}
+                            class={s.filterSelect}
+                        />
+                    </div>
+
+                    <div class={s.filterField} data-testid="query-log-client-filter">
+                        <Select
+                            size="responsive"
+                            options={clientOptions()}
+                            value={selectedClient()}
+                            optionTestIdPrefix="query-log-client-option"
+                            onChange={(option: IOption<string>) =>
+                                props.onClientFilterChange(option.value)
                             }
                             menuSize="big"
                             menuPosition="right"

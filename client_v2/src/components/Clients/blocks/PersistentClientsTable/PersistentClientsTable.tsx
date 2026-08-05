@@ -8,6 +8,7 @@ import { LOCAL_STORAGE_KEYS, LocalStorageHelper } from 'panel/helpers/localStora
 import { Table, type TableColumn } from 'panel/common/ui/Table';
 import { Icon } from 'panel/common/ui/Icon';
 import { Tooltip } from 'panel/common/ui/Tooltip';
+import { LogsSearchLink } from 'panel/common/ui/LogsSearchLink';
 import { addSuccessToast } from 'panel/stores/toasts';
 import theme from 'panel/lib/theme';
 
@@ -257,21 +258,34 @@ export const PersistentClientsTable = (props: Props) => {
                 accessor: (row: Client) =>
                     props.normalizedTopClients?.configured[row.name ?? ''] || 0,
                 sortable: true,
-                render: (_value: unknown, row: Client) => (
-                    <div class={theme.table.cell}>
-                        <span class={theme.table.cellLabel}>
-                            {intl.getMessage('requests_table_header')}
-                        </span>
-
-                        <div class={theme.table.cellValueText}>
-                            <span class={theme.common.textOverflow}>
-                                {(
-                                    props.normalizedTopClients?.configured[row.name ?? ''] || 0
-                                ).toLocaleString()}
+                render: (_value: unknown, row: Client) => {
+                    const count = props.normalizedTopClients?.configured[row.name ?? ''] || 0;
+                    const clientName = row.name;
+                    const value = count.toLocaleString();
+                    return (
+                        <div class={theme.table.cell}>
+                            <span class={theme.table.cellLabel}>
+                                {intl.getMessage('requests_table_header')}
                             </span>
+
+                            <div class={theme.table.cellValueText}>
+                                <Show
+                                    when={count > 0 && !!clientName}
+                                    fallback={
+                                        <span class={theme.common.textOverflow}>{value}</span>
+                                    }
+                                >
+                                    <LogsSearchLink
+                                        client={clientName ?? ''}
+                                        class={theme.common.textOverflow}
+                                    >
+                                        {value}
+                                    </LogsSearchLink>
+                                </Show>
+                            </div>
                         </div>
-                    </div>
-                ),
+                    );
+                },
             },
             {
                 key: 'actions',

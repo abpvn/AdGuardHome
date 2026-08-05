@@ -3,6 +3,7 @@ import cn from 'clsx';
 
 import { Icon } from 'panel/common/ui/Icon';
 import theme from 'panel/lib/theme';
+import { LogsSearchLink } from 'panel/common/ui/LogsSearchLink';
 import { getClientLocation } from 'panel/components/QueryLog/helpers';
 import type { NormalizedQueryLogItem } from 'panel/helpers/helpers';
 
@@ -34,14 +35,13 @@ export const ClientCell = (props: Props) => {
             </div>
             <div class={s.clientSecondary}>
                 <Show when={clientName()}>
-                    <button
-                        type="button"
+                    <LogsSearchLink
+                        client={clientName()}
                         class={cn(s.clientButtonPlain, s.clientName, theme.text.t4)}
-                        title={clientName()}
-                        onClick={(e) => props.onSearchSelect(clientName())(e)}
+                        stop
                     >
                         {clientName()}
-                    </button>
+                    </LogsSearchLink>
                 </Show>
 
                 <Show when={clientName() && clientLocation()}>

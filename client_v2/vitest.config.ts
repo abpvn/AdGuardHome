@@ -6,7 +6,15 @@ import { defineConfig } from 'vitest/config';
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-    plugins: [solid()],
+    plugins: [
+        solid({
+            // Disable the HMR runtime injection in tests.  With `hot` enabled
+            // (the default) the solid-refresh babel plugin imports the
+            // `@solid-refresh` virtual module in every .tsx file, which vitest
+            // tries to resolve via `createRequire` and fails on Windows.
+            hot: false,
+        }),
+    ],
     resolve: {
         conditions: ['development', 'browser'],
         // Force Vite to use a single solid-js instance across all deps,

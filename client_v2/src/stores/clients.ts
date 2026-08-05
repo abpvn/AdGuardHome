@@ -1,6 +1,11 @@
 import { createStore } from 'solid-js/store';
 import { untrack } from 'solid-js';
-import { clientsAdd, clientsDelete, clientsUpdate } from 'panel/api/generated';
+import {
+    clientsAdd,
+    clientsCacheClear,
+    clientsDelete,
+    clientsUpdate,
+} from 'panel/api/generated';
 import { addErrorToast, addSuccessToast } from './toasts';
 import intl from 'panel/common/intl';
 import { getClients } from './dashboard';
@@ -79,6 +84,15 @@ export const updateClient = async (name: string, data: Client): Promise<boolean>
         addErrorToast({ error });
         setState('processingUpdating', false);
         return false;
+    }
+};
+
+export const clearClientCache = async (name: string) => {
+    try {
+        await clientsCacheClear({ name });
+        addSuccessToast(intl.getMessage('client_cache_cleared', { key: name }));
+    } catch (error) {
+        addErrorToast({ error });
     }
 };
 

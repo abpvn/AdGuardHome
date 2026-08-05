@@ -12,6 +12,7 @@ import { Icon } from 'panel/common/ui/Icon';
 import { Link } from 'panel/common/ui/Link';
 import { PageLoader } from 'panel/common/ui/Loader';
 import { SwitchGroup } from 'panel/common/ui/SettingsGroup';
+import { ConfirmDialog } from 'panel/common/ui/ConfirmDialog';
 import type { Client } from 'panel/initialState';
 import {
     clientFormState,
@@ -23,6 +24,7 @@ import {
     setFormErrors,
 } from 'panel/stores/clientForm';
 import { dashboardState, getClients } from 'panel/stores/dashboard';
+import { clearClientCache } from 'panel/stores/clients';
 import { validateUpstreams, validateCacheSize } from 'panel/helpers/validators';
 import { RoutePath, Paths } from 'panel/components/Routes/Paths';
 import theme from 'panel/lib/theme';
@@ -40,6 +42,7 @@ export const AddClient = () => {
     const [nameError, setNameError] = createSignal<string | undefined>();
     const [cacheSizeError, setCacheSizeError] = createSignal<string | undefined>();
     const [upstreamsError, setUpstreamsError] = createSignal<string | undefined>();
+    const [showClearCacheConfirm, setShowClearCacheConfirm] = createSignal(false);
 
     createEffect(() => {
         const formErrors = clientFormState.formErrors;
@@ -101,6 +104,13 @@ export const AddClient = () => {
     });
 
     const isEdit = createMemo(() => clientFormState.mode === 'edit');
+
+    const canShowClearCache = createMemo(
+        () =>
+            isEdit() &&
+            clientFormState.upstreams_cache_enabled &&
+            clientFormState.upstreams_cache_size > 0,
+    );
 
     const handleCancel = () => {
         clearClientForm();
@@ -441,6 +451,20 @@ export const AddClient = () => {
                         )}
                     </SwitchGroup>
 
+                    <Show when={canShowClearCache()}>
+                        <div class={s.clearCacheRow}>
+                            <Button
+                                variant="secondary"
+                                size="small"
+                                onClick={() => setShowClearCacheConfirm(true)}
+                                data-testid="clients_clear_cache"
+                                class={s.clearCacheButton}
+                            >
+                                {intl.getMessage('clear_cache')}
+                            </Button>
+                        </div>
+                    </Show>
+
                     <div class={s.actions}>
                         <Button
                             variant="primary"
@@ -464,6 +488,22 @@ export const AddClient = () => {
                     </div>
                 </Show>
             </div>
+
+            <Show when={showClearCacheConfirm()}>
+                <ConfirmDialog
+                    text={intl.getMessage('confirm_client_dns_cache_clear', {
+                        key: clientFormState.name,
+                    })}
+                    buttonText={intl.getMessage('clear_cache')}
+                    cancelText={intl.getMessage('cancel')}
+                    buttonVariant="danger"
+                    onClose={() => setShowClearCacheConfirm(false)}
+                    onConfirm={() => {
+                        clearClientCache(clientFormState.name);
+                        setShowClearCacheConfirm(false);
+                    }}
+                />
+            </Show>
         </div>
     );
 };

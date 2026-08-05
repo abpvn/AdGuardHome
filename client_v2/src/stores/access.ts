@@ -3,6 +3,7 @@ import { untrack } from 'solid-js';
 import { accessList, accessSet } from 'panel/api/generated';
 import { addErrorToast, addSuccessToast } from './toasts';
 import { splitByNewLine } from 'panel/helpers/helpers';
+import { COUNTRY_PREFIX } from 'panel/helpers/constants';
 import intl from 'panel/common/intl';
 import type { AccessList } from 'panel/api/model/accessList';
 
@@ -12,6 +13,8 @@ type AccessState = {
     allowed_clients: string;
     disallowed_clients: string;
     blocked_hosts: string;
+    allowed_countries: string;
+    blocked_countries: string;
 };
 
 const initialState: AccessState = {
@@ -20,6 +23,8 @@ const initialState: AccessState = {
     allowed_clients: '',
     disallowed_clients: '',
     blocked_hosts: '',
+    allowed_countries: '',
+    blocked_countries: '',
 };
 
 const [state, setState] = createStore<AccessState>(initialState);
@@ -32,6 +37,8 @@ export const getAccessList = async () => {
             allowed_clients: data.allowed_clients?.join('\n') || '',
             disallowed_clients: data.disallowed_clients?.join('\n') || '',
             blocked_hosts: data.blocked_hosts?.join('\n') || '',
+            allowed_countries: data.allowed_countries?.join('\n') || '',
+            blocked_countries: data.blocked_countries?.join('\n') || '',
             processing: false,
         });
     } catch (error) {
@@ -44,6 +51,8 @@ export const setAccessList = async (values: {
     allowed_clients?: string;
     disallowed_clients?: string;
     blocked_hosts?: string;
+    allowed_countries?: string;
+    blocked_countries?: string;
 }) => {
     setState('processingSet', true);
     try {
@@ -59,6 +68,14 @@ export const setAccessList = async (values: {
             blocked_hosts:
                 values.blocked_hosts !== undefined
                     ? splitByNewLine(values.blocked_hosts)
+                    : undefined,
+            allowed_countries:
+                values.allowed_countries !== undefined
+                    ? splitByNewLine(values.allowed_countries.toUpperCase())
+                    : undefined,
+            blocked_countries:
+                values.blocked_countries !== undefined
+                    ? splitByNewLine(values.blocked_countries.toUpperCase())
                     : undefined,
         };
 
@@ -90,9 +107,20 @@ const getNextClientAccessList = ({
         blocked_hosts: accessList.blocked_hosts ?? [],
         allowed_clients: accessList.allowed_clients ?? [],
         disallowed_clients: accessList.disallowed_clients ?? [],
+        blocked_countries: accessList.blocked_countries ?? [],
+        allowed_countries: accessList.allowed_countries ?? [],
     };
+    const country = disallowedRule.startsWith(COUNTRY_PREFIX)
+        ? disallowedRule.split(':')[1]
+        : '';
     const isAllowlistMode = values.allowed_clients.length > 0;
 
+    if (disallowed && country) {
+        return {
+            ...values,
+            blocked_countries: removeValue(values.blocked_countries, country),
+        };
+    }
     if (disallowed && isAllowlistMode) {
         return {
             ...values,
@@ -136,13 +164,22 @@ export const toggleClientBlock = async (
             allowed_clients: values.allowed_clients.join('\n'),
             disallowed_clients: values.disallowed_clients.join('\n'),
             blocked_hosts: values.blocked_hosts.join('\n'),
+            allowed_countries: values.allowed_countries.join('\n'),
+            blocked_countries: values.blocked_countries.join('\n'),
             processingSet: false,
         });
-        addSuccessToast(
-            disallowed
-                ? intl.getMessage('client_unblocked_flash')
-                : intl.getMessage('client_blocked_flash'),
-        );
+        if (disallowed) {
+            const country = disallowedRule.startsWith(COUNTRY_PREFIX)
+                ? disallowedRule.split(':')[1]
+                : '';
+            addSuccessToast(
+                country
+                    ? intl.getMessage('client_unblocked_country', { country })
+                    : intl.getMessage('client_unblocked_flash'),
+            );
+        } else {
+            addSuccessToast(intl.getMessage('client_blocked_flash'));
+        }
     } catch (error) {
         addErrorToast({ error });
         setState('processingSet', false);

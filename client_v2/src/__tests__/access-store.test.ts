@@ -21,6 +21,11 @@ import { toggleClientBlock, setAccessList } from 'panel/stores/access';
 describe('toggleClientBlock', () => {
     beforeEach(() => vi.clearAllMocks());
 
+    const emptyCountries: { blocked_countries: string[]; allowed_countries: string[] } = {
+        blocked_countries: [],
+        allowed_countries: [],
+    };
+
     it('not-disallowed + allowlist mode with >1 allowed → removes from allowed', async () => {
         mocks.accessList.mockResolvedValue({
             allowed_clients: ['1.1.1.1', '2.2.2.2'],
@@ -32,6 +37,7 @@ describe('toggleClientBlock', () => {
             allowed_clients: ['2.2.2.2'],
             disallowed_clients: [],
             blocked_hosts: [],
+            ...emptyCountries,
         });
     });
 
@@ -46,6 +52,7 @@ describe('toggleClientBlock', () => {
             allowed_clients: [],
             disallowed_clients: ['3.3.3.3'],
             blocked_hosts: [],
+            ...emptyCountries,
         });
     });
 
@@ -60,6 +67,7 @@ describe('toggleClientBlock', () => {
             allowed_clients: ['1.1.1.1', '2.2.2.2'],
             disallowed_clients: ['2.2.2.2'],
             blocked_hosts: [],
+            ...emptyCountries,
         });
     });
 
@@ -74,7 +82,28 @@ describe('toggleClientBlock', () => {
             allowed_clients: [],
             disallowed_clients: [],
             blocked_hosts: [],
+            ...emptyCountries,
         });
+    });
+
+    it('disallowed by a country rule → removes the country from blocked_countries', async () => {
+        mocks.accessList.mockResolvedValue({
+            allowed_clients: [],
+            disallowed_clients: [],
+            blocked_hosts: [],
+            blocked_countries: ['VN'],
+            allowed_countries: [],
+        });
+        await toggleClientBlock('1.2.3.4', true, 'COUNTRY:VN');
+        expect(mocks.accessSet).toHaveBeenCalledWith({
+            allowed_clients: [],
+            disallowed_clients: [],
+            blocked_hosts: [],
+            blocked_countries: [],
+            allowed_countries: [],
+        });
+        expect(mocks.addSuccessToast).toHaveBeenCalledTimes(1);
+        expect(mocks.addSuccessToast.mock.calls[0][0]).not.toBe('Client unblocked');
     });
 });
 
@@ -109,6 +138,20 @@ describe('setAccessList', () => {
             allowed_clients: [],
             disallowed_clients: undefined,
             blocked_hosts: undefined,
+        });
+    });
+
+    it('uppercases and drops empty lines in country lists', async () => {
+        await setAccessList({
+            allowed_countries: 'vn\nus\n',
+            blocked_countries: '\ngb\n',
+        });
+        expect(mocks.accessSet).toHaveBeenCalledWith({
+            allowed_clients: undefined,
+            disallowed_clients: undefined,
+            blocked_hosts: undefined,
+            allowed_countries: ['VN', 'US'],
+            blocked_countries: ['GB'],
         });
     });
 });

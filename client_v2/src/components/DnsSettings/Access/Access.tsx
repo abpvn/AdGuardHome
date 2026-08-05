@@ -11,18 +11,25 @@ import theme from 'panel/lib/theme';
 import { AllowedClientsDialog } from './blocks/AllowedClientsDialog';
 import { DisallowedClientsDialog } from './blocks/DisallowedClientsDialog';
 import { DisallowedDomainsDialog } from './blocks/DisallowedDomainsDialog';
+import { AllowedCountriesDialog } from './blocks/AllowedCountriesDialog';
+import { BlockedCountriesDialog } from './blocks/BlockedCountriesDialog';
 
 export const Access = () => {
     const allowedDialog = useDialog();
     const disallowedClientsDialog = useDialog();
     const disallowedDomainsDialog = useDialog();
+    const allowedCountriesDialog = useDialog();
+    const blockedCountriesDialog = useDialog();
 
     const allowedClientsOn = createMemo(() => accessState.allowed_clients.trim().length > 0);
+    const allowedCountriesOn = createMemo(() => accessState.allowed_countries.trim().length > 0);
     const processing = () => accessState.processingSet;
 
     const allowedClientsValue = createMemo(() => getListSummary(accessState.allowed_clients));
     const disallowedClientsValue = createMemo(() => getListSummary(accessState.disallowed_clients));
     const disallowedDomainsValue = createMemo(() => getListSummary(accessState.blocked_hosts));
+    const allowedCountriesValue = createMemo(() => getListSummary(accessState.allowed_countries));
+    const blockedCountriesValue = createMemo(() => getListSummary(accessState.blocked_countries));
 
     return (
         <div>
@@ -51,6 +58,25 @@ export const Access = () => {
 
             <SettingRow
                 variant="link"
+                id="allowed_countries"
+                title={intl.getMessage('dns_allowed_countries')}
+                description={intl.getMessage('dns_allowed_countries_desc')}
+                value={allowedCountriesValue()}
+                onClick={allowedCountriesDialog.openDialog}
+            />
+
+            <SettingRow
+                variant="link"
+                id="blocked_countries"
+                title={intl.getMessage('dns_blocked_countries')}
+                description={intl.getMessage('dns_blocked_countries_desc')}
+                value={blockedCountriesValue()}
+                disabled={allowedCountriesOn()}
+                onClick={blockedCountriesDialog.openDialog}
+            />
+
+            <SettingRow
+                variant="link"
                 id="disallowed_domains"
                 title={intl.getMessage('dns_disallowed_domains')}
                 description={intl.getMessage('dns_disallowed_domains_desc')}
@@ -67,6 +93,18 @@ export const Access = () => {
             <DisallowedClientsDialog
                 open={disallowedClientsDialog.open}
                 onClose={disallowedClientsDialog.closeDialog}
+                processing={processing()}
+            />
+
+            <AllowedCountriesDialog
+                open={allowedCountriesDialog.open}
+                onClose={allowedCountriesDialog.closeDialog}
+                processing={processing()}
+            />
+
+            <BlockedCountriesDialog
+                open={blockedCountriesDialog.open}
+                onClose={blockedCountriesDialog.closeDialog}
                 processing={processing()}
             />
 

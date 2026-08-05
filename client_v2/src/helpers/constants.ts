@@ -403,6 +403,8 @@ export const RATE_LIMIT = {
     MAX: UINT32_RANGE.MAX,
 };
 
+export const COUNTRY_PREFIX = 'COUNTRY:';
+
 export const IPV4_SUBNET_PREFIX = {
     MIN: 0,
     MAX: 32,

@@ -46,7 +46,8 @@ export const TopClients = (props: Props) => {
         open: boolean;
         client: string;
         action: 'block' | 'unblock';
-    }>({ open: false, client: '', action: 'block' });
+        rule: string;
+    }>({ open: false, client: '', action: 'block', rule: '' });
     const [openMenuClient, setOpenMenuClient] = createSignal<string | null>(null);
 
     const isDesktop = useIsDesktop();
@@ -60,7 +61,8 @@ export const TopClients = (props: Props) => {
         isDesktop() ? sortedClients() : sortedClients().slice(0, MOBILE_TABLE_MAX_ROWS),
     );
 
-    const isClientBlocked = (clientName: string) => disallowedClientsList().includes(clientName);
+    const isClientBlocked = (client: ClientInfo) =>
+        !!client.info?.disallowed || disallowedClientsList().includes(client.name);
 
     const handleBlockClient = async (clientIp: string) => {
         const disallowedList = accessState.disallowed_clients
@@ -72,34 +74,35 @@ export const TopClients = (props: Props) => {
                 error: new Error(intl.getMessage('client_already_blocked', { ip: clientIp })),
             });
             if (isMounted) {
-                setConfirmDialog({ open: false, client: '', action: 'block' });
+                setConfirmDialog({ open: false, client: '', action: 'block', rule: '' });
             }
             return;
         }
         await toggleClientBlock(clientIp, false, '');
         if (isMounted) {
-            setConfirmDialog({ open: false, client: '', action: 'block' });
+            setConfirmDialog({ open: false, client: '', action: 'block', rule: '' });
         }
     };
 
-    const handleUnblockClient = async (clientIp: string) => {
-        const disallowedList = accessState.disallowed_clients
-            ? accessState.disallowed_clients.split('\n').filter(Boolean)
-            : [];
-        const isDisallowed = disallowedList.includes(clientIp);
-        await toggleClientBlock(clientIp, isDisallowed, isDisallowed ? clientIp : '');
+    const handleUnblockClient = async (clientIp: string, disallowedRule: string) => {
+        await toggleClientBlock(clientIp, true, disallowedRule || clientIp);
         if (isMounted) {
-            setConfirmDialog({ open: false, client: '', action: 'unblock' });
+            setConfirmDialog({ open: false, client: '', action: 'unblock', rule: '' });
         }
     };
 
-    const openConfirmDialog = (client: string, action: 'block' | 'unblock') => {
+    const openConfirmDialog = (client: ClientInfo, action: 'block' | 'unblock') => {
         setOpenMenuClient(null);
-        setConfirmDialog({ open: true, client, action });
+        setConfirmDialog({
+            open: true,
+            client: client.name,
+            action,
+            rule: client.info?.disallowed_rule || '',
+        });
     };
 
     const getClientMenu = (client: ClientInfo) => {
-        const isBlocked = isClientBlocked(client.name);
+        const isBlocked = isClientBlocked(client);
 
         return (
             <div class={s.protectionMenu}>
@@ -113,7 +116,7 @@ export const TopClients = (props: Props) => {
                                 s.protectionMenuItem,
                                 s.protectionMenuItemRed,
                             )}
-                            onClick={() => openConfirmDialog(client.name, 'block')}
+                            onClick={() => openConfirmDialog(client, 'block')}
                         >
                             {intl.getMessage('block_client')}
                         </div>
@@ -126,7 +129,7 @@ export const TopClients = (props: Props) => {
                             theme.dropdown.item,
                             s.protectionMenuItem,
                         )}
-                        onClick={() => openConfirmDialog(client.name, 'unblock')}
+                        onClick={() => openConfirmDialog(client, 'unblock')}
                     >
                         {intl.getMessage('unblock_client')}
                     </div>
@@ -162,7 +165,7 @@ export const TopClients = (props: Props) => {
                                     ? (client.count / props.numDnsQueries) * 100
                                     : 0,
                             );
-                            const isBlocked = isClientBlocked(client.name);
+                            const isBlocked = isClientBlocked(client);
 
                             return (
                                 <div class={s.clientRow}>
@@ -327,11 +330,19 @@ export const TopClients = (props: Props) => {
                     {(() => {
                         const dialog = confirmDialog();
                         const isBlock = dialog.action === 'block';
+                        const country = dialog.rule.startsWith('COUNTRY:')
+                            ? dialog.rule.split(':')[1]
+                            : '';
 
                         return (
                             <ConfirmDialog
                                 onClose={() =>
-                                    setConfirmDialog({ open: false, client: '', action: 'block' })
+                                    setConfirmDialog({
+                                        open: false,
+                                        client: '',
+                                        action: 'block',
+                                        rule: '',
+                                    })
                                 }
                                 title={
                                     isBlock
@@ -347,9 +358,13 @@ export const TopClients = (props: Props) => {
                                         ? intl.getMessage('confirm_client_block_desc', {
                                               ip: dialog.client,
                                           })
-                                        : intl.getMessage('confirm_client_unblock_desc', {
-                                              ip: dialog.client,
-                                          })
+                                        : country
+                                          ? intl.getMessage('client_confirm_unblock_country', {
+                                                country,
+                                            })
+                                          : intl.getMessage('confirm_client_unblock_desc', {
+                                                ip: dialog.client,
+                                            })
                                 }
                                 buttonText={
                                     isBlock ? intl.getMessage('block') : intl.getMessage('unblock')
@@ -360,7 +375,7 @@ export const TopClients = (props: Props) => {
                                     if (isBlock) {
                                         handleBlockClient(dialog.client);
                                     } else {
-                                        handleUnblockClient(dialog.client);
+                                        handleUnblockClient(dialog.client, dialog.rule);
                                     }
                                 }}
                             />

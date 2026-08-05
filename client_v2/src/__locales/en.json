@@ -452,6 +452,8 @@
   "ignore_domains_desc_log": "Requests that match these rules are not displayed in Query log",
   "ignore_domains_desc_stats": "Requests that match these rules are not included in the statistics",
   "ignore_domains_title": "Ignored domains",
+  "ignore_non_client_log": "Ignore non client query log",
+  "ignore_non_client_log_desc": "Only store client query log (also follow client setting)",
   "inactivity_schedule": "Inactivity schedule",
   "inactivity_schedule_add": "Add schedule",
   "inactivity_schedule_all_day": "All day",

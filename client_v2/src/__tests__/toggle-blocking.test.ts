@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { toggleBlocking, BLOCK_ACTIONS, filteringState } from 'panel/stores/filtering';
+import { toggleBlocking, toggleBlockingForClient, BLOCK_ACTIONS, filteringState } from 'panel/stores/filtering';
 
 let lastSetRules = '';
 
@@ -78,5 +78,42 @@ describe('toggleBlocking', () => {
 
         expect(result).toBe(true);
         expect(filteringState.userRules).toContain('@@||blocked.example^$important');
+    });
+});
+
+describe('toggleBlockingForClient', () => {
+    beforeEach(async () => {
+        lastSetRules = '';
+        mocks.apiSetRules.mockClear();
+        mocks.addSuccessToast.mockClear();
+        mocks.addErrorToast.mockClear();
+        const { setRules } = await import('panel/stores/filtering');
+        await setRules('');
+    });
+
+    it('escapes backslashes in the client name', async () => {
+        const result = await toggleBlockingForClient(
+            BLOCK_ACTIONS.BLOCK,
+            'example.com',
+            'C:\\dir\\name',
+        );
+
+        expect(result).toBe(true);
+        expect(filteringState.userRules).toContain(
+            "||example.com^$client='C:\\\\dir\\\\name'",
+        );
+    });
+
+    it('escapes backslashes before quotes, commas, and pipes', async () => {
+        const result = await toggleBlockingForClient(
+            BLOCK_ACTIONS.BLOCK,
+            'example.com',
+            'q"a,b|c',
+        );
+
+        expect(result).toBe(true);
+        expect(filteringState.userRules).toContain(
+            "||example.com^$client='q\\\"a\\,b\\|c'",
+        );
     });
 });

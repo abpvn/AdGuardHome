@@ -170,6 +170,7 @@ export const Dashboard = () => {
                             <TopClients
                                 topClients={statsState.topClients}
                                 numDnsQueries={statsState.numDnsQueries}
+                                processingClientInfo={statsState.processingClientInfo}
                             />
 
                             <TopQueriedDomains

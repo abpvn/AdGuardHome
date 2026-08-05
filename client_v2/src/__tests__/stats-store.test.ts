@@ -69,4 +69,65 @@ describe('getStats', () => {
             { name: '9.9.9.9', count: 300 },
         ]);
     });
+
+    it('renders stats before the client search resolves', async () => {
+        let resolveSearch!: (value: unknown) => void;
+        const deferred = new Promise((resolve) => {
+            resolveSearch = resolve;
+        });
+        mocks.clientsSearch.mockReturnValueOnce(deferred as never);
+        mocks.stats.mockResolvedValue({
+            top_clients: [{ '1.2.3.4': 5 }],
+            avg_processing_time: 0.012,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+
+        const promise = getStats();
+        // Let stats resolve; the client search is still pending.
+        await Promise.resolve();
+
+        expect(statsState.processingClientInfo).toBe(true);
+        expect(statsState.topClients[0].info).toEqual({});
+        expect(mocks.clientsSearch).toHaveBeenCalledWith({
+            clients: [{ id: '1.2.3.4' }],
+        });
+
+        resolveSearch([{ '1.2.3.4': { name: 'My Phone' } }]);
+        await promise;
+
+        expect(statsState.processingClientInfo).toBe(false);
+        expect(statsState.topClients[0].info).toEqual({ name: 'My Phone' });
+    });
+
+    it('ignores a stale client-info response when a newer refresh started', async () => {
+        let resolveFirst!: (value: unknown) => void;
+        const firstDeferred = new Promise((resolve) => {
+            resolveFirst = resolve;
+        });
+        mocks.clientsSearch
+            .mockReturnValueOnce(firstDeferred as never)
+            .mockResolvedValue([]);
+        mocks.stats.mockResolvedValue({
+            top_clients: [{ '1.2.3.4': 5 }],
+            avg_processing_time: 0.012,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+
+        const first = getStats();
+        await Promise.resolve();
+        // Second refresh fully completes while the first search is still pending.
+        await getStats();
+
+        resolveFirst([{ '1.2.3.4': { name: 'Stale' } }]);
+        await first;
+
+        expect(statsState.processingClientInfo).toBe(false);
+        expect(statsState.topClients[0].info).not.toEqual({ name: 'Stale' });
+    });
 });

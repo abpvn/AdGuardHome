@@ -203,6 +203,30 @@
     white-space: nowrap;
 }
 
+.clientInfoSkeleton {
+    width: 120px;
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(
+        90deg,
+        var(--default-item-divider) 25%,
+        var(--hovered-page-background) 37%,
+        var(--default-item-divider) 63%
+    );
+    background-size: 400% 100%;
+    animation: client-info-shimmer 1.4s ease infinite;
+}
+
+@keyframes client-info-shimmer {
+    0% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0 50%;
+    }
+}
+
 .clientBlocked {
     display: none;
     color: var(--default-error-link);

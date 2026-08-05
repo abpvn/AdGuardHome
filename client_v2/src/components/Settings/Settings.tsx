@@ -262,6 +262,22 @@ export const Settings = () => {
                                 />
 
                                 <SettingRow
+                                    variant="switch"
+                                    id="querylog_ignore_non_client"
+                                    title={intl.getMessage('ignore_non_client_log')}
+                                    description={intl.getMessage('ignore_non_client_log_desc')}
+                                    checked={queryLogsState.ignore_non_client_log}
+                                    disabled={!queryLogsState.enabled}
+                                    onChange={(v) =>
+                                        setLogsConfig(
+                                            buildQueryLogConfig(queryLogsState, {
+                                                ignore_non_client_log: v,
+                                            }),
+                                        )
+                                    }
+                                />
+
+                                <SettingRow
                                     variant="link"
                                     id="querylog_retention"
                                     title={intl.getMessage('query_log_retention')}

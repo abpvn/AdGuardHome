@@ -29,6 +29,7 @@ type ClientInfo = {
 type Props = {
     topClients: ClientInfo[];
     numDnsQueries: number;
+    processingClientInfo?: boolean;
 };
 
 export const TopClients = (props: Props) => {
@@ -266,16 +267,26 @@ export const TopClients = (props: Props) => {
                                     </div>
 
                                     <div class={s.tableRowInfo}>
-                                        <Show when={client.info?.name}>
+                                        <Show
+                                            when={props.processingClientInfo}
+                                            fallback={
+                                                <Show when={client.info?.name}>
+                                                    <div
+                                                        class={cn(
+                                                            theme.text.t4,
+                                                            theme.text.condenced,
+                                                            s.clientName,
+                                                        )}
+                                                    >
+                                                        {client.info.name}
+                                                    </div>
+                                                </Show>
+                                            }
+                                        >
                                             <div
-                                                class={cn(
-                                                    theme.text.t4,
-                                                    theme.text.condenced,
-                                                    s.clientName,
-                                                )}
-                                            >
-                                                {client.info.name}
-                                            </div>
+                                                class={s.clientInfoSkeleton}
+                                                data-testid="client-info-skeleton"
+                                            />
                                         </Show>
                                         <Show when={isBlocked}>
                                             <div

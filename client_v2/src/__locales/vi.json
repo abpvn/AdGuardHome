@@ -222,6 +222,8 @@
   "gateway_or_subnet_invalid": "Mặt nạ mạng con không hợp lệ",
   "general_statistics": "Thống kê chung",
   "ignore_domains_title": "Các miền bị bỏ qua",
+  "ignore_non_client_log": "Bỏ qua nhật ký công khai",
+  "ignore_non_client_log_desc": "Chỉ lưu nhật ký của các thiết bị đã cấu hình (tuân theo cài đặt thiết bị)",
   "inactivity_schedule_add": "Thêm lịch trình",
   "inactivity_schedule_all_day": "Cả ngày",
   "inactivity_schedule_edit": "Chỉnh sửa lịch trình",

@@ -25,6 +25,7 @@ type StatsState = {
     processingSetConfig: boolean;
     processingStats: boolean;
     processingReset: boolean;
+    processingClientInfo: boolean;
     interval: number;
     customInterval: number | null;
     dnsQueries: number[];
@@ -57,6 +58,7 @@ const initialState: StatsState = {
     processingSetConfig: false,
     processingStats: true,
     processingReset: false,
+    processingClientInfo: false,
     interval: DAY,
     customInterval: null,
     dnsQueries: [],
@@ -83,15 +85,21 @@ const initialState: StatsState = {
 
 const [state, setState] = createStore<StatsState>(initialState);
 
+// Guards against stale client-info updates overwriting a newer stats refresh.
+let statsSequence = 0;
+
 export const getStats = async (period?: number) => {
     setState('processingStats', true);
+    const sequence = ++statsSequence;
     try {
         const data = await stats(period != null ? { recent: period } : undefined);
 
         const normalizedTopClientsList = normalizeTopStats(data.top_clients || []);
         const clientsParams = getParamsForClientsSearch(normalizedTopClientsList, 'name');
-        const clients = await clientsSearch(clientsParams);
-        const topClientsWithInfo = addClientInfo(normalizedTopClientsList, clients, 'name');
+        const clientsPromise = clientsSearch(clientsParams);
+
+        // Render stats right away; client info arrives asynchronously.
+        const topClientsWithEmptyInfo = addClientInfo(normalizedTopClientsList, [], 'name');
 
         setState({
             dnsQueries: data.dns_queries || [],
@@ -99,8 +107,8 @@ export const getStats = async (period?: number) => {
             replacedParental: data.replaced_parental || [],
             replacedSafebrowsing: data.replaced_safebrowsing || [],
             topBlockedDomains: normalizeTopStats(data.top_blocked_domains || []),
-            topClients: topClientsWithInfo,
-            normalizedTopClients: normalizeTopClients(topClientsWithInfo),
+            topClients: topClientsWithEmptyInfo,
+            normalizedTopClients: normalizeTopClients(topClientsWithEmptyInfo),
             topQueriedDomains: normalizeTopStats(data.top_queried_domains || []),
             numBlockedFiltering: data.num_blocked_filtering || 0,
             numDnsQueries: data.num_dns_queries || 0,
@@ -117,7 +125,27 @@ export const getStats = async (period?: number) => {
             ),
             topUpstreamsResponses: normalizeTopStats(data.top_upstreams_responses || []),
             processingStats: false,
+            processingClientInfo: true,
         });
+
+        try {
+            const clients = await clientsPromise;
+            if (sequence !== statsSequence) {
+                return;
+            }
+            const topClientsWithInfo = addClientInfo(normalizedTopClientsList, clients, 'name');
+            setState({
+                topClients: topClientsWithInfo,
+                normalizedTopClients: normalizeTopClients(topClientsWithInfo),
+                processingClientInfo: false,
+            });
+        } catch (error) {
+            if (sequence !== statsSequence) {
+                return;
+            }
+            addErrorToast({ error });
+            setState('processingClientInfo', false);
+        }
     } catch (error) {
         addErrorToast({ error });
         setState('processingStats', false);

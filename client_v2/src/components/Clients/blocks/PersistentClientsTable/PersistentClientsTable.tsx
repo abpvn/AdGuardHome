@@ -211,6 +211,9 @@ export const PersistentClientsTable = (props: Props) => {
                                     ? intl.getMessage('settings_global')
                                     : intl.getMessage('settings_custom')}
                             </span>
+                            <Show when={!value}>
+                                <Icon icon="user" color="gray" class={s.userIconRight} />
+                            </Show>
                         </div>
                     </div>
                 ),

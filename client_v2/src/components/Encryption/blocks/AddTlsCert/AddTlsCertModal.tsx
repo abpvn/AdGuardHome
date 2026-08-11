@@ -135,7 +135,11 @@ export const AddTlsCertModal = (props: Props) => {
         setErrors({});
     };
 
-    const processing = () => encryptionState.processingConfig || encryptionState.processingValidate;
+    // Only an actual TLS config write (processingConfig) gates the buttons.
+    // processingValidate reflects background validation of the whole store,
+    // not the state being edited in this modal, so coupling to it would make
+    // the buttons flash disabled/enabled whenever validation runs.
+    const processing = () => encryptionState.processingConfig;
     const hasErrors = () => Object.values(errors()).some(Boolean);
 
     const isCertStep = () => step() === 1;

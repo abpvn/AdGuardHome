@@ -167,4 +167,54 @@ describe('setTlsConfig', () => {
             expect.any(Number),
         );
     });
+
+    it('does not rewrite config fields (server_names) from a validate response', async () => {
+        mocks.tlsConfigure.mockImplementation(async (v: any) => ({
+            ...v,
+            server_names: ['dns.example.com'],
+            certificate_chain: '',
+            private_key: '',
+        }));
+        await setTlsConfig({
+            server_names: ['dns.example.com'],
+            certificate_chain: '',
+            private_key: '',
+            port_https: 443,
+            port_dns_over_tls: 853,
+            port_dns_over_quic: 0,
+        });
+
+        const serverNamesBefore = encryptionState.server_names;
+
+        // Mimic a real HTTP response: fresh object and fresh array refs per call.
+        mocks.tlsValidate.mockImplementation(async () => ({
+            server_names: ['dns.example.com'],
+            enabled: true,
+            valid_pair: true,
+            valid_cert: true,
+            valid_key: true,
+            valid_chain: true,
+            warning_validation: '',
+            subject: '',
+            issuer: '',
+            key_type: 'RSA',
+            not_after: '',
+            not_before: '',
+            dns_names: ['dns.example.com'],
+            certificate_chain: '',
+            private_key: '',
+        }));
+
+        await validateTlsConfig({ enabled: true, server_names: ['dns.example.com'] });
+
+        // If the validate response replaced the server_names array reference,
+        // the page's validation effect (which reads server_names) would re-fire
+        // on every response, causing an endless loop of /control/tls/validate
+        // calls.  Only validation-status fields may be written back.
+        expect(encryptionState.server_names).toBe(serverNamesBefore);
+        // Validation status still updates.
+        expect(encryptionState.valid_pair).toBe(true);
+        expect(encryptionState.valid_cert).toBe(true);
+        expect(encryptionState.warning_validation).toBe('');
+    });
 });

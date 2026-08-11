@@ -90,6 +90,26 @@ const encodeRequest = (values: TlsConfig): TlsConfig => {
     return encoded;
 };
 
+// The validation-status subset written back into the store by
+// validateTlsConfig.  Config fields (server_names, ports, certificate_chain,
+// private_key, enabled, ...) are intentionally excluded: spreading the whole
+// validate response replaces array references (e.g. server_names) on every
+// call, which re-triggers the page's validation effect and causes an endless
+// loop of /control/tls/validate requests.
+const VALIDATION_STATUS_FIELDS = [
+    'valid_chain',
+    'valid_cert',
+    'valid_key',
+    'valid_pair',
+    'subject',
+    'issuer',
+    'key_type',
+    'not_after',
+    'not_before',
+    'dns_names',
+    'warning_validation',
+] as const;
+
 export const getTlsStatus = async () => {
     setState('processing', true);
     try {
@@ -159,7 +179,11 @@ export const validateTlsConfig = async (values: TlsConfigBody) => {
         encoded.port_dns_over_quic = encoded.port_dns_over_quic || 0;
         const data = await tlsValidate(encoded);
         const decoded = decodeResponse(data);
-        setState({ ...decoded, processingValidate: false });
+        const status: Record<string, unknown> = {};
+        VALIDATION_STATUS_FIELDS.forEach((field) => {
+            status[field] = decoded[field as keyof TlsConfig];
+        });
+        setState({ ...status, processingValidate: false });
     } catch (error) {
         addErrorToast({ error });
         setState('processingValidate', false);

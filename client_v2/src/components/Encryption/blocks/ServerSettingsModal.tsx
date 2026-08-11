@@ -144,7 +144,11 @@ export const ServerSettingsModal = (props: Props) => {
         props.onClose();
     };
 
-    const processing = () => encryptionState.processingConfig || encryptionState.processingValidate;
+    // Only an actual TLS config write (processingConfig) gates the save
+    // button.  processingValidate reflects background validation of the whole
+    // store (not this modal's local edits), so coupling to it would make the
+    // button flash disabled/enabled whenever validation runs.
+    const processing = () => encryptionState.processingConfig;
 
     return (
         <ConfigDialog

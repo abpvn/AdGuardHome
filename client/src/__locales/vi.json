@@ -750,6 +750,7 @@
   "upstream_dns": "Máy chủ DNS tìm kiếm",
   "upstream_dns_cache_configuration": "Cấu hình bộ nhớ đệm upstream của các máy chủ DNS",
   "upstream_dns_client_desc": "Nếu để trống trường này, AdGuard Home sẽ sử dụng những máy chủ được cấu hình ở <0>Cấu hình DNS</0>.",
+  "custom_rules_client_desc": "Nếu để trống trường này, AdGuardHome sẽ sử dụng bộ lọc tuỳ chỉnh được cấu hình ở <0>Bộ lọc tuỳ chỉnh</0>.",
   "upstream_dns_configured_in_file": "Cấu hình tại {{path}}",
   "upstream_dns_help": "Nhập địa chỉ máy chủ một trên mỗi dòng. <a>Tìm hiểu thêm</a> về cách định cấu hình máy chủ DNS ngược dòng.",
   "upstream_parallel": "Sử dụng truy vấn song song để tăng tốc độ giải quyết bằng cách truy vấn đồng thời tất cả các máy chủ ngược tuyến",

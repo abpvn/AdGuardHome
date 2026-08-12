@@ -94,12 +94,8 @@ const App = () => {
         const colorSchemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
         setUITheme(theme);
 
-        const handleChange = (e: MediaQueryListEvent) => {
-            if (e.matches) {
-                setUITheme(THEMES.dark);
-            } else {
-                setUITheme(THEMES.light);
-            }
+        const handleChange = () => {
+            setUITheme(THEMES.auto);
         };
 
         colorSchemeMedia.addEventListener('change', handleChange);

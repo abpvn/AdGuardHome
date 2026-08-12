@@ -156,7 +156,7 @@ export const getDnsStatus = async () => {
             });
             getVersion();
             getTlsStatus();
-            getProfile();
+            getProfileData();
         } else {
             setState('isCoreRunning', runningStatus);
         }

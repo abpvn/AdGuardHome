@@ -812,19 +812,32 @@ export const getTheme = () =>
     LocalStorageHelper.getItem<string>(LOCAL_STORAGE_KEYS.THEME) || THEMES.light;
 
 /**
+ * Resolves the "auto" theme to the current OS preference.
+ *
+ * @param theme
+ * @returns theme with "auto" replaced by "dark" or "light"
+ */
+export const resolveTheme = (theme: string): string => {
+    if (theme !== THEMES.auto) {
+        return theme;
+    }
+
+    const prefersDark =
+        window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    return prefersDark ? THEMES.dark : THEMES.light;
+};
+
+/**
  * Sets UI theme.
  *
  * @param theme
  */
 export const setUITheme = (theme?: string): void => {
-    let currentTheme = theme || getTheme();
+    const storedTheme = theme || getTheme();
+    const currentTheme = resolveTheme(storedTheme);
 
-    if (currentTheme === THEMES.auto) {
-        const prefersDark =
-            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        currentTheme = prefersDark ? THEMES.dark : THEMES.light;
-    }
-    setTheme(currentTheme);
+    setTheme(storedTheme);
     document.documentElement.dataset.theme = currentTheme;
     document.documentElement.style.colorScheme = currentTheme;
 };

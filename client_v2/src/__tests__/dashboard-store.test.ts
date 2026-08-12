@@ -23,10 +23,24 @@ vi.mock('panel/stores/toasts', () => ({
     addNoticeToast: mocks.addNoticeToast,
 }));
 
-import { getDnsStatus } from 'panel/stores/dashboard';
+import { getDnsStatus, dashboardState } from 'panel/stores/dashboard';
 
 describe('getDnsStatus', () => {
     beforeEach(() => vi.clearAllMocks());
+
+    const mockStatus = {
+        running: true,
+        version: 'v',
+        dns_port: 53,
+        dns_addresses: [] as string[],
+        protection_enabled: true,
+        http_port: 80,
+    };
+
+    const fetchStatus = () =>
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify(mockStatus), { status: 200 }),
+        );
 
     it('fetches TLS status when the core is running', async () => {
         mocks.getVersionJson.mockResolvedValue({
@@ -35,24 +49,26 @@ describe('getDnsStatus', () => {
         });
         mocks.getProfile.mockResolvedValue({ name: 'n', theme: 't' });
         mocks.tlsStatus.mockResolvedValue({ enabled: false });
-
-        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-            new Response(
-                JSON.stringify({
-                    running: true,
-                    version: 'v',
-                    dns_port: 53,
-                    dns_addresses: [],
-                    protection_enabled: true,
-                    http_port: 80,
-                }),
-                { status: 200 },
-            ),
-        );
+        fetchStatus();
 
         await getDnsStatus();
         // allow microtasks for chained getVersion/getTlsStatus/getProfile
         await new Promise((r) => setTimeout(r, 0));
         expect(mocks.tlsStatus).toHaveBeenCalled();
+    });
+
+    it('loads the profile theme and name into the store', async () => {
+        mocks.getVersionJson.mockResolvedValue({ disabled: true, new_version: 'x' });
+        mocks.getProfile.mockResolvedValue({ name: 'profile-name', theme: 'auto' });
+        mocks.tlsStatus.mockResolvedValue({ enabled: false });
+        fetchStatus();
+
+        await getDnsStatus();
+        // allow microtasks for chained getVersion/getTlsStatus/getProfile
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(mocks.getProfile).toHaveBeenCalled();
+        expect(dashboardState.theme).toBe('auto');
+        expect(dashboardState.name).toBe('profile-name');
     });
 });

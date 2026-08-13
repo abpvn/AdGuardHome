@@ -39,6 +39,7 @@ type DashboardState = {
     dnsPort: number;
     dnsAddresses: string[];
     dnsVersion: string;
+    dnsStartTime: number | undefined;
     clients: Client[];
     autoClients: AutoClient[];
     supportedTags: string[];
@@ -67,6 +68,7 @@ const initialState: DashboardState = {
     dnsPort: STANDARD_DNS_PORT,
     dnsAddresses: [],
     dnsVersion: '',
+    dnsStartTime: undefined,
     clients: [],
     autoClients: [],
     supportedTags: [],
@@ -91,7 +93,7 @@ const rmTimeout = (t: ReturnType<typeof setTimeout> | null): null => {
 };
 
 const checkStatus = async (
-    handleRequestSuccess: (response: { status: number; data: ServerStatus }) => void,
+    handleRequestSuccess: (response: { status: number; data: ServerStatus }) => boolean | void,
     handleRequestError: () => void,
     attempts = 60,
 ): Promise<void> => {
@@ -105,8 +107,8 @@ const checkStatus = async (
             skipAuthRedirect: true,
         });
         statusTimeout = rmTimeout(statusTimeout);
-        handleRequestSuccess({ status: 200, data });
-        if (data.running === false) {
+        const shouldContinue = handleRequestSuccess({ status: 200, data });
+        if (shouldContinue === true || data.running === false) {
             statusTimeout = setTimeout(
                 checkStatus,
                 CHECK_TIMEOUT,
@@ -147,6 +149,7 @@ export const getDnsStatus = async () => {
                 isCoreRunning: true,
                 processing: false,
                 dnsVersion: dnsStatus.version,
+                dnsStartTime: dnsStatus.start_time,
                 dnsPort: dnsStatus.dns_port,
                 dnsAddresses: dnsStatus.dns_addresses || [],
                 protectionEnabled: dnsStatus.protection_enabled,
@@ -231,18 +234,25 @@ export const getVersion = async (recheck = false) => {
 };
 
 export const getUpdate = async () => {
+    const prevVersion = untrack(() => state.dnsVersion);
+    const prevStartTime = untrack(() => state.dnsStartTime);
     setState('processingUpdate', true);
+
     const handleRequestError = () => {
         addNoticeToast(getUpdateFailedMessage());
         setState('processingUpdate', false);
     };
-    const handleRequestSuccess = (response: { status: number; data: ServerStatus }) => {
-        const responseVersion = response.data?.version;
-        if (untrack(() => state.dnsVersion) !== responseVersion) {
-            setState('processingUpdate', false);
-            window.location.reload();
+
+    const handleRequestSuccess = (response: { status: number; data: ServerStatus }): boolean => {
+        const { version, start_time } = response.data ?? {};
+        if (version === prevVersion && start_time === prevStartTime) {
+            return true;
         }
+        setState('processingUpdate', false);
+        window.location.reload();
+        return false;
     };
+
     try {
         await beginUpdate();
         checkStatus(handleRequestSuccess, handleRequestError);

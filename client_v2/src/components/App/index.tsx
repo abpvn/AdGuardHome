@@ -6,6 +6,7 @@ import { Icons } from 'panel/common/ui/Icons';
 import { Footer } from 'panel/common/ui/Footer';
 import { Header } from 'panel/common/ui/Header';
 import { Banners } from 'panel/common/ui/Banners';
+import { UpdateOverlay } from 'panel/common/ui/UpdateOverlay';
 import { Settings } from 'panel/components/Settings';
 import intl, { LocalesType } from 'panel/common/intl';
 import { Encryption } from 'panel/components/Encryption';
@@ -125,6 +126,10 @@ const App = () => {
                     <Toasts />
 
                     <Icons />
+
+                    <Show when={dashboardState.processingUpdate}>
+                        <UpdateOverlay />
+                    </Show>
                 </>
             )}
         >

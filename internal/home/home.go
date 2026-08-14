@@ -907,7 +907,11 @@ func runDNSServer(
 	err := initDNS(ctx, slogLogger, tlsMgr, confModifier, httpReg, statsDir, querylogDir, hc, mux)
 	fatalOnError(ctx, slogLogger, err)
 
-	tlsMgr.start(ctx)
+	err = tlsMgr.Start(ctx)
+	if err != nil {
+		// Should never happen.
+		fatalOnError(ctx, slogLogger, err)
+	}
 
 	go func() {
 		startErr := startDNSServer()
@@ -961,7 +965,7 @@ func initTLS(
 		confModifier:  confModifier,
 		manager:       aghtlsMgr,
 		httpReg:       httpReg,
-		tlsSettings:   config.TLS,
+		extTLSConf:    confFromTLSSettings(&config.TLS),
 		servePlainDNS: config.DNS.ServePlainDNS,
 	})
 	if err != nil {
@@ -1328,28 +1332,31 @@ func printWebAddrs(ctx context.Context, l *slog.Logger, proto, addr string, port
 }
 
 // printHTTPAddresses prints the IP addresses which user can use to access the
-// admin interface.  proto is either [urlutil.SchemeHTTPS] or
-// [urlutil.SchemeHTTP].  l must not be nil.  If proto is [urlutil.SchemeHTTPS],
-// then tlsMgr must not be nil.
-//
-// TODO(s.chzhen):  Implement separate functions for HTTP and HTTPS.
-func printHTTPAddresses(ctx context.Context, l *slog.Logger, proto string, tlsMgr *tlsManager) {
-	var extTLSConf *tlsConfigSettings
-	if tlsMgr != nil {
-		extTLSConf = tlsMgr.extendedTLSConfig()
-	}
-
+// admin interface over HTTP.  l must not be nil.
+func printHTTPAddresses(ctx context.Context, l *slog.Logger) {
 	port := config.HTTPConfig.Address.Port()
-	if proto == urlutil.SchemeHTTPS {
-		port = extTLSConf.PortHTTPS
-	}
 
-	if proto == urlutil.SchemeHTTPS && len(extTLSConf.ServerNames) != 0 {
-		printWebAddrs(ctx, l, proto, extTLSConf.ServerNames[0], extTLSConf.PortHTTPS)
+	printWebInterfaces(ctx, l, urlutil.SchemeHTTP, port)
+}
+
+// printHTTPSAddresses prints the IP addresses which user can use to access the
+// admin interface over HTTPS.  l and extTLSConf must not be nil.
+func printHTTPSAddresses(ctx context.Context, l *slog.Logger, extTLSConf *aghtls.ExtendedTLSConfig) {
+	port := extTLSConf.PortHTTPS
+
+	if len(extTLSConf.ServerNames) != 0 {
+		printWebAddrs(ctx, l, urlutil.SchemeHTTPS, extTLSConf.ServerNames[0], extTLSConf.PortHTTPS)
 
 		return
 	}
 
+	printWebInterfaces(ctx, l, urlutil.SchemeHTTPS, port)
+}
+
+// printWebInterfaces prints the web interface addresses for the given proto and
+// port.  proto must be either [urlutil.SchemeHTTPS] or [urlutil.SchemeHTTP].
+// l must not be nil.
+func printWebInterfaces(ctx context.Context, l *slog.Logger, proto string, port uint16) {
 	bindHost := config.HTTPConfig.Address.Addr()
 	if !bindHost.IsUnspecified() {
 		printWebAddrs(ctx, l, proto, bindHost.String(), port)
@@ -1429,7 +1436,6 @@ func cmdlineUpdate(
 			TLSConfigProvider: tlsMgr,
 		},
 		nil,
-		tlsMgr,
 		agh.EmptyConfigModifier{},
 	)
 	fatalOnError(ctx, l, err)

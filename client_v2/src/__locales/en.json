@@ -548,6 +548,7 @@
   "port_in_use": "This port is already in use",
   "privacy_policy": "Privacy policy",
   "processing_time_ms": "%value% ms",
+  "processing_update": "Please wait, AdGuard Home is being updated",
   "protection": "Protection",
   "protocol": "Protocol",
   "protocols": "Protocols",

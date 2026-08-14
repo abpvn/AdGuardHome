@@ -821,6 +821,21 @@ func (web *webAPI) handleTLSConfigure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	web.respondAndRestartTLS(ctx, w, r, req, status, newTLSConf, restartHTTPS)
+}
+
+// respondAndRestartTLS sends the TLS config response, flushes the response
+// writer, and restarts the HTTPS server if needed.  status and tlsConf must
+// not be nil.
+func (web *webAPI) respondAndRestartTLS(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	req tlsConfigSettingsExt,
+	status *aghtls.TLSConfigStatus,
+	tlsConf *aghtls.ExtendedTLSConfig,
+	restartHTTPS bool,
+) {
 	resp := &tlsConfig{
 		tlsConfigSettingsExt: req,
 		tlsConfigStatus:      tlsConfigStatusFromConf(status),
@@ -834,7 +849,7 @@ func (web *webAPI) handleTLSConfigure(w http.ResponseWriter, r *http.Request) {
 		// request.  It is also should be done in a separate goroutine due to the
 		// same reason.
 		if restartHTTPS {
-			go web.tlsConfigChanged(context.Background(), newTLSConf)
+			go web.tlsConfigChanged(context.Background(), tlsConf)
 		}
 	}()
 }

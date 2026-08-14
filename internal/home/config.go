@@ -8,7 +8,6 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
-	"slices"
 	"sync"
 	"time"
 
@@ -29,7 +28,6 @@ import (
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/netutil"
 	"github.com/AdguardTeam/golibs/timeutil"
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/renameio/v2/maybe"
 	yaml "go.yaml.in/yaml/v4"
 )
@@ -307,8 +305,8 @@ type pendingRequests struct {
 }
 
 // tlsConfigSettings is the TLS configuration for DNS-over-TLS, DNS-over-QUIC,
-// and HTTPS.  When adding new properties, update the [tlsConfigSettings.clone]
-// and [tlsConfigSettings.setPrivateFieldsAndCompare] methods as necessary.
+// and HTTPS.  When adding new properties, update the conversion functions
+// [confFromTLSSettings] and [confToTLSSettings] as necessary.
 type tlsConfigSettings struct {
 	// Status is the current status of the configuration.
 	Status tlsConfigStatus `yaml:"-" json:"-"`
@@ -375,51 +373,6 @@ type tlsConfigSettings struct {
 
 	// ServePlainDNS defines whether to serve a plain DNS.
 	ServePlainDNS bool `yaml:"-" json:"-"`
-}
-
-// clone returns a deep copy of c.
-func (c *tlsConfigSettings) clone() (clone *tlsConfigSettings) {
-	clone = &tlsConfigSettings{}
-	*clone = *c
-
-	clone.OverrideTLSCiphers = slices.Clone(c.OverrideTLSCiphers)
-	clone.CertificateChainData = slices.Clone(c.CertificateChainData)
-	clone.PrivateKeyData = slices.Clone(c.PrivateKeyData)
-
-	clone.Status.DNSNames = slices.Clone(c.Status.DNSNames)
-
-	return clone
-}
-
-// setPrivateFieldsAndCompare sets any missing properties in conf to match those
-// in c and returns true if TLS configurations are equal.  conf must not be nil.
-// It sets the following properties because these are not accepted from the
-// frontend:
-//
-//	[tlsConfigSettings.DNSCryptConfigFile]
-//	[tlsConfigSettings.OverrideTLSCiphers]
-//	[tlsConfigSettings.PortDNSCrypt]
-//
-// The following properties are skipped as they are set by
-// [tlsManager.loadTLSConfig]:
-//
-//	[tlsConfigSettings.CertificateChainData]
-//	[tlsConfigSettings.PrivateKeyData]
-func (c *tlsConfigSettings) setPrivateFieldsAndCompare(conf *tlsConfigSettings) (equal bool) {
-	conf.OverrideTLSCiphers = slices.Clone(c.OverrideTLSCiphers)
-
-	conf.DNSCryptConfigFile = c.DNSCryptConfigFile
-	conf.PortDNSCrypt = c.PortDNSCrypt
-
-	// Zero out the Status field during comparison since it represents
-	// computed validation status, not actual configuration.
-	cCopy := *c
-	cCopy.Status = tlsConfigStatus{}
-
-	confCopy := *conf
-	confCopy.Status = tlsConfigStatus{}
-
-	return cmp.Equal(&cCopy, &confCopy)
 }
 
 type queryLogConfig struct {
@@ -913,7 +866,7 @@ func readConfigFile(
 func (c *configuration) write(
 	ctx context.Context,
 	l *slog.Logger,
-	tlsMgr *tlsManager,
+	extTLSConf *aghtls.ExtendedTLSConfig,
 	auth *auth,
 	workDir string,
 	confPath string,
@@ -925,9 +878,8 @@ func (c *configuration) write(
 		config.Users = auth.usersList(ctx)
 	}
 
-	if tlsMgr != nil {
-		extTLSConf := tlsMgr.extendedTLSConfig()
-		config.TLS = *extTLSConf
+	if extTLSConf != nil {
+		config.TLS = confToTLSSettings(extTLSConf)
 	}
 
 	if globalContext.stats != nil {
@@ -1051,7 +1003,12 @@ var _ agh.ConfigModifier = (*defaultConfigModifier)(nil)
 // Apply implements the [agh.ConfigModifier] interface for
 // *defaultConfigModifier.
 func (cm *defaultConfigModifier) Apply(ctx context.Context) {
-	err := cm.config.write(ctx, cm.logger, cm.tlsMgr, cm.auth, cm.workDir, cm.confPath)
+	var extTLSConf *aghtls.ExtendedTLSConfig
+	if cm.tlsMgr != nil {
+		extTLSConf = cm.tlsMgr.ExtendedTLSConfig()
+	}
+
+	err := cm.config.write(ctx, cm.logger, extTLSConf, cm.auth, cm.workDir, cm.confPath)
 	if err != nil {
 		cm.logger.ErrorContext(ctx, "writing config", slogutil.KeyError, err)
 	}

@@ -19,7 +19,7 @@ env:
   BUILD_CHANNEL: 'release'
 
 concurrency:
-  group: build_and_release
+  group: build_and_release_legacy_client
   cancel-in-progress: true
 
 jobs:

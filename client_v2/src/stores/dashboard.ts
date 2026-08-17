@@ -238,9 +238,17 @@ export const getUpdate = async () => {
     const prevStartTime = untrack(() => state.dnsStartTime);
     setState('processingUpdate', true);
 
-    const handleRequestError = () => {
+    const handleRequestError = (updateInitiated = false) => {
         addNoticeToast(getUpdateFailedMessage());
         setState('processingUpdate', false);
+
+        // If the update was initiated, the server is restarting.  Schedule a
+        // delayed reload so the browser picks up the new version once the
+        // server comes back up.  Without this, the overlay vanishes but the
+        // page never refreshes, leaving the user on a stale SPA.
+        if (updateInitiated) {
+            setTimeout(() => window.location.reload(), 3000);
+        }
     };
 
     const handleRequestSuccess = (response: { status: number; data: ServerStatus }): boolean => {
@@ -255,9 +263,9 @@ export const getUpdate = async () => {
 
     try {
         await beginUpdate();
-        checkStatus(handleRequestSuccess, handleRequestError);
+        checkStatus(handleRequestSuccess, () => handleRequestError(true));
     } catch {
-        handleRequestError();
+        handleRequestError(false);
     }
 };
 

@@ -871,8 +871,6 @@ func run(
 
 	sigHdlr.addWeb(web)
 
-	tlsMgr.setWebAPI(web)
-
 	statsDir, querylogDir, err := checkStatsAndQuerylogDirs(config, workDir)
 	fatalOnError(ctx, baseLogger, err)
 

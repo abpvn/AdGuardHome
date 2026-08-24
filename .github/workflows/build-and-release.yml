@@ -5,7 +5,7 @@ on:
     tags:
       - 'v*'
     branches:
-      - master
+      - legacy-client
 
 env:
   GO_VERSION: '1.26.6'
@@ -31,7 +31,7 @@ jobs:
     env:
       GO111MODULE': 'on'
       GOPROXY: 'https://goproxy.cn'
-      VERSION: ${{ github.ref_name == 'master' && 'v0.0.0-d.0' || github.ref_name }}
+      VERSION: ${{ github.ref_name == 'legacy_client' && 'v0.0.0-d.0' || github.ref_name }}
       NPM_CACHE_DIR: ''
       PREV_VERSION: 'master'
       CHANGE_LOGS: '* ${{ github.event.head_commit.message }}'

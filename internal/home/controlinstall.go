@@ -1,5 +1,7 @@
 package home
 
+//lint:file-ignore SA4023 the static ip helpers always fail on some OSes in the lint matrix
+
 import (
 	"context"
 	"encoding/json"

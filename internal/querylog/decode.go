@@ -277,8 +277,6 @@ func (l *queryLog) decodeResultRules(ctx context.Context, dec *json.Decoder, ent
 
 		err = l.decodeResultRuleToken(ctx, dec, ent)
 		switch {
-		case err == nil:
-			continue
 		case
 			err == io.EOF,
 			errors.Is(err, ErrEndOfToken):

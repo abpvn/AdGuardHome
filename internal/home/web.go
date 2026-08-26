@@ -832,7 +832,7 @@ func (web *webAPI) handleTLSConfigure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	web.respondAndRestartTLS(ctx, w, r, req, status, newTLSConf, restartHTTPS)
+	web.respondAndRestartTLS(ctx, w, r, req, status, restartHTTPS)
 }
 
 // respondAndRestartTLS sends the TLS config response, flushes the response
@@ -844,7 +844,6 @@ func (web *webAPI) respondAndRestartTLS(
 	r *http.Request,
 	req tlsConfigSettingsExt,
 	status *aghtls.TLSConfigStatus,
-	tlsConf *aghtls.ExtendedTLSConfig,
 	restartHTTPS bool,
 ) {
 	resp := &tlsConfig{

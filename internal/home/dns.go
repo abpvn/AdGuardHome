@@ -281,8 +281,7 @@ func newServerConfig(
 	fwdConf.GeoIPDatabasePath = config.GeoIP.DatabasePath
 	fwdConf.GeoIPUpdatePeriod = config.GeoIP.UpdatePeriod
 
-	extTLSConf := tlsConfProvider.ExtendedTLSConfig()
-	intTLSConf, err := newDNSTLSConfig(extTLSConf, hosts)
+	intTLSConf, err := newDNSTLSConfig(tlsConfProvider, hosts)
 	if err != nil {
 		return nil, fmt.Errorf("constructing tls config: %w", err)
 	}
@@ -331,12 +330,13 @@ func newServerConfig(
 }
 
 // newDNSTLSConfig converts values from the configuration file into the internal
-// TLS settings for the DNS server.  extTLSConf must not be nil.
+// TLS settings for the DNS server.  tlsConfProvider must not be nil.
 func newDNSTLSConfig(
-	extTLSConf *aghtls.ExtendedTLSConfig,
+	tlsConfProvider aghtls.TLSConfigProvider,
 	addrs []netip.Addr,
 ) (dnsConf *dnsforward.TLSConfig, err error) {
-	if !extTLSConf.Enabled {
+	extTLSConf := tlsConfProvider.ExtendedTLSConfig()
+	if extTLSConf == nil || !extTLSConf.Enabled {
 		return &dnsforward.TLSConfig{}, nil
 	}
 
@@ -352,6 +352,10 @@ func newDNSTLSConfig(
 		DNSCryptConf:   dnsCryptConf,
 		ServerNames:    extTLSConf.ServerNames,
 		StrictSNICheck: extTLSConf.StrictSNICheck,
+	}
+
+	if tlsConfProvider.TLSConfig() == nil {
+		return dnsConf, nil
 	}
 
 	if extTLSConf.PortHTTPS != 0 {

@@ -1,5 +1,7 @@
 //go:build darwin || freebsd || linux || openbsd
 
+//lint:file-ignore SA4023 the static ip helpers always fail on some OSes in the lint matrix
+
 package dhcpd
 
 import (

@@ -86,7 +86,7 @@ export const clearClientForm = () => {
     setState(getInitialClientFormState());
 };
 
-export const setFormErrors = (errors: Record<string, string | string[]>) => {
+export const setFormErrors = (errors: Record<string, string | (string | undefined)[]>) => {
     setState('formErrors', errors);
 };
 
@@ -158,7 +158,7 @@ export const buildClientConfig = (form: ClientFormState) => ({
         ? form.upstreams.split('\n').filter((line: string) => line.trim() !== '')
         : [],
     upstreams_cache_enabled: form.upstreams_cache_enabled,
-    upstreams_cache_size: form.upstreams_cache_size,
+    upstreams_cache_size: form.upstreams_cache_size === '' ? 0 : Number(form.upstreams_cache_size),
 });
 
 /**
@@ -176,7 +176,7 @@ export const computeExistingClientNames = (): string[] =>
         .map((c: Client) => c.name);
 
 export const saveClient = async (): Promise<boolean> => {
-    const errors: Record<string, string | string[]> = {};
+    const errors: Record<string, string | (string | undefined)[]> = {};
 
     if (!state.name.trim()) {
         errors.name = intl.getMessage('form_error_required');
@@ -197,9 +197,8 @@ export const saveClient = async (): Promise<boolean> => {
         }
         return validateIdentifier(id, state.ids, index, existingClientIds);
     });
-    const filteredErrors = idErrors.filter((e): e is string => e !== undefined);
-    if (filteredErrors.length > 0) {
-        errors.ids = filteredErrors;
+    if (idErrors.some((e) => e !== undefined)) {
+        errors.ids = idErrors;
     }
 
     // Validate cache size when per-client cache is enabled (and not using global settings).

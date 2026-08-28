@@ -1,20 +1,23 @@
 import { Show, For, createSignal, createMemo, onCleanup } from 'solid-js';
 import { useIsDesktop } from 'panel/helpers/useMediaQuery';
-import { MOBILE_TABLE_MAX_ROWS } from 'panel/helpers/constants';
 
 import intl from 'panel/common/intl';
 import { Icon } from 'panel/common/ui/Icon';
 import { Tooltip } from 'panel/common/ui/Tooltip';
+import { QueriesTooltip } from 'panel/common/ui/QueriesTooltip';
 import { Dropdown } from 'panel/common/ui/Dropdown';
 import { ConfirmDialog } from 'panel/common/ui/ConfirmDialog';
-import { formatNumber, formatCompactNumber } from 'panel/helpers/helpers';
+import { Link } from 'panel/common/ui/Link';
+import { RoutePath } from 'panel/components/Routes/Paths';
+import { formatCompactNumber } from 'panel/helpers/helpers';
 import { addErrorToast } from 'panel/stores/toasts';
 import { accessState, toggleClientBlock } from 'panel/stores/access';
 import theme from 'panel/lib/theme';
 import cn from 'clsx';
-import { useSortedData } from '../../hooks/useSortedData';
-import { SortableTableHeader } from '../SortableTableHeader';
+import { useSortedData, TOP_CLIENTS_VISIBLE_ITEMS } from '../../hooks/useSortedData';
+import { TableHeader } from '../TableHeader';
 import { EmptyState } from '../EmptyState';
+import { ClientTooltip } from '../ClientTooltip';
 
 import s from './TopClients.module.pcss';
 
@@ -52,14 +55,9 @@ export const TopClients = (props: Props) => {
     const [openMenuClient, setOpenMenuClient] = createSignal<string | null>(null);
 
     const isDesktop = useIsDesktop();
-    const {
-        sortedData: sortedClients,
-        sortField,
-        sortDirection,
-        handleSort,
-    } = useSortedData(() => props.topClients);
-    const visibleClients = createMemo(() =>
-        isDesktop() ? sortedClients() : sortedClients().slice(0, MOBILE_TABLE_MAX_ROWS),
+    const { sortedData: sortedClients } = useSortedData(
+        () => props.topClients,
+        TOP_CLIENTS_VISIBLE_ITEMS,
     );
 
     const isClientBlocked = (client: ClientInfo) =>
@@ -148,18 +146,15 @@ export const TopClients = (props: Props) => {
             </div>
 
             <Show when={hasStats()}>
-                <SortableTableHeader
+                <TableHeader
                     nameLabel={intl.getMessage('table_client')}
                     countLabel={intl.getMessage('queries')}
-                    sortField={sortField()}
-                    sortDirection={sortDirection()}
-                    onSort={handleSort}
                 />
             </Show>
 
             <div class={s.tableRows}>
                 <Show when={hasStats()} fallback={<EmptyState />}>
-                    <For each={visibleClients()}>
+                    <For each={sortedClients()}>
                         {(client) => {
                             const percent = createMemo(() =>
                                 props.numDnsQueries > 0
@@ -169,49 +164,71 @@ export const TopClients = (props: Props) => {
                             const isBlocked = isClientBlocked(client);
 
                             return (
-                                <div class={s.clientRow}>
+                                <div class={s.clientRow} data-testid="top-client-row">
                                     <div class={s.clientInfo}>
-                                        <div
+                                        <Link
+                                            to={RoutePath.QueryLog}
+                                            query={{ search: `"${client.name}"` }}
                                             class={cn(
                                                 theme.text.t3,
                                                 theme.text.condenced,
                                                 s.clientIp,
+                                                s.clientIpLink,
                                             )}
                                         >
-                                            <Show
-                                                when={client.info}
-                                                fallback={<div class={s.tableRowDot} />}
+                                            <Tooltip
+                                                position="bottomLeft"
+                                                content={
+                                                    <ClientTooltip
+                                                        address={client.name}
+                                                        whoisInfo={client.info?.whois_info}
+                                                        blocked={isBlocked}
+                                                    />
+                                                }
+                                                class={theme.common.noShrink}
                                             >
-                                                <Icon icon="location" class={s.tableRowIcon} />
-                                            </Show>
+                                                <Show
+                                                    when={isBlocked}
+                                                    fallback={
+                                                        <Icon icon="wifi" class={s.tableRowIcon} />
+                                                    }
+                                                >
+                                                    <Icon
+                                                        icon="wifi_protect"
+                                                        class={cn(
+                                                            s.tableRowIcon,
+                                                            s.tableRowIconDanger,
+                                                        )}
+                                                    />
+                                                </Show>
+                                            </Tooltip>
 
                                             {client.name}
-                                        </div>
+                                        </Link>
                                     </div>
 
                                     <div class={s.tableRowRight}>
                                         <Show when={isDesktop()}>
                                             <div class={s.dropdowWrapper}>
-                                                <Tooltip
-                                                    position="top"
-                                                    overlayClass={s.queryTooltipOverlay}
-                                                    content={
-                                                        <div class={s.queryTooltip}>
-                                                            {intl.getMessage('queries_tooltip', {
-                                                                value: formatNumber(client.count),
-                                                            })}
-                                                        </div>
-                                                    }
-                                                >
+                                                <QueriesTooltip count={client.count}>
                                                     <div
                                                         class={cn(
                                                             theme.text.t3,
                                                             theme.text.condenced,
                                                             s.queryCount,
-                                                            s.queryCountHover,
                                                         )}
                                                     >
-                                                        {formatCompactNumber(client.count)}
+                                                        <Link
+                                                            to={RoutePath.QueryLog}
+                                                            query={{ search: `"${client.name}"` }}
+                                                            class={cn(
+                                                                theme.text.t3,
+                                                                theme.text.condenced,
+                                                                s.queryCountLink,
+                                                            )}
+                                                        >
+                                                            {formatCompactNumber(client.count)}
+                                                        </Link>
 
                                                         <div
                                                             class={cn(
@@ -223,7 +240,7 @@ export const TopClients = (props: Props) => {
                                                             ({percent().toFixed(1)}%)
                                                         </div>
                                                     </div>
-                                                </Tooltip>
+                                                </QueriesTooltip>
                                             </div>
                                         </Show>
 
@@ -252,35 +269,23 @@ export const TopClients = (props: Props) => {
                                                 </button>
                                             </Dropdown>
                                         </div>
-
-                                        <Show when={isBlocked}>
-                                            <div
-                                                class={cn(
-                                                    theme.text.t4,
-                                                    theme.text.condenced,
-                                                    s.clientBlocked,
-                                                )}
-                                            >
-                                                {intl.getMessage('blocked')}
-                                            </div>
-                                        </Show>
                                     </div>
 
                                     <div class={s.tableRowInfo}>
                                         <Show
                                             when={props.processingClientInfo}
                                             fallback={
-                                                <Show when={client.info?.name}>
-                                                    <div
-                                                        class={cn(
-                                                            theme.text.t4,
-                                                            theme.text.condenced,
-                                                            s.clientName,
-                                                        )}
-                                                    >
-                                                        {client.info.name}
-                                                    </div>
-                                                </Show>
+                                                <div
+                                                    data-testid="top-client-name"
+                                                    class={cn(
+                                                        theme.text.t4,
+                                                        theme.text.condenced,
+                                                        s.clientName,
+                                                    )}
+                                                >
+                                                    {client.info?.name ||
+                                                        intl.getMessage('not_available')}
+                                                </div>
                                             }
                                         >
                                             <div
@@ -288,27 +293,25 @@ export const TopClients = (props: Props) => {
                                                 data-testid="client-info-skeleton"
                                             />
                                         </Show>
-                                        <Show when={isBlocked}>
-                                            <div
-                                                class={cn(
-                                                    theme.text.t4,
-                                                    theme.text.condenced,
-                                                    s.clientBlocked,
-                                                )}
-                                            >
-                                                {intl.getMessage('blocked')}
-                                            </div>
-                                        </Show>
                                         <div class={s.tableRowQueriesInfo}>
                                             <div
                                                 class={cn(
                                                     theme.text.t3,
                                                     theme.text.condenced,
                                                     s.queryCount,
-                                                    s.queryCountHover,
                                                 )}
                                             >
-                                                {formatCompactNumber(client.count)}
+                                                <Link
+                                                    to={RoutePath.QueryLog}
+                                                    query={{ search: `"${client.name}"` }}
+                                                    class={cn(
+                                                        theme.text.t3,
+                                                        theme.text.condenced,
+                                                        s.queryCountLink,
+                                                    )}
+                                                >
+                                                    {formatCompactNumber(client.count)}
+                                                </Link>
 
                                                 <div
                                                     class={cn(

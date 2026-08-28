@@ -12,7 +12,7 @@ import { CertificateStatus, KeyStatus, ValidationStatus } from '../Status';
 import s from '../styles.module.pcss';
 import theme from 'panel/lib/theme';
 
-export const TlsCertSection = () => {
+export const TlsCertSection = (props: { onEdit?: () => void }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
 
     const enc = () => encryptionState;
@@ -81,14 +81,24 @@ export const TlsCertSection = () => {
         <div class={s.certSection} data-testid="tls-cert-section">
             <div class={s.certRow}>
                 <span class={s.certTitle}>{intl.getMessage('tls_certificate')}</span>
-                <button
-                    type="button"
-                    class={theme.form.action}
-                    onClick={() => setShowDeleteConfirm(true)}
-                    aria-label={intl.getMessage('encryption_certificates')}
-                >
-                    <Icon icon="delete" color="red" />
-                </button>
+                <div class={s.certActions}>
+                    <button
+                        type="button"
+                        class={theme.form.action}
+                        onClick={() => props.onEdit?.()}
+                        aria-label={intl.getMessage('edit_tls_certificate')}
+                    >
+                        <Icon icon="edit" />
+                    </button>
+                    <button
+                        type="button"
+                        class={theme.form.action}
+                        onClick={() => setShowDeleteConfirm(true)}
+                        aria-label={intl.getMessage('encryption_certificates')}
+                    >
+                        <Icon icon="delete" color="red" />
+                    </button>
+                </div>
             </div>
             {renderStatus()}
 

@@ -22,6 +22,8 @@ type FieldName = 'certificate_chain' | 'certificate_path' | 'private_key' | 'pri
 type Props = {
     open: boolean;
     onClose: () => void;
+    /** When true the modal edits the current certificate instead of adding a new one. */
+    edit?: boolean;
 };
 
 export const AddTlsCertModal = (props: Props) => {
@@ -41,6 +43,31 @@ export const AddTlsCertModal = (props: Props) => {
             (open) => {
                 if (open) {
                     setStep(1);
+                    setErrors({});
+
+                    if (props.edit) {
+                        setCertSource(
+                            encryptionState.certificate_path
+                                ? ENCRYPTION_SOURCE.PATH
+                                : ENCRYPTION_SOURCE.CONTENT,
+                        );
+                        setCertChain(encryptionState.certificate_chain || '');
+                        setCertPath(encryptionState.certificate_path || '');
+
+                        setKeySource(
+                            encryptionState.private_key_saved
+                                ? ENCRYPTION_SOURCE.SAVED
+                                : encryptionState.private_key_path
+                                  ? ENCRYPTION_SOURCE.PATH
+                                  : ENCRYPTION_SOURCE.CONTENT,
+                        );
+                        setPrivateKey(encryptionState.private_key || '');
+                        setPrivateKeyPath(encryptionState.private_key_path || '');
+                        setPrivateKeySaved(!!encryptionState.private_key_saved);
+                        return;
+                    }
+
+                    setStep(1);
                     setCertSource(ENCRYPTION_SOURCE.PATH);
                     setCertChain('');
                     setCertPath('');
@@ -48,7 +75,6 @@ export const AddTlsCertModal = (props: Props) => {
                     setPrivateKey('');
                     setPrivateKeyPath('');
                     setPrivateKeySaved(false);
-                    setErrors({});
                 }
             },
         ),
@@ -223,10 +249,27 @@ export const AddTlsCertModal = (props: Props) => {
         </div>
     );
 
+    const certTitle = () =>
+        props.edit
+            ? intl.getMessage('edit_tls_certificate')
+            : intl.getMessage('add_tls_certificate');
+
+    const keyTitle = () =>
+        props.edit
+            ? intl.getMessage('edit_tls_certificate_private_key')
+            : intl.getMessage('add_tls_certificate_private_key');
+
+    const submitText = () =>
+        props.edit ? intl.getMessage('save') : intl.getMessage('add');
+
     const KeyStepFooter = (
         <div class={s.footer}>
-            <Button variant="primary" onClick={handleAdd} disabled={processing() || hasErrors()}>
-                {intl.getMessage('add')}
+            <Button
+                variant="primary"
+                onClick={handleAdd}
+                disabled={processing() || hasErrors()}
+            >
+                {submitText()}
             </Button>
             <Button variant="secondary" onClick={handleBack}>
                 {intl.getMessage('back')}
@@ -238,9 +281,7 @@ export const AddTlsCertModal = (props: Props) => {
         <ConfigDialog
             open={props.open}
             title={
-                isCertStep()
-                    ? intl.getMessage('add_tls_certificate')
-                    : intl.getMessage('add_tls_certificate_private_key')
+                isCertStep() ? certTitle() : keyTitle()
             }
             description={intl.getMessage('tls_cert_modal_description')}
             onClose={props.onClose}

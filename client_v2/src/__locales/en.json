@@ -7,6 +7,8 @@
   "add_tls_certificate": "Add TLS certificate",
   "add_tls_certificate_private_key": "Add TLS certificate private key",
   "add_to_allowlist": "Add to allowlist",
+  "edit_tls_certificate": "Edit TLS certificate",
+  "edit_tls_certificate_private_key": "Edit TLS certificate private key",
   "ads_blocked": "Blocked ads",
   "ads_blocked_card": "Blocked ads",
   "ads_blocked_tooltip": "The number of DNS queries blocked by adblock filters and hosts blocklist",

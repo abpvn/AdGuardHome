@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@solidjs/testing-library';
+import userEvent from '@testing-library/user-event';
 
 const mockEncryptionState: Record<string, any> = {
     valid_chain: true,
@@ -35,6 +36,7 @@ vi.mock('panel/common/intl', () => {
                 delete_table_action_confirm: 'Delete',
                 cancel: 'Cancel',
                 encryption_certificates: 'Certificates',
+                edit_tls_certificate: 'Edit TLS certificate',
                 encryption_key_cert_mismatch: 'Key and certificate do not match',
                 encryption_certificate_has_issues: 'Certificate has issues',
                 encryption_chain_valid: 'Certificate chain is valid',
@@ -57,7 +59,8 @@ vi.mock('panel/common/intl', () => {
 
 import { TlsCertSection } from 'panel/components/Encryption/blocks/TlsCertSection';
 
-const renderSection = () => render(() => <TlsCertSection />);
+const renderSection = (props?: { onEdit?: () => void }) =>
+    render(() => <TlsCertSection {...props} />);
 
 describe('TlsCertSection', () => {
     beforeEach(() => {
@@ -117,5 +120,15 @@ describe('TlsCertSection', () => {
         renderSection();
 
         expect(screen.queryByText('Certificate chain is valid')).not.toBeInTheDocument();
+    });
+
+    it('fires onEdit when the edit button is clicked', async () => {
+        const onEdit = vi.fn();
+
+        renderSection({ onEdit });
+
+        await userEvent.click(screen.getByLabelText('Edit TLS certificate'));
+
+        expect(onEdit).toHaveBeenCalledTimes(1);
     });
 });

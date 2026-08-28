@@ -26,6 +26,7 @@ export const Encryption = () => {
     const [resetOpen, setResetOpen] = createSignal(false);
     const [serverSettingsOpen, setServerSettingsOpen] = createSignal(false);
     const [addCertOpen, setAddCertOpen] = createSignal(false);
+    const [addCertEdit, setAddCertEdit] = createSignal(false);
     const [menuOpen, setMenuOpen] = createSignal(false);
 
     const [tlsStatusLoaded, setTlsStatusLoaded] = createSignal(false);
@@ -101,7 +102,7 @@ export const Encryption = () => {
 
         // Certificate or key is missing — open the TLS cert wizard (don't save yet).
         if (!hasCert || !hasKey) {
-            setAddCertOpen(true);
+            handleAddCertOpen(false);
             return;
         }
 
@@ -155,6 +156,16 @@ export const Encryption = () => {
     const handleResetClick = () => {
         setMenuOpen(false);
         setResetOpen(true);
+    };
+
+    const handleAddCertOpen = (edit = false) => {
+        setAddCertEdit(edit);
+        setAddCertOpen(true);
+    };
+
+    const handleAddCertClose = () => {
+        setAddCertOpen(false);
+        setAddCertEdit(false);
     };
 
     const resetMenu = (
@@ -217,14 +228,14 @@ export const Encryption = () => {
 
                 <Show when={!certConfigured()}>
                     <div class={s.plusButton}>
-                        <PlusButton onClick={() => setAddCertOpen(true)} weight="semi">
+                        <PlusButton onClick={() => handleAddCertOpen(false)} weight="semi">
                             {intl.getMessage('add_tls_certificate')}
                         </PlusButton>
                     </div>
                 </Show>
 
                 <Show when={certConfigured()}>
-                    <TlsCertSection />
+                    <TlsCertSection onEdit={() => handleAddCertOpen(true)} />
                 </Show>
 
                 <InsecureToggle />
@@ -242,7 +253,11 @@ export const Encryption = () => {
                 onClose={() => setServerSettingsOpen(false)}
             />
 
-            <AddTlsCertModal open={addCertOpen()} onClose={() => setAddCertOpen(false)} />
+            <AddTlsCertModal
+                open={addCertOpen()}
+                edit={addCertEdit()}
+                onClose={handleAddCertClose}
+            />
         </div>
     );
 };

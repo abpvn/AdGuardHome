@@ -109,7 +109,7 @@ export const AddClient = () => {
         () =>
             isEdit() &&
             clientFormState.upstreams_cache_enabled &&
-            clientFormState.upstreams_cache_size > 0,
+            Number(clientFormState.upstreams_cache_size) > 0,
     );
 
     const handleCancel = () => {
@@ -159,7 +159,8 @@ export const AddClient = () => {
     };
 
     const handleCacheSizeChange = (e: Event) => {
-        const value = Number((e.target as HTMLInputElement).value) || 0;
+        const raw = (e.target as HTMLInputElement).value;
+        const value = raw === '' ? '' : parseInt(raw, 10);
         updateClientFormField({ field: 'upstreams_cache_size', value });
         setCacheSizeError(undefined);
     };
@@ -222,9 +223,9 @@ export const AddClient = () => {
 
     return (
         <div class={cn(theme.layout.container, s.containerOverride)} data-testid="client-form">
-            <div class={cn(theme.layout.containerIn, theme.layout.containerIn_one_col)}>
-                <ClientsHeader currentTitle={intl.getMessage('clients_add')} />
+            <ClientsHeader currentTitle={intl.getMessage('clients_add')} />
 
+            <div class={cn(theme.layout.containerIn, theme.layout.containerIn_one_col)}>
                 <Show when={clientFormState.processingSave}>
                     <PageLoader />
                 </Show>
@@ -243,6 +244,7 @@ export const AddClient = () => {
                             size="large"
                             error={!!nameError()}
                             errorMessage={nameError()}
+                            isClearable
                         />
                     </div>
 

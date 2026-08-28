@@ -234,6 +234,21 @@ func (web *webAPI) finishUpdate(
 		os.Exit(osutil.ExitCodeSuccess)
 	}
 
+	// When running as a systemd (or SysV) service on Linux, trigger a real
+	// service-manager restart instead of replacing the process image in-place
+	// with [syscall.Exec].  The in-place exec bypasses systemd, so the unit's
+	// network-online dependency is never re-driven, leaving the host
+	// netfilter state (firewalld/Docker rules) stale.  Containers then keep
+	// timing out connecting to the web port until a manual systemctl restart.
+	if web.conf.runningAsService && runtime.GOOS == "linux" {
+		err = restartService(ctx, web.logger)
+		if err != nil {
+			panic(fmt.Errorf("restarting service: %w", err))
+		}
+
+		return
+	}
+
 	web.logger.InfoContext(ctx, "restarting", "exec_path", execPath, "args", os.Args[1:])
 	err = syscall.Exec(execPath, os.Args, os.Environ())
 	if err != nil {

@@ -54,6 +54,14 @@ vi.mock('panel/common/intl', () => {
             return msg;
         },
         getUILanguage: () => 'en',
+        getPlural: (key: string, count: number) => {
+            if (key === 'tls_certificate_expiring_days') {
+                return count === 1
+                    ? 'Your TLS certificate will expire in 1 day'
+                    : `Your TLS certificate will expire in ${count} days`;
+            }
+            return key;
+        },
         changeLanguage: vi.fn(),
     };
     return { default: intl };
@@ -101,15 +109,15 @@ describe('Banners', () => {
         expect(screen.getByText('Your TLS certificate has expired')).toBeInTheDocument();
     });
 
-    it('shows TLS expiring banner when cert expires within 30 days', () => {
+    it('shows TLS expiring banner when cert expires within 5 days', () => {
         mockEncryptionState.enabled = true;
         mockEncryptionState.valid_cert = true;
-        mockEncryptionState.not_after = new Date(Date.now() + 15 * 86400000).toISOString(); // 15 days
+        mockEncryptionState.not_after = new Date(Date.now() + 2 * 86400000).toISOString(); // 2 days
 
         renderBanners();
 
         expect(screen.getByTestId('banner-tls-expiring')).toBeInTheDocument();
-        expect(screen.getByText('Your TLS certificate is about to expire')).toBeInTheDocument();
+        expect(screen.getByText('Your TLS certificate will expire in 2 days')).toBeInTheDocument();
     });
 
     it('shows auto-update banner when update available and can auto-update', () => {
@@ -218,7 +226,7 @@ describe('Banners', () => {
         expect(screen.queryByTestId('banner-tls-expired')).not.toBeInTheDocument();
 
         // Change condition: now cert is valid but expiring soon
-        mockEncryptionState.not_after = new Date(Date.now() + 15 * 86400000).toISOString(); // 15 days
+        mockEncryptionState.not_after = new Date(Date.now() + 2 * 86400000).toISOString(); // 2 days
         // Re-render
         renderBanners();
 

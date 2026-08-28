@@ -19,7 +19,8 @@ import {
 
 import s from './Banners.module.pcss';
 
-const TLS_EXPIRY_WARNING_MS = 30 * 24 * 60 * 60 * 1000;
+const TLS_EXPIRY_WARNING_MS = 5 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type Props = {
     forceBanner?: BannerSpec;
@@ -108,11 +109,14 @@ export const Banners = (props: Props) => {
                                 />
                             );
 
-                        case 'tls_expiring':
+                        case 'tls_expiring': {
+                            const expiry = new Date(encryptionState.not_after).getTime();
+                            const days = Math.ceil((expiry - Date.now()) / DAY_MS);
+
                             return (
                                 <Banner
                                     variant="warning"
-                                    message={intl.getMessage('tls_certificate_expiring')}
+                                    message={intl.getPlural('tls_certificate_expiring_days', days)}
                                     action={
                                         <Button
                                             variant="secondary"
@@ -128,6 +132,7 @@ export const Banners = (props: Props) => {
                                     data-testid="banner-tls-expiring"
                                 />
                             );
+                        }
 
                         case 'update_auto':
                             return (

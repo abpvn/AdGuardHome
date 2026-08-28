@@ -341,6 +341,7 @@
   "threats_blocked": "Заблоковано загроз",
   "thursday": "Четвер",
   "time_table_header": "Час",
+  "tls_certificate_expiring_days": "| Термін дії вашого TLS-сертифіката закінчиться через %count% день | Термін дії вашого TLS-сертифіката закінчиться через %count% дні | Термін дії вашого TLS-сертифіката закінчиться через %count% днів",
   "top_blocked_domains": "Найчастіше блоковані домени",
   "top_clients": "Найактивніші клієнти",
   "top_upstreams": "Часто запитувані upstream-сервери",

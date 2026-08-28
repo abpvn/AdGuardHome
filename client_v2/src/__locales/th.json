@@ -320,6 +320,7 @@
   "threats_blocked": "ปิดกั้นภัยคุกคามแล้ว",
   "thursday": "พฤหัสบดี",
   "time_table_header": "เวลา",
+  "tls_certificate_expiring_days": "| ใบรับรอง TLS ของคุณจะหมดอายุใน %count% วัน",
   "top_blocked_domains": "โดเมนที่ถูกปิดกั้นมากที่สุด",
   "top_clients": "ลูกข่ายที่ใช้งานบ่อยสุด",
   "top_upstreams": "เซิร์ฟเวอร์ต้นทางที่ดีที่สุด",

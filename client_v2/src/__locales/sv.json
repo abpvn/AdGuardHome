@@ -340,6 +340,7 @@
   "threats_blocked": "Hot blockerade",
   "thursday": "Torsdag",
   "time_table_header": "Tid",
+  "tls_certificate_expiring_days": "| Ditt TLS-certifikat upphör om %count% dag | Ditt TLS-certifikat upphör om %count% dagar",
   "top_blocked_domains": "Flest blockerade domäner",
   "top_clients": "Toppklienter",
   "top_upstreams": "Topp uppströmsservrar",

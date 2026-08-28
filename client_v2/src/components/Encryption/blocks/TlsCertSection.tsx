@@ -12,7 +12,7 @@ import { CertificateStatus, KeyStatus, ValidationStatus } from '../Status';
 import s from '../styles.module.pcss';
 import theme from 'panel/lib/theme';
 
-export const TlsCertSection = () => {
+export const TlsCertSection = (props: { onEdit?: () => void }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
 
     const enc = () => encryptionState;
@@ -33,25 +33,9 @@ export const TlsCertSection = () => {
     };
 
     const renderStatus = () => {
-        if (enc().valid_cert && enc().valid_key && !enc().valid_pair) {
-            return (
-                <ValidationStatus
-                    type="error"
-                    message={intl.getMessage('encryption_key_cert_mismatch')}
-                />
-            );
-        }
-        if (enc().warning_validation) {
-            const isWarning = enc().valid_key && enc().valid_cert && enc().valid_pair;
-            return (
-                <ValidationStatus
-                    type={isWarning ? 'warning' : 'error'}
-                    message={enc().warning_validation}
-                />
-            );
-        }
         if (!enc().certificate_chain && !enc().certificate_path) return null;
-        return (
+
+        const certInfo = (
             <>
                 <CertificateStatus
                     validChain={enc().valid_chain}
@@ -66,20 +50,55 @@ export const TlsCertSection = () => {
                 </Show>
             </>
         );
+
+        if (enc().valid_cert && enc().valid_key && !enc().valid_pair) {
+            return (
+                <>
+                    <ValidationStatus
+                        type="error"
+                        message={intl.getMessage('encryption_key_cert_mismatch')}
+                    />
+                    {certInfo}
+                </>
+            );
+        }
+        if (enc().warning_validation) {
+            const isWarning = enc().valid_key && enc().valid_cert && enc().valid_pair;
+            return (
+                <>
+                    <ValidationStatus
+                        type={isWarning ? 'warning' : 'error'}
+                        message={enc().warning_validation}
+                    />
+                    {certInfo}
+                </>
+            );
+        }
+        return certInfo;
     };
 
     return (
         <div class={s.certSection} data-testid="tls-cert-section">
             <div class={s.certRow}>
                 <span class={s.certTitle}>{intl.getMessage('tls_certificate')}</span>
-                <button
-                    type="button"
-                    class={theme.form.action}
-                    onClick={() => setShowDeleteConfirm(true)}
-                    aria-label={intl.getMessage('encryption_certificates')}
-                >
-                    <Icon icon="delete" color="red" />
-                </button>
+                <div class={s.certActions}>
+                    <button
+                        type="button"
+                        class={theme.form.action}
+                        onClick={() => props.onEdit?.()}
+                        aria-label={intl.getMessage('edit_tls_certificate')}
+                    >
+                        <Icon icon="edit" />
+                    </button>
+                    <button
+                        type="button"
+                        class={theme.form.action}
+                        onClick={() => setShowDeleteConfirm(true)}
+                        aria-label={intl.getMessage('encryption_certificates')}
+                    >
+                        <Icon icon="delete" color="red" />
+                    </button>
+                </div>
             </div>
             {renderStatus()}
 

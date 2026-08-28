@@ -341,6 +341,7 @@
   "threats_blocked": "Blokirano pretnji",
   "thursday": "Četvrtak",
   "time_table_header": "Vreme",
+  "tls_certificate_expiring_days": "| Vaš TLS sertifikat ističe za %count% dan | Vaš TLS sertifikat ističe za %count% dana | Vaš TLS sertifikat ističe za %count% dana",
   "top_blocked_domains": "Najčešće blokirani domeni",
   "top_clients": "Najčešći klijenti",
   "top_upstreams": "Često traženi upstream serveri",

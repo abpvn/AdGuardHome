@@ -341,6 +341,7 @@
   "threats_blocked": "Amenințări blocate",
   "thursday": "Joi",
   "time_table_header": "Ora",
+  "tls_certificate_expiring_days": "| Certificatul dvs. TLS va expira în %count% zi | Certificatul dvs. TLS va expira în %count% zile | Certificatul dvs. TLS va expira în %count% de zile",
   "top_blocked_domains": "Domeniile blocate cel mai des",
   "top_clients": "Clienți de top",
   "top_upstreams": "Top servere în amonte",

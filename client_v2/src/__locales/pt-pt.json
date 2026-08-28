@@ -812,6 +812,7 @@
   "tls_cert_path_label": "Caminho completo para o ficheiro do certificado",
   "tls_cert_path_option": "Insira o caminho completo para o ficheiro do certificado",
   "tls_certificate": "Certificado TLS",
+  "tls_certificate_expiring_days": "| O seu certificado TLS expira em %count% dia | O seu certificado TLS expira em %count% dias",
   "top_blocked_domains": "Principais domínios bloqueados",
   "top_clients": "Principais clientes",
   "top_upstreams": "Melhores servidores DNS primários",

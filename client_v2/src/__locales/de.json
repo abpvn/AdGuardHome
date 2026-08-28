@@ -756,7 +756,7 @@
   "time_table_header": "Zeit",
   "tls_certificate": "TLS-Zertifikat",
   "tls_certificate_expired": "Dein TLS-Zertifikat ist abgelaufen",
-  "tls_certificate_expiring": "Dein TLS-Zertifikat läuft bald ab",
+  "tls_certificate_expiring_days": "| Dein TLS-Zertifikat läuft in %count% Tag ab | Dein TLS-Zertifikat läuft in %count% Tagen ab",
   "top_blocked_domains": "Am häufigsten gesperrte Domains",
   "top_clients": "Top Clients",
   "top_upstreams": "Top Upstreams",

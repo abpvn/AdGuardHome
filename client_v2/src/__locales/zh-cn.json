@@ -871,7 +871,7 @@
   "tls_cert_path_option": "输入证书文件的完整路径",
   "tls_certificate": "TLS 证书",
   "tls_certificate_expired": "您的 TLS 证书已过期",
-  "tls_certificate_expiring": "您的 TLS 证书即将过期",
+  "tls_certificate_expiring_days": "| 您的 TLS 证书将在 %count% 天后过期",
   "tls_key_path_label": "私钥文件的完整路径",
   "tls_key_path_option": "输入私钥文件的完整路径",
   "top_blocked_domains": "被拦截域名排行",

@@ -333,6 +333,7 @@
   "test_upstreams": "Тествай главния DNS",
   "thursday": "Четвъртък",
   "time_table_header": "Време",
+  "tls_certificate_expiring_days": "| Вашият TLS сертификат ще изтече след %count% ден | Вашият TLS сертификат ще изтече след %count% дни",
   "top_blocked_domains": "Най-блокирани страници",
   "top_clients": "Най-активни IP адреси",
   "top_upstreams": "Най-добри upstream сървъри",

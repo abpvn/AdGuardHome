@@ -429,6 +429,7 @@
   "threats_blocked": "Заблокировано угроз",
   "thursday": "Четверг",
   "time_table_header": "Время",
+  "tls_certificate_expiring_days": "| Срок действия вашего TLS-сертификата истечёт через %count% день | Срок действия вашего TLS-сертификата истечёт через %count% дня | Срок действия вашего TLS-сертификата истечёт через %count% дней",
   "top_blocked_domains": "Часто блокируемые домены",
   "top_clients": "Частые клиенты",
   "top_upstreams": "Часто запрашиваемые upstream-серверы",

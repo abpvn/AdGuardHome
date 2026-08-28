@@ -418,6 +418,7 @@
   "threats_blocked": "脅威ブロック数",
   "thursday": "木曜日",
   "time_table_header": "時刻",
+  "tls_certificate_expiring_days": "| TLS証明書は%count%日後に失効します",
   "top_blocked_domains": "最もブロックされたドメイン",
   "top_clients": "トップクライアント",
   "top_upstreams": "上位のアップストリーム",

@@ -342,6 +342,7 @@
   "threats_blocked": "Ancaman diblokir",
   "thursday": "Kamis",
   "time_table_header": "Waktu",
+  "tls_certificate_expiring_days": "| Sertifikat TLS Anda akan kedaluwarsa dalam %count% hari",
   "top_blocked_domains": "Domain diblokir teratas",
   "top_clients": "Klien teratas",
   "top_upstreams": "Hulu teratas",

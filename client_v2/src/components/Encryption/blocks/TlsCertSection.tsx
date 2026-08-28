@@ -33,25 +33,9 @@ export const TlsCertSection = () => {
     };
 
     const renderStatus = () => {
-        if (enc().valid_cert && enc().valid_key && !enc().valid_pair) {
-            return (
-                <ValidationStatus
-                    type="error"
-                    message={intl.getMessage('encryption_key_cert_mismatch')}
-                />
-            );
-        }
-        if (enc().warning_validation) {
-            const isWarning = enc().valid_key && enc().valid_cert && enc().valid_pair;
-            return (
-                <ValidationStatus
-                    type={isWarning ? 'warning' : 'error'}
-                    message={enc().warning_validation}
-                />
-            );
-        }
         if (!enc().certificate_chain && !enc().certificate_path) return null;
-        return (
+
+        const certInfo = (
             <>
                 <CertificateStatus
                     validChain={enc().valid_chain}
@@ -66,6 +50,31 @@ export const TlsCertSection = () => {
                 </Show>
             </>
         );
+
+        if (enc().valid_cert && enc().valid_key && !enc().valid_pair) {
+            return (
+                <>
+                    <ValidationStatus
+                        type="error"
+                        message={intl.getMessage('encryption_key_cert_mismatch')}
+                    />
+                    {certInfo}
+                </>
+            );
+        }
+        if (enc().warning_validation) {
+            const isWarning = enc().valid_key && enc().valid_cert && enc().valid_pair;
+            return (
+                <>
+                    <ValidationStatus
+                        type={isWarning ? 'warning' : 'error'}
+                        message={enc().warning_validation}
+                    />
+                    {certInfo}
+                </>
+            );
+        }
+        return certInfo;
     };
 
     return (

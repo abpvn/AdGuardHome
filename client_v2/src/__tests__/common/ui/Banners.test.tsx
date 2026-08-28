@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@solidjs/testing-library';
+import { fireEvent, render, screen } from '@solidjs/testing-library';
 import userEvent from '@testing-library/user-event';
 import { HashRouter, Route } from '@solidjs/router';
 
@@ -233,6 +233,29 @@ describe('Banners', () => {
         // Should now show the expiring banner
         expect(screen.getByTestId('banner-tls-expiring')).toBeInTheDocument();
         expect(screen.queryByTestId('banner-tls-expired')).not.toBeInTheDocument();
+    });
+
+    it('shows the update banner after dismissing the TLS expiring banner', () => {
+        mockEncryptionState.enabled = true;
+        mockEncryptionState.valid_cert = true;
+        mockEncryptionState.not_after = new Date(Date.now() + 2 * 86400000).toISOString(); // 2 days
+        // Update available too, but TLS expiring takes priority
+        mockDashboardState.isUpdateAvailable = true;
+        mockDashboardState.newVersion = 'v1.0.0';
+        mockDashboardState.canAutoUpdate = true;
+
+        renderBanners();
+
+        expect(screen.getByTestId('banner-tls-expiring')).toBeInTheDocument();
+        expect(screen.queryByTestId('banner-update-auto')).not.toBeInTheDocument();
+
+        // Dismiss the expiring warning while TLS is still within the warning window
+        const closeButton = screen.getByTestId('banner-tls-expiring-close');
+        fireEvent.click(closeButton);
+
+        // Lower-priority update banner should now appear even though TLS still takes priority
+        expect(screen.queryByTestId('banner-tls-expiring')).not.toBeInTheDocument();
+        expect(screen.getByTestId('banner-update-auto')).toBeInTheDocument();
     });
 
     // ── forceBanner (dev test override) ──

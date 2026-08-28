@@ -275,6 +275,7 @@
   "threats_blocked": "已封鎖的威脅",
   "thursday": "星期四",
   "time_table_header": "時間",
+  "tls_certificate_expiring_days": "| 您的 TLS 證書將在 %count% 天後過期",
   "top_blocked_domains": "熱門封鎖網域排行",
   "top_clients": "熱門用戶端排行",
   "top_upstreams": "熱門上游伺服器",

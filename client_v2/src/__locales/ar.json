@@ -340,6 +340,7 @@
   "threats_blocked": "التهديدات المحظورة",
   "thursday": "الخميس",
   "time_table_header": "الوقت",
+  "tls_certificate_expiring_days": "| ستنتهي صلاحية شهادة TLS الخاصة بك خلال يوم واحد | ستنتهي صلاحية شهادة TLS الخاصة بك خلال يومين | ستنتهي صلاحية شهادة TLS الخاصة بك خلال %count% أيام | ستنتهي صلاحية شهادة TLS الخاصة بك خلال %count% يومًا | ستنتهي صلاحية شهادة TLS الخاصة بك خلال %count% يوم",
   "top_blocked_domains": "اعلى الدومينات المحظورة",
   "top_clients": "كبار العملاء",
   "top_upstreams": "أعلى الخوادم upstream",

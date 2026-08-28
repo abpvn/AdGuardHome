@@ -383,6 +383,7 @@
   "threats_blocked": "차단된 위협",
   "thursday": "목요일",
   "time_table_header": "시간",
+  "tls_certificate_expiring_days": "| TLS 인증서가 %count%일 후에 만료됩니다",
   "top_blocked_domains": "차단된 도메인",
   "top_clients": "클라이언트",
   "top_upstreams": "상위 업스트림",

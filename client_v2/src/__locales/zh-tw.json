@@ -735,6 +735,7 @@
   "threats_blocked_tooltip": "被 AdGuard 瀏覽安全模組封鎖的 DNS 查詢數量",
   "thursday": "星期四",
   "time_table_header": "時間",
+  "tls_certificate_expiring_days": "| 您的 TLS 憑證將在 %count% 天後到期",
   "top_blocked_domains": "熱門已封鎖的網域",
   "top_clients": "熱門用戶端",
   "top_upstreams": "熱門上游",

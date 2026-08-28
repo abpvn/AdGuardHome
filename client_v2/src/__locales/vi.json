@@ -857,7 +857,7 @@
   "tls_cert_path_option": "Nhập đường dẫn đầy đủ đến tệp chứng chỉ",
   "tls_certificate": "Chứng chỉ TLS",
   "tls_certificate_expired": "Chứng chỉ TLS của bạn đã hết hạn",
-  "tls_certificate_expiring": "Chứng chỉ TLS của bạn sắp hết hạn",
+  "tls_certificate_expiring_days": "| Chứng chỉ TLS của bạn sẽ hết hạn sau %count% ngày nữa",
   "tls_key_path_label": "Đường dẫn đầy đủ đến tệp khóa riêng",
   "tls_key_path_option": "Nhập đường dẫn đầy đủ đến tệp khóa riêng",
   "top_blocked_domains": "Tên miền chặn nhiều",

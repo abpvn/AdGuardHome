@@ -876,7 +876,7 @@
   "tls_cert_path_option": "Angiv den fulde sti til certifikatfilen",
   "tls_certificate": "TLS-certifikat",
   "tls_certificate_expired": "TLS-certifikatet er udløbet",
-  "tls_certificate_expiring": "TLS-certifikatet er ved at udløbe",
+  "tls_certificate_expiring_days": "| Dit TLS-certifikat udløber om %count% dag | Dit TLS-certifikat udløber om %count% dage",
   "tls_key_path_label": "Fuld sti til den private nøglefil",
   "tls_key_path_option": "Anguv den fulde sti til den private nøglefil",
   "top_blocked_domains": "Hyppigst blokerede domæner",

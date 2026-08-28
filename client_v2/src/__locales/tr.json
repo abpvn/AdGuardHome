@@ -383,6 +383,7 @@
   "threats_blocked": "Engellenen tehdit",
   "thursday": "Perşembe",
   "time_table_header": "Zaman",
+  "tls_certificate_expiring_days": "| TLS sertifikanız %count% gün içinde sona erecek",
   "top_blocked_domains": "Başlıca engellenen alan adları",
   "top_clients": "Başlıca istemciler",
   "top_upstreams": "Başlıca üst kaynaklar",

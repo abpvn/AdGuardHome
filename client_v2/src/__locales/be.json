@@ -337,6 +337,7 @@
   "threats_blocked": "Заблакіравана пагроз",
   "thursday": "Чацвер",
   "time_table_header": "Час",
+  "tls_certificate_expiring_days": "| Ваш TLS-сертыфікат скончыцца праз %count% дзень | Ваш TLS-сертыфікат скончыцца праз %count% дні | Ваш TLS-сертыфікат скончыцца праз %count% дзён",
   "top_blocked_domains": "Дамены, якія часта блакіруюцца",
   "top_clients": "Самыя актыўныя кліенты",
   "top_upstreams": "Самыя частыя серверы upstream",

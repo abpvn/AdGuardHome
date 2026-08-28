@@ -341,6 +341,7 @@
   "threats_blocked": "Zablokowanych zagrożeń",
   "thursday": "Czwartek",
   "time_table_header": "Czas",
+  "tls_certificate_expiring_days": "| Twój certyfikat TLS wygaśnie za %count% dzień | Twój certyfikat TLS wygaśnie za %count% dni | Twój certyfikat TLS wygaśnie za %count% dni",
   "top_blocked_domains": "Najpopularniejsze zablokowane domeny",
   "top_clients": "Główni klienci",
   "top_upstreams": "Często żądane serwery nadrzędne",

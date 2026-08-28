@@ -341,6 +341,7 @@
   "threats_blocked": "تهدید مسدود شد",
   "thursday": "پنج شنبه",
   "time_table_header": "زمان",
+  "tls_certificate_expiring_days": "| گواهینامه TLS شما در %count% روز منقضی میشود | گواهینامه TLS شما در %count% روز منقضی میشود",
   "top_blocked_domains": "دامنه های بیشتر مسدود شده",
   "top_clients": "بالاترین کلاینت ها",
   "top_upstreams": "سرورهای بالادست بالا",

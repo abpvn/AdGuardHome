@@ -341,6 +341,7 @@
   "threats_blocked": "Trusler blokkert",
   "thursday": "Torsdag",
   "time_table_header": "Tidspunkt",
+  "tls_certificate_expiring_days": "| TLS-sertifikatet ditt utløper om %count% dag | TLS-sertifikatet ditt utløper om %count% dager",
   "top_blocked_domains": "Mest blokkerte domener",
   "top_clients": "Vanligste klienter",
   "top_upstreams": "Topp oppstrøms servere",

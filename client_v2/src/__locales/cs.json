@@ -353,6 +353,7 @@
   "threats_blocked": "Zablokovaných hrozeb",
   "thursday": "Čtvrtek",
   "time_table_header": "Čas",
+  "tls_certificate_expiring_days": "| Platnost vašeho certifikátu TLS vyprší za %count% den | Platnost vašeho certifikátu TLS vyprší za %count% dny | Platnost vašeho certifikátu TLS vyprší za %count% dní",
   "top_blocked_domains": "Nejčastěji blokované domény",
   "top_clients": "Nejčastější klienti",
   "top_upstreams": "Top odchozí připojení",

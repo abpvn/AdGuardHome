@@ -342,6 +342,7 @@
   "threats_blocked": "Blokkolt fenyegetések",
   "thursday": "Csütörtök",
   "time_table_header": "Idő",
+  "tls_certificate_expiring_days": "| TLS-tanúsítványa %count% nap múlva jár le | TLS-tanúsítványa %count% nap múlva jár le",
   "top_blocked_domains": "Legtöbbet blokkolt domainek",
   "top_clients": "Legaktívabb kliensek",
   "top_upstreams": "Top upstream szerverek",

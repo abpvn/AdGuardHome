@@ -243,6 +243,7 @@
   "test_upstreams": "අත්හදා බලන්න",
   "thursday": "බ්‍රහස්පතින්දා",
   "time_table_header": "වේලාව",
+  "tls_certificate_expiring_days": "ඔබේ TLS සහතිකය තව දිනකින් කල් ඉකුත් වේ | ඔබේ TLS සහතිකය තව %count% දිනකින් කල් ඉකුත් වේ",
   "top_blocked_domains": "ප්‍රචලිත අවහිර කළ වසම්",
   "top_clients": "ප්‍රචලිත අනුග්‍රාහක",
   "top_upstreams": "නිෂ්පාදන සම්පුර්ණ",

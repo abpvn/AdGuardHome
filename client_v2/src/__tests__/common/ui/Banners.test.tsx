@@ -54,6 +54,14 @@ vi.mock('panel/common/intl', () => {
             return msg;
         },
         getUILanguage: () => 'en',
+        getPlural: (key: string, count: number) => {
+            if (key === 'tls_certificate_expiring_days') {
+                return count === 1
+                    ? 'Your TLS certificate will expire in 1 day'
+                    : `Your TLS certificate will expire in ${count} days`;
+            }
+            return key;
+        },
         changeLanguage: vi.fn(),
     };
     return { default: intl };
@@ -109,7 +117,7 @@ describe('Banners', () => {
         renderBanners();
 
         expect(screen.getByTestId('banner-tls-expiring')).toBeInTheDocument();
-        expect(screen.getByText('Your TLS certificate is about to expire')).toBeInTheDocument();
+        expect(screen.getByText('Your TLS certificate will expire in 2 days')).toBeInTheDocument();
     });
 
     it('shows auto-update banner when update available and can auto-update', () => {

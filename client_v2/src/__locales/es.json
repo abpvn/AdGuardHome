@@ -771,7 +771,7 @@
   "tls_cert_path_option": "Introduce la ruta completa al archivo del certificado",
   "tls_certificate": "Certificado TLS",
   "tls_certificate_expired": "Tu certificado TLS ha expirado",
-  "tls_certificate_expiring": "Tu certificado TLS está a punto de caducar",
+  "tls_certificate_expiring_days": "| Tu certificado TLS caducará en %count% día | Tu certificado TLS caducará en %count% días",
   "tls_key_path_label": "Ruta completa al archivo de clave privada",
   "tls_key_path_option": "Introduce la ruta completa al archivo de la clave privada",
   "top_blocked_domains": "Dominios más bloqueados",

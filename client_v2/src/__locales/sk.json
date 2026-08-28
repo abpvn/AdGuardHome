@@ -737,6 +737,7 @@
   "threats_blocked_tooltip": "Počet DNS dopytpv blokovaných bezpečnostným modulom AdGuard pre prehliadanie",
   "thursday": "Štvrtok",
   "time_table_header": "Čas",
+  "tls_certificate_expiring_days": "| Platnosť vášho certifikátu TLS vyprší o %count% deň | Platnosť vášho certifikátu TLS vyprší o %count% dni | Platnosť vášho certifikátu TLS vyprší o %count% dní",
   "top_blocked_domains": "Najčastejšie zablokované domény",
   "top_clients": "Najčastejší klienti",
   "top_upstreams": "Často požadované upstream servery",

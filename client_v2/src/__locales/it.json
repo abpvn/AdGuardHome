@@ -735,6 +735,7 @@
   "threats_blocked_tooltip": "Numero di richieste DNS bloccate dal modulo sicurezza di navigazione di AdGuard",
   "thursday": "Giovedì",
   "time_table_header": "Ora",
+  "tls_certificate_expiring_days": "| Il tuo certificato TLS scadrà tra %count% giorno | Il tuo certificato TLS scadrà tra %count% giorni",
   "top_blocked_domains": "Domini maggiormente bloccati",
   "top_clients": "Client più utilizzati",
   "top_upstreams": "Top upstream",

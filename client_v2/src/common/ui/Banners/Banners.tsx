@@ -39,15 +39,16 @@ export const Banners = (props: Props) => {
         return null;
     });
 
-    const computeActiveBanner = (): BannerSpec | null => {
+    const getActiveBanners = (): BannerSpec[] => {
+        const active: BannerSpec[] = [];
+
         if (encryptionState.enabled && encryptionState.valid_cert && encryptionState.not_after) {
             const expiry = new Date(encryptionState.not_after).getTime();
             if (!Number.isNaN(expiry)) {
                 if (Date.now() > expiry) {
-                    return { type: 'tls_expired' };
-                }
-                if (Date.now() > expiry - TLS_EXPIRY_WARNING_MS) {
-                    return { type: 'tls_expiring' };
+                    active.push({ type: 'tls_expired' });
+                } else if (Date.now() > expiry - TLS_EXPIRY_WARNING_MS) {
+                    active.push({ type: 'tls_expiring' });
                 }
             }
         }
@@ -57,22 +58,24 @@ export const Banners = (props: Props) => {
                 version: dashboardState.newVersion,
                 announcementUrl: dashboardState.announcementUrl,
             };
-            return dashboardState.canAutoUpdate
-                ? { type: 'update_auto', ...spec }
-                : { type: 'update_manual', ...spec };
+            active.push(
+                dashboardState.canAutoUpdate
+                    ? { type: 'update_auto', ...spec }
+                    : { type: 'update_manual', ...spec },
+            );
         }
 
-        return null;
+        return active;
     };
 
     const banner = createMemo<BannerSpec | null>(() => {
-        const active = props.forceBanner ?? forceFromQuery() ?? computeActiveBanner();
-        if (!active) return null;
+        const forced = props.forceBanner ?? forceFromQuery();
+        const candidates = forced ? [forced] : getActiveBanners();
         const dismissedValue = dismissed();
-        if (dismissedValue && bannerSpecsEqual(dismissedValue, active)) {
-            return null;
-        }
-        return active;
+        return (
+            candidates.find((b) => !(dismissedValue && bannerSpecsEqual(dismissedValue, b))) ??
+            null
+        );
     });
 
     const announcementLinkHandler = (announcementUrl: string) => (text: string) => (
@@ -82,9 +85,8 @@ export const Banners = (props: Props) => {
     );
 
     return (
-        <Show when={banner()}>
-            {(spec) => {
-                const current = spec();
+        <Show when={banner()} keyed>
+            {(current) => {
 
                 const renderBanner = (): JSX.Element => {
                     switch (current.type) {

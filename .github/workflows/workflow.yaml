@@ -155,8 +155,6 @@
 'name': 'Test and snapshot workflow'
 'on':
   'push':
-    'tags':
-      - 'v*'
     'branches':
       - '*'
   'pull_request':

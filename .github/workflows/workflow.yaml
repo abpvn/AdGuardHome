@@ -1,5 +1,5 @@
 'env':
-  'CLIENT_DIR': 'client'
+  'CLIENT_DIR': 'client_v2'
   'GO_VERSION': '1.26.8'
   'NODE_VERSION': '24'
 'jobs':

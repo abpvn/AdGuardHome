@@ -20,6 +20,7 @@ import { TableHeader } from '../TableHeader';
 import { EmptyState } from '../EmptyState';
 import { CardFooter } from '../CardFooter';
 import { ClientTooltip } from '../ClientTooltip';
+import { Whois } from './Whois';
 
 import s from './TopClients.module.pcss';
 
@@ -237,23 +238,27 @@ onClick={() => openClientConfirmDialog(client.name, 'unblock')}
                                         <Show
                                             when={props.processingClientInfo}
                                             fallback={
-                                                <div
-                                                    data-testid="top-client-name"
-                                                    class={cn(
-                                                        theme.text.t4,
-                                                        theme.text.condenced,
-                                                        s.clientName,
-                                                    )}
-                                                >
-                                                    {client.info?.name ||
-                                                        intl.getMessage('not_available')}
-                                                </div>
+                                                <Show when={client.info?.name}>
+                                                    <div
+                                                        data-testid="top-client-name"
+                                                        class={cn(
+                                                            theme.text.t4,
+                                                            theme.text.condenced,
+                                                            s.clientName,
+                                                        )}
+                                                    >
+                                                        {client.info?.name}
+                                                    </div>
+                                                </Show>
                                             }
                                         >
                                             <div
                                                 class={s.clientInfoSkeleton}
                                                 data-testid="client-info-skeleton"
                                             />
+                                        </Show>
+                                        <Show when={!isDesktop()}>
+                                            <Whois info={client.info?.whois_info} />
                                         </Show>
                                         <div class={s.tableRowQueriesInfo}>
                                             <div

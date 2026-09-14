@@ -21,22 +21,24 @@ vi.mock('panel/stores/stats', () => ({
 
 import { useStatsRefresh } from 'panel/components/Stats/hooks/useStatsRefresh';
 
-function Harness(): null {
-    const refreshStats = useStatsRefresh();
+function Harness(props: { enrichClientsLimit?: number }): null {
     onMount(() => {
+        const refreshStats = useStatsRefresh({
+            enrichClientsLimit: props.enrichClientsLimit,
+        });
         void refreshStats();
     });
 
     return null;
 }
 
-const renderAt = (path: string) => {
+const renderAt = (path: string, props: { enrichClientsLimit?: number } = {}) => {
     const history = createMemoryHistory();
     history.set({ value: path });
 
     return render(() => (
         <MemoryRouter history={history}>
-            <Route path="/" component={Harness} />
+            <Route path="/" component={() => <Harness {...props} />} />
         </MemoryRouter>
     ));
 };
@@ -53,13 +55,13 @@ describe('useStatsRefresh', () => {
     it('calls getStats with the ?period URL param (clamped by the max interval)', () => {
         renderAt('/?period=3600000');
         expect(mocks.getStats).toHaveBeenCalledTimes(1);
-        expect(mocks.getStats).toHaveBeenCalledWith(3_600_000);
+        expect(mocks.getStats).toHaveBeenCalledWith(3_600_000, undefined);
     });
 
     it('falls back to the default DAY period when there is no URL param', () => {
         renderAt('/');
         expect(mocks.getStats).toHaveBeenCalledTimes(1);
-        expect(mocks.getStats).toHaveBeenCalledWith(86_400_000);
+        expect(mocks.getStats).toHaveBeenCalledWith(86_400_000, undefined);
     });
 
     it('loads the stats config before fetching stats when it is not loaded yet', async () => {
@@ -79,6 +81,18 @@ describe('useStatsRefresh', () => {
             expect(mocks.getStatsConfig).toHaveBeenCalledTimes(1);
         });
         // The URL period must not be clamped by the uninitialized DAY default.
-        expect(mocks.getStats).toHaveBeenCalledWith(2_592_000_000);
+        expect(mocks.getStats).toHaveBeenCalledWith(2_592_000_000, undefined);
+    });
+
+    it('forwards the enrichment limit to getStats', () => {
+        renderAt('/?period=3600000', { enrichClientsLimit: 100 });
+        expect(mocks.getStats).toHaveBeenCalledTimes(1);
+        expect(mocks.getStats).toHaveBeenCalledWith(3_600_000, 100);
+    });
+
+    it('omits the enrichment limit when not provided', () => {
+        renderAt('/?period=3600000');
+        expect(mocks.getStats).toHaveBeenCalledTimes(1);
+        expect(mocks.getStats).toHaveBeenCalledWith(3_600_000, undefined);
     });
 });

@@ -1,12 +1,13 @@
 import { createMemo } from 'solid-js';
+import { TOP_CLIENTS_VISIBLE_ITEMS } from 'panel/helpers/constants';
+
+export { TOP_CLIENTS_VISIBLE_ITEMS };
 
 type SortableItem = {
     count: number;
 };
 
 export const DEFAULT_VISIBLE_ITEMS = 5;
-
-export const TOP_CLIENTS_VISIBLE_ITEMS = 4;
 
 export const useSortedData = <T extends SortableItem>(
     data: () => T[],

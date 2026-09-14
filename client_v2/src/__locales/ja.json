@@ -403,6 +403,7 @@
   "setup_dns_privacy_ioc_mac": "iOS と macOS での設定",
   "setup_dns_privacy_other_title": "その他の機能",
   "show_blocked_responses": "ブロック済",
+  "show_more": "さらに表示",
   "show_processed_responses": "処理済み",
   "source_label": "ソース",
   "source_tooltip": "ソース",

@@ -850,6 +850,7 @@
   "setup_ui_title": "Indstil Web UI-adresserne til AdGuard Home",
   "setup_ui_title_banner": "Web UI-indstillinger",
   "show_blocked_responses": "Blokeret",
+  "show_more": "Vis mere",
   "show_more_count": "+ %count% flere",
   "show_processed_responses": "Behandlet",
   "sort_asc": "Sortér fra A-Z",

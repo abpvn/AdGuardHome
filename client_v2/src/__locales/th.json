@@ -306,6 +306,7 @@
   "setup_dns_privacy_ioc_mac": "การกำหนดค่า iOS และ macOS",
   "setup_dns_privacy_other_title": "การใช้งานอื่น ๆ",
   "show_blocked_responses": "ปิดกั้นแล้ว",
+  "show_more": "ดูเพิ่มเติม",
   "show_processed_responses": "ประมวลผลแล้ว",
   "source_label": "ที่มา",
   "source_tooltip": "ที่มา",

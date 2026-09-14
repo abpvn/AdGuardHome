@@ -745,6 +745,7 @@
   "setup_ui_title": "Configura la dirección de la interfaz de usuario web de AdGuard Home",
   "setup_ui_title_banner": "Configuración de la interfaz de usuario web",
   "show_blocked_responses": "Bloqueado",
+  "show_more": "Mostrar más",
   "show_more_count": "+ %count% más",
   "show_processed_responses": "Procesado",
   "sort_asc": "Ordenar de la A a la Z",

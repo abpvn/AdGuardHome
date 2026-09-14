@@ -327,6 +327,7 @@
   "setup_dns_privacy_ioc_mac": "iOS ja macOS -asetukset",
   "setup_dns_privacy_other_title": "Muita toteutuksia",
   "show_blocked_responses": "Estetty",
+  "show_more": "Näytä lisää",
   "show_processed_responses": "Käsitelty",
   "source_label": "Lähde",
   "source_tooltip": "Lähde",

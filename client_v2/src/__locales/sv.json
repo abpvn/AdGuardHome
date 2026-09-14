@@ -326,6 +326,7 @@
   "setup_dns_privacy_ioc_mac": "iOS och macOS konfiguration",
   "setup_dns_privacy_other_title": "Andra implementeringar",
   "show_blocked_responses": "Blockerade",
+  "show_more": "Visa mer",
   "show_processed_responses": "Utförda",
   "source_label": "Webbkälla",
   "source_tooltip": "Webbkälla",

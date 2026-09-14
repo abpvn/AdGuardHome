@@ -369,6 +369,7 @@
   "setup_dns_privacy_ioc_mac": "iOS 및 macOS 설정",
   "setup_dns_privacy_other_title": "기타 구현",
   "show_blocked_responses": "차단됨",
+  "show_more": "더 보기",
   "show_processed_responses": "처리됨",
   "source_label": "소스",
   "source_tooltip": "소스",

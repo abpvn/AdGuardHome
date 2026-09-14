@@ -327,6 +327,7 @@
   "setup_dns_privacy_ioc_mac": "iOS- og macOS-oppsett",
   "setup_dns_privacy_other_title": "Andre implementeringer",
   "show_blocked_responses": "Blokkert",
+  "show_more": "Vis mer",
   "show_processed_responses": "Behandlet",
   "source_label": "Kilde",
   "source_tooltip": "Kilde",

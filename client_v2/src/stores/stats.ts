@@ -26,6 +26,8 @@ type StatsState = {
     processingStats: boolean;
     processingReset: boolean;
     processingClientInfo: boolean;
+    /** Whether the stats config (interval etc.) has been fetched from the server. */
+    configLoaded: boolean;
     interval: number;
     customInterval: number | null;
     dnsQueries: number[];
@@ -59,6 +61,7 @@ const initialState: StatsState = {
     processingStats: true,
     processingReset: false,
     processingClientInfo: false,
+    configLoaded: false,
     interval: DAY,
     customInterval: null,
     dnsQueries: [],
@@ -165,6 +168,7 @@ export const getStatsConfig = async () => {
             ignored: data.ignored || [],
             ignored_enabled: data.ignored_enabled ?? false,
             processingGetConfig: false,
+            configLoaded: true,
         });
     } catch (error) {
         addErrorToast({ error });

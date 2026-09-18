@@ -1,17 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@solidjs/testing-library';
 
-vi.mock('panel/common/intl', () => {
-    const intl = {
-        getMessage: (key: string) => {
-            const messages: Record<string, string> = {
-                processing_update: 'Please wait, AdGuard Home is being updated',
-            };
-            return messages[key] || key;
-        },
-    };
-    return { default: intl };
-});
+import { copyInDom } from 'panel/__tests__/helpers/copy';
+
+vi.mock('panel/common/intl', async () =>
+    (await import('panel/__tests__/helpers/copy')).createIntlMock(),
+);
 
 import { UpdateOverlay } from 'panel/common/ui/UpdateOverlay';
 
@@ -20,8 +14,6 @@ describe('UpdateOverlay', () => {
         render(() => <UpdateOverlay />);
 
         expect(screen.getByTestId('update-overlay')).toBeInTheDocument();
-        expect(
-            screen.getByText('Please wait, AdGuard Home is being updated'),
-        ).toBeInTheDocument();
+        expect(screen.getByText(copyInDom('processing_update'))).toBeInTheDocument();
     });
 });

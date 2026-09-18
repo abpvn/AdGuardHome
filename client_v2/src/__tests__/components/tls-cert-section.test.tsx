@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@solidjs/testing-library';
 import userEvent from '@testing-library/user-event';
 
+import { copy, copyInDom } from 'panel/__tests__/helpers/copy';
+
 const mockEncryptionState: Record<string, any> = {
     valid_chain: true,
     valid_cert: true,
@@ -23,39 +25,12 @@ vi.mock('panel/stores/encryption', () => ({
     },
     setTlsConfig: vi.fn(),
     resetValidationStatus: vi.fn(),
-    clearCertOptimistically: vi.fn(),
+    applyTlsOptimistically: vi.fn(),
 }));
 
-vi.mock('panel/common/intl', () => {
-    const intl = {
-        getMessage: (key: string, values?: any) => {
-            const messages: Record<string, string> = {
-                tls_certificate: 'TLS certificate',
-                delete_tls_certificate: 'Delete TLS certificate',
-                delete_tls_certificate_desc: 'Delete the TLS certificate?',
-                delete_table_action_confirm: 'Delete',
-                cancel: 'Cancel',
-                encryption_certificates: 'Certificates',
-                edit_tls_certificate: 'Edit TLS certificate',
-                encryption_key_cert_mismatch: 'Key and certificate do not match',
-                encryption_certificate_has_issues: 'Certificate has issues',
-                encryption_chain_valid: 'Certificate chain is valid',
-                encryption_chain_invalid: 'Certificate chain is invalid',
-                encryption_key_valid: 'Private key is valid',
-                encryption_key_invalid: 'Private key is invalid',
-                encryption_subject: `Subject: ${values?.value}`,
-                encryption_issuer: `Issuer: ${values?.value}`,
-                encryption_expire: `Expires: ${values?.value}`,
-                encryption_hostnames: `Hostnames: ${values?.value}`,
-                encryption_key_type: `Encryption algorithm: ${values?.value}`,
-            };
-            return messages[key] || key;
-        },
-        getUILanguage: () => 'en',
-        changeLanguage: vi.fn(),
-    };
-    return { default: intl };
-});
+vi.mock('panel/common/intl', async () =>
+    (await import('panel/__tests__/helpers/copy')).createIntlMock(),
+);
 
 import { TlsCertSection } from 'panel/components/Encryption/blocks/TlsCertSection';
 
@@ -83,13 +58,19 @@ describe('TlsCertSection', () => {
     it('renders certificate details when certificate is configured', () => {
         renderSection();
 
-        expect(screen.getByText('Certificate chain is valid')).toBeInTheDocument();
-        expect(screen.getByText('Subject: CN=example.com')).toBeInTheDocument();
-        expect(screen.getByText(/Issuer: /)).toBeInTheDocument();
-        expect(screen.getByText(/Expires: /)).toBeInTheDocument();
-        expect(screen.getByText('Hostnames: example.com')).toBeInTheDocument();
-        expect(screen.getByText('Private key is valid')).toBeInTheDocument();
-        expect(screen.getByText('Encryption algorithm: RSA')).toBeInTheDocument();
+        expect(screen.getByText(copyInDom('encryption_chain_valid'))).toBeInTheDocument();
+        expect(
+            screen.getByText(copyInDom('encryption_subject', { value: 'CN=example.com' })),
+        ).toBeInTheDocument();
+        expect(screen.getByText(new RegExp(copy('encryption_issuer').slice(0, 6)))).toBeInTheDocument();
+        expect(screen.getByText(new RegExp(copy('encryption_expire').slice(0, 7)))).toBeInTheDocument();
+        expect(
+            screen.getByText(copyInDom('encryption_hostnames', { value: 'example.com' })),
+        ).toBeInTheDocument();
+        expect(screen.getByText(copyInDom('encryption_key_valid'))).toBeInTheDocument();
+        expect(
+            screen.getByText(copyInDom('encryption_key_type', { value: 'RSA' })),
+        ).toBeInTheDocument();
     });
 
     it('shows warning message and certificate details together when a warning is present', () => {
@@ -97,10 +78,14 @@ describe('TlsCertSection', () => {
 
         renderSection();
 
-        expect(screen.getByText('Certificate has issues')).toBeInTheDocument();
+        expect(
+            screen.getByText(copyInDom('encryption_certificate_has_issues')),
+        ).toBeInTheDocument();
         expect(screen.getByText('Certificate will expire soon')).toBeInTheDocument();
-        expect(screen.getByText('Certificate chain is valid')).toBeInTheDocument();
-        expect(screen.getByText('Subject: CN=example.com')).toBeInTheDocument();
+        expect(screen.getByText(copyInDom('encryption_chain_valid'))).toBeInTheDocument();
+        expect(
+            screen.getByText(copyInDom('encryption_subject', { value: 'CN=example.com' })),
+        ).toBeInTheDocument();
     });
 
     it('shows mismatch error and certificate details together', () => {
@@ -108,9 +93,13 @@ describe('TlsCertSection', () => {
 
         renderSection();
 
-        expect(screen.getByText('Key and certificate do not match')).toBeInTheDocument();
-        expect(screen.getByText('Certificate chain is valid')).toBeInTheDocument();
-        expect(screen.getByText('Subject: CN=example.com')).toBeInTheDocument();
+        expect(
+            screen.getByText(copyInDom('encryption_key_cert_mismatch')),
+        ).toBeInTheDocument();
+        expect(screen.getByText(copyInDom('encryption_chain_valid'))).toBeInTheDocument();
+        expect(
+            screen.getByText(copyInDom('encryption_subject', { value: 'CN=example.com' })),
+        ).toBeInTheDocument();
     });
 
     it('renders nothing when no certificate is configured', () => {
@@ -119,7 +108,7 @@ describe('TlsCertSection', () => {
 
         renderSection();
 
-        expect(screen.queryByText('Certificate chain is valid')).not.toBeInTheDocument();
+        expect(screen.queryByText(copyInDom('encryption_chain_valid'))).not.toBeInTheDocument();
     });
 
     it('fires onEdit when the edit button is clicked', async () => {
@@ -127,7 +116,7 @@ describe('TlsCertSection', () => {
 
         renderSection({ onEdit });
 
-        await userEvent.click(screen.getByLabelText('Edit TLS certificate'));
+        await userEvent.click(screen.getByLabelText(copyInDom('edit_tls_certificate')));
 
         expect(onEdit).toHaveBeenCalledTimes(1);
     });

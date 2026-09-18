@@ -355,6 +355,7 @@ export const PersistentClientsTable = (props: Props) => {
             pageSize={pageSize()}
             onPageSizeChange={handlePageSizeChange}
             getRowId={(row) => row.name ?? ''}
+            headerTooltip
         />
     );
 };

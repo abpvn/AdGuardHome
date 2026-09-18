@@ -11,8 +11,8 @@
   "add_to_allowlist": "Thêm vào danh sách cho phép",
   "edit_tls_certificate": "Sửa chứng chỉ TLS",
   "edit_tls_certificate_private_key": "Sửa khóa riêng của chứng chỉ TLS",
-  "ads_blocked": "Quảng cáo bị chặn",
-  "ads_blocked_card": "Quảng cáo bị chặn",
+  "ads_blocked": "Quảng cáo đã chặn",
+  "ads_blocked_card": "Quảng cáo đã chặn",
   "ads_blocked_tooltip": "Số lượng truy vấn DNS bị chặn bởi bộ lọc chặn quảng cáo và danh sách chặn máy chủ",
   "adult_websites_blocked": "Các trang web người lớn đã bị chặn",
   "adult_websites_blocked_tooltip": "Số trang web người lớn đã chặn",
@@ -868,7 +868,7 @@
   "try_again": "Hãy thử lại",
   "tuesday": "Thứ ba",
   "type_value": "Loại: %value%",
-  "unavailable_dhcp": "DHCP không khả dụng",
+  "unavailable_dhcp": "DHCP không khả dụng. Hệ điều hành không được hỗ trợ hoặc không có phạm vi DHCP nào được cấu hình",
   "unavailable_dhcp_desc": "AdGuard Home không thể chạy máy chủ DHCP trên hệ điều hành của bạn",
   "unblock": "Bỏ chặn",
   "unblock_client": "Bỏ chặn máy khách",
@@ -988,5 +988,10 @@
   "yes_disable": "Có, tắt",
   "yes_disallow": "Có, từ chối",
   "yes_remove": "Có, xóa",
-  "yes_reset": "Có, đặt lại"
+  "yes_reset": "Có, đặt lại",
+  "aria_actions": "Thao tác",
+  "aria_more_info": "Tìm hiểu thêm",
+  "go_back": "Quay lại",
+  "tls_certificate_expiring": "Chứng chỉ TLS của bạn sắp hết hạn",
+  "tls_setup_error_read_key": "Không thể đọc tệp khóa riêng tư"
 }

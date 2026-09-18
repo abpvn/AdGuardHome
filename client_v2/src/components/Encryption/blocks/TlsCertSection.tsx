@@ -6,7 +6,7 @@ import {
     encryptionState,
     setTlsConfig,
     resetValidationStatus,
-    clearCertOptimistically,
+    applyTlsOptimistically,
 } from 'panel/stores/encryption';
 import { CertificateStatus, KeyStatus, ValidationStatus } from '../Status';
 import s from '../styles.module.pcss';
@@ -18,7 +18,13 @@ export const TlsCertSection = (props: { onEdit?: () => void }) => {
     const enc = () => encryptionState;
 
     const handleRemoveCert = () => {
-        clearCertOptimistically();
+        applyTlsOptimistically({
+            certificate_chain: '',
+            private_key: '',
+            certificate_path: '',
+            private_key_path: '',
+            private_key_saved: false,
+        });
         resetValidationStatus();
         setTlsConfig({
             enabled: false,

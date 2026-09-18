@@ -17,6 +17,7 @@ vi.mock('panel/stores/toasts', () => ({
 }));
 
 import { toggleClientBlock, setAccessList } from 'panel/stores/access';
+import { copy } from 'panel/__tests__/helpers/copy';
 
 describe('toggleClientBlock', () => {
     beforeEach(() => vi.clearAllMocks());
@@ -103,7 +104,7 @@ describe('toggleClientBlock', () => {
             allowed_countries: [],
         });
         expect(mocks.addSuccessToast).toHaveBeenCalledTimes(1);
-        expect(mocks.addSuccessToast.mock.calls[0][0]).not.toBe('Client unblocked');
+        expect(mocks.addSuccessToast.mock.calls[0][0]).not.toBe(copy('client_unblocked_flash'));
     });
 });
 

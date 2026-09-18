@@ -63,6 +63,7 @@ export const REPOSITORY = {
 };
 
 export const CLIENT_ID_LINK = 'https://github.com/AdguardTeam/AdGuardHome/wiki/Clients#clientid';
+export const LETSENCRYPT_LINK = 'https://letsencrypt.org/';
 export const MANUAL_UPDATE_LINK =
     'https://github.com/AdguardTeam/AdGuardHome/wiki/FAQ#manual-update';
 export const PORT_53_FAQ_LINK = 'https://github.com/AdguardTeam/AdGuardHome/wiki/FAQ#bindinuse';
@@ -149,6 +150,22 @@ export const DAY = HOUR * 24;
 export const STATS_INTERVALS_DAYS = [6 * HOUR, DAY, DAY * 7, DAY * 30, DAY * 90];
 
 export const QUERY_LOG_INTERVALS_DAYS = [HOUR * 6, DAY, DAY * 7, DAY * 30, DAY * 90];
+
+/**
+ * Number of top clients displayed on the dashboard's "Top clients" block.
+ *
+ * The dashboard only renders this many rows, so `getStats` also only requests
+ * client info for this many clients when loading stats for the dashboard.
+ */
+export const TOP_CLIENTS_VISIBLE_ITEMS = 4;
+
+/**
+ * Upper limit of "top clients" the stats API can return.  Mirrors
+ * `maxClients` in `internal/stats/unit.go`.  Pass this to `getStats` when all
+ * top clients need client info (e.g. the "Show more" Top clients page or the
+ * Clients page, which aggregates per-client query counts by resolved name).
+ */
+export const STATS_TOP_CLIENTS_LIMIT = 100;
 
 export const RETENTION_CUSTOM = 1;
 

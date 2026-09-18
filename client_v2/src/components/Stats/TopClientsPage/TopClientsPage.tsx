@@ -17,6 +17,7 @@ import { statsState } from 'panel/stores/stats';
 import { accessState, getAccessList } from 'panel/stores/access';
 import { initClientForm } from 'panel/stores/clientForm';
 import { LOCAL_STORAGE_KEYS } from 'panel/helpers/localStorageHelper';
+import { STATS_TOP_CLIENTS_LIMIT } from 'panel/helpers/constants';
 import { computePercent } from 'panel/helpers/statistics';
 import { splitByNewLine } from 'panel/helpers/helpers';
 import type { IOption } from 'panel/lib/helpers/utils';
@@ -37,7 +38,9 @@ type ClientStat = {
 
 export const TopClientsPage = () => {
     const navigate = useNavigate();
-    const refreshStats = useStatsRefresh();
+    // The full page renders every top client, so all of them must be enriched
+    // with client info, not just the ones shown on the dashboard.
+    const refreshStats = useStatsRefresh({ enrichClientsLimit: STATS_TOP_CLIENTS_LIMIT });
 
     onMount(() => {
         refreshStats();

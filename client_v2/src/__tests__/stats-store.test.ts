@@ -130,4 +130,54 @@ describe('getStats', () => {
         expect(statsState.processingClientInfo).toBe(false);
         expect(statsState.topClients[0].info).not.toEqual({ name: 'Stale' });
     });
+
+    it('only requests client info for the dashboard-visible top clients by default', async () => {
+        mocks.stats.mockResolvedValue({
+            top_clients: Array.from({ length: 100 }, (_, i) => ({
+                [`10.0.0.${i + 1}`]: 100 - i,
+            })),
+            avg_processing_time: 0.012,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+
+        await getStats();
+
+        expect(mocks.clientsSearch).toHaveBeenCalledTimes(1);
+        expect(mocks.clientsSearch).toHaveBeenCalledWith({
+            clients: [
+                { id: '10.0.0.1' },
+                { id: '10.0.0.2' },
+                { id: '10.0.0.3' },
+                { id: '10.0.0.4' },
+            ],
+        });
+    });
+
+    it('enriches all top clients when an explicit limit is passed', async () => {
+        mocks.stats.mockResolvedValue({
+            top_clients: Array.from({ length: 5 }, (_, i) => ({
+                [`10.0.0.${i + 1}`]: 100 - i,
+            })),
+            avg_processing_time: 0.012,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+
+        await getStats(undefined, 100);
+
+        expect(mocks.clientsSearch).toHaveBeenCalledWith({
+            clients: [
+                { id: '10.0.0.1' },
+                { id: '10.0.0.2' },
+                { id: '10.0.0.3' },
+                { id: '10.0.0.4' },
+                { id: '10.0.0.5' },
+            ],
+        });
+    });
 });

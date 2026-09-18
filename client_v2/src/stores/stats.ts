@@ -9,7 +9,13 @@ import {
 } from 'panel/api/generated';
 import { addErrorToast, addSuccessToast } from './toasts';
 import intl from 'panel/common/intl';
-import { DAY, HOUR, STATS_INTERVALS_DAYS, TIME_UNITS } from 'panel/helpers/constants';
+import {
+    DAY,
+    HOUR,
+    STATS_INTERVALS_DAYS,
+    TIME_UNITS,
+    TOP_CLIENTS_VISIBLE_ITEMS,
+} from 'panel/helpers/constants';
 import {
     normalizeTopStats,
     normalizeTopClients,
@@ -91,14 +97,29 @@ const [state, setState] = createStore<StatsState>(initialState);
 // Guards against stale client-info updates overwriting a newer stats refresh.
 let statsSequence = 0;
 
-export const getStats = async (period?: number) => {
+/**
+ * Fetches statistics and optionally enriches the top clients with client info
+ * (names, WHOIS, blocked status) via `POST /control/clients/search`.
+ *
+ * @param period Stats period in milliseconds.
+ * @param enrichClientsLimit How many top clients to request client info for.
+ * The dashboard renders only `TOP_CLIENTS_VISIBLE_ITEMS` rows, so by default
+ * only those are looked up.  Pass `STATS_TOP_CLIENTS_LIMIT` when all top
+ * clients must be enriched (the "Show more" Top clients page and the Clients
+ * page, which aggregates per-client query counts by resolved name).
+ */
+export const getStats = async (
+    period?: number,
+    enrichClientsLimit: number = TOP_CLIENTS_VISIBLE_ITEMS,
+) => {
     setState('processingStats', true);
     const sequence = ++statsSequence;
     try {
         const data = await stats(period != null ? { recent: period } : undefined);
 
         const normalizedTopClientsList = normalizeTopStats(data.top_clients || []);
-        const clientsParams = getParamsForClientsSearch(normalizedTopClientsList, 'name');
+        const topClientsToEnrich = normalizedTopClientsList.slice(0, enrichClientsLimit);
+        const clientsParams = getParamsForClientsSearch(topClientsToEnrich, 'name');
         const clientsPromise = clientsSearch(clientsParams);
 
         // Render stats right away; client info arrives asynchronously.

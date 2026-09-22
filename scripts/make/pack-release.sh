@@ -208,7 +208,7 @@ env \
 
 # Create the version.json file.
 
-version_download_url="https://static.adtidy.org/adguardhome/${channel}"
+version_download_url="https://github.com/abpvn/AdGuardHome/releases/download/${version}"
 version_json="./${dist}/version.json"
 readonly version_download_url version_json
 
@@ -217,7 +217,7 @@ readonly version_download_url version_json
 if [ "$channel" = 'edge' ]; then
 	announcement_url='https://github.com/AdguardTeam/AdGuardHome/wiki/Platforms'
 else
-	announcement_url="https://github.com/AdguardTeam/AdGuardHome/releases/tag/${version}"
+	announcement_url="https://github.com/abpvn/AdGuardHome/releases/tag/${version}"
 fi
 readonly announcement_url
 

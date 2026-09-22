@@ -27,7 +27,7 @@ jobs:
       contents: write
       packages: write
     env:
-      GO111MODULE': 'on'
+      GO111MODULE: 'on'
       GOPROXY: 'https://goproxy.cn'
       VERSION: ${{ github.ref_name == 'master' && 'v0.0.0-d.0' || github.ref_name }}
       NPM_CACHE_DIR: ''
@@ -110,7 +110,7 @@ jobs:
           DOCKER_IMAGE_NAME="${{env.REGISTRY}}/abpvn/adguardhome" \
           DOCKER_PUSH='1' \
           VERSION="${{env.VERSION}}" \
-          build-release build-docker
+          build-release pack-release build-docker
           rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
       - name: Create release
         if: ${{ !contains(env.VERSION, env.DEV_VERSION_CHECK) }}
@@ -152,7 +152,7 @@ jobs:
       - name: Run development build
         if: ${{ contains(env.VERSION, env.DEV_VERSION_CHECK) }}
         run: |
-          make SIGN=0 VERBOSE=1 VERSION="${{env.VERSION}}" build-release
+          make SIGN=0 VERBOSE=1 VERSION="${{env.VERSION}}" build-release pack-release
           rm -rf ${{env.DIST_FOLDER}}/AdGuardHome_frontend.tar.gz
       - name: Create development release
         if: ${{ env.VERSION != env.DEV_VERSION_NAME && contains(env.VERSION, env.DEV_VERSION_CHECK) }}

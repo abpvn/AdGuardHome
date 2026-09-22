@@ -22,7 +22,10 @@ fi
 
 # Exit the script if a pipeline fails (-e), prevent accidental filename
 # expansion (-f), and consider undefined variables as errors (-u).
-set -e -o 'pipefail' -f -u
+#
+# TODO(d.kolyshev): Use set -o 'pipefail' when it's supported by the shells in
+# the build environments.
+set -e -f -u
 
 # Function log is an echo wrapper that writes to stderr if the caller requested
 # verbosity level greater than 0.  Otherwise, it does nothing.

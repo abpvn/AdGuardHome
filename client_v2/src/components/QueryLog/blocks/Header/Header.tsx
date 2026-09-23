@@ -190,24 +190,21 @@ export const Header = (props: Props) => {
                         prefixIcon={<Icon icon="search" class={s.searchIcon} />}
                         suffixIcon={
                             <div class={s.searchSuffix}>
-                                <Show
-                                    when={props.isLoading}
-                                    fallback={
-                                        <Show when={searchValue()}>
-                                            <button
-                                                type="button"
-                                                class={s.searchClearButton}
-                                                data-testid="query-log-search-clear-button"
-                                                aria-label={intl.getMessage('reset')}
-                                                title={intl.getMessage('reset')}
-                                                onMouseDown={(event) => event.preventDefault()}
-                                                onClick={handleClearSearch}
-                                            >
-                                                <Icon icon="cross" class={s.searchClearIcon} />
-                                            </button>
-                                        </Show>
-                                    }
-                                >
+                                <Show when={searchValue()}>
+                                    <button
+                                        type="button"
+                                        class={s.searchClearButton}
+                                        data-testid="query-log-search-clear-button"
+                                        aria-label={intl.getMessage('reset')}
+                                        title={intl.getMessage('reset')}
+                                        onMouseDown={(event) => event.preventDefault()}
+                                        onClick={handleClearSearch}
+                                    >
+                                        <Icon icon="cross" class={s.searchClearIcon} />
+                                    </button>
+                                </Show>
+
+                                <Show when={props.isLoading}>
                                     <InlineLoader class={s.searchLoader} />
                                 </Show>
 

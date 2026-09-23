@@ -326,34 +326,52 @@ export const QueryLog = () => {
                                 when={visibleLogs().length === 0}
                                 fallback={
                                     <>
-                                        <div class={s.mobileList}>
-                                            <For each={visibleLogs()}>
-                                                {(entry) => (
-                                                    <LogCard
-                                                        entry={entry}
-                                                        onRowClick={handleRowClick}
-                                                        onBlock={handleBlockDomain}
-                                                        onUnblock={handleUnblockDomain}
-                                                        onBlockClient={handleBlockClient}
-                                                        onDisallowClient={handleDisallowClient}
-                                                        onAddPersistentClient={
-                                                            handleAddPersistentClient
-                                                        }
-                                                        filters={filteringState.filters || []}
-                                                        services={servicesState.allServices || []}
-                                                        whitelistFilters={
-                                                            filteringState.whitelistFilters || []
-                                                        }
-                                                        clientsFilters={
-                                                            filteringState.clientsFilters || []
-                                                        }
-                                                        persistentClientIds={persistentClientIds()}
-                                                        persistentClientsLoaded={
-                                                            !dashboardState.processingClients
-                                                        }
+                                        <div class={s.mobileListWrap}>
+                                            <div class={s.mobileList}>
+                                                <For each={visibleLogs()}>
+                                                    {(entry) => (
+                                                        <LogCard
+                                                            entry={entry}
+                                                            onRowClick={handleRowClick}
+                                                            onBlock={handleBlockDomain}
+                                                            onUnblock={handleUnblockDomain}
+                                                            onBlockClient={handleBlockClient}
+                                                            onDisallowClient={handleDisallowClient}
+                                                            onAddPersistentClient={
+                                                                handleAddPersistentClient
+                                                            }
+                                                            filters={filteringState.filters || []}
+                                                            services={
+                                                                servicesState.allServices || []
+                                                            }
+                                                            whitelistFilters={
+                                                                filteringState.whitelistFilters || []
+                                                            }
+                                                            clientsFilters={
+                                                                filteringState.clientsFilters || []
+                                                            }
+                                                            persistentClientIds={
+                                                                persistentClientIds()
+                                                            }
+                                                            persistentClientsLoaded={
+                                                                !dashboardState.processingClients
+                                                            }
+                                                        />
+                                                    )}
+                                                </For>
+                                            </div>
+
+                                            <Show when={isFilterReloading()}>
+                                                <div
+                                                    class={s.mobileLoadingOverlay}
+                                                    data-testid="query-log-mobile-loading-overlay"
+                                                >
+                                                    <Loader
+                                                        color="green"
+                                                        class={s.mobileLoadingOverlayLoader}
                                                     />
-                                                )}
-                                            </For>
+                                                </div>
+                                            </Show>
                                         </div>
 
                                         <InfiniteScrollTrigger

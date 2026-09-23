@@ -151,6 +151,10 @@ export const TopClientsPage = () => {
         {
             key: 'queries',
             header: { text: intl.getMessage('queries') },
+            // The count + percent is compact, so cap the column and hand the
+            // remaining space to the IP column so full IPv6 addresses fit.
+            minWidth: 90,
+            maxWidth: 140,
             accessor: (row) => row.count,
             sortable: true,
             sortFn: (a: number, b: number) => a - b,
@@ -165,6 +169,9 @@ export const TopClientsPage = () => {
         {
             key: 'ip',
             header: { text: intl.getMessage('ip_address') },
+            // Full IPv6 addresses are long, so give the column a generous
+            // minimum width to keep them from bleeding into the whois column.
+            minWidth: 210,
             accessor: (row) => row.name,
             sortable: true,
             render: (_v, row) => (

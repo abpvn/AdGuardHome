@@ -603,6 +603,7 @@
   "query_log_retention": "Log rotation",
   "query_log_rewritten": "Rewritten",
   "query_log_safe_search": "Safe search",
+  "query_log_strict_search": "Use double quotes for exact matches",
   "reason_table_header": "Reason",
   "refresh_btn": "Refresh",
   "refresh_statics": "Refresh statistics",

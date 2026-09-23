@@ -128,29 +128,40 @@ export const LogTable = (props: Props) => {
 
     return (
         <div class={s.tableContainer}>
-            <Table
-                data={props.logs}
-                columns={columns()}
-                emptyTable={
-                    props.isInitialLoading || props.isFilterReloading ? (
-                        <div class={s.initialLoader} data-testid="query-log-initial-loader">
-                            <Loader color="green" class={s.loader} />
-                        </div>
-                    ) : (
-                        <EmptyState
-                            class={s.emptyTableWrapper}
-                            mode={props.emptyStateMode}
-                            messageClass={s.emptyTableTitle}
-                        />
-                    )
-                }
-                pagination={false}
-                sortable={false}
-                class={s.table}
-                onRowClick={props.onRowClick}
-                tableRowClass={s.tableRow}
-                tableHeaderClass={s.tableHeader}
-            />
+            <div class={s.tableWrap}>
+                <Table
+                    data={props.logs}
+                    columns={columns()}
+                    emptyTable={
+                        props.isInitialLoading || props.isFilterReloading ? (
+                            <div class={s.initialLoader} data-testid="query-log-initial-loader">
+                                <Loader color="green" class={s.loader} />
+                            </div>
+                        ) : (
+                            <EmptyState
+                                class={s.emptyTableWrapper}
+                                mode={props.emptyStateMode}
+                                messageClass={s.emptyTableTitle}
+                            />
+                        )
+                    }
+                    pagination={false}
+                    sortable={false}
+                    class={s.table}
+                    onRowClick={props.onRowClick}
+                    tableRowClass={s.tableRow}
+                    tableHeaderClass={s.tableHeader}
+                />
+
+                <Show when={props.isFilterReloading}>
+                    <div
+                        class={s.loadingOverlay}
+                        data-testid="query-log-table-loading-overlay"
+                    >
+                        <Loader color="green" class={s.loadingOverlayLoader} />
+                    </div>
+                </Show>
+            </div>
 
             <Show when={props.logs.length > 0}>
                 <InfiniteScrollTrigger

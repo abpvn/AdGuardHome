@@ -1,13 +1,12 @@
 import { Show, For, createSignal, createMemo } from 'solid-js';
-import { useIsDesktop } from 'panel/helpers/useMediaQuery';
+import { useIsDesktop } from 'panel/hooks/useMediaQuery';
 
 import intl from 'panel/common/intl';
 import { Icon } from 'panel/common/ui/Icon';
-import { Tooltip } from 'panel/common/ui/Tooltip';
-import { QueriesTooltip } from 'panel/common/ui/QueriesTooltip';
 import { Dropdown } from 'panel/common/ui/Dropdown';
 import {
     ClientBlockConfirmDialog,
+    ClientBlockMenuItem,
     useClientBlockConfirm,
 } from 'panel/common/ui/ClientBlockConfirm';
 import { Link } from 'panel/common/ui/Link';
@@ -20,6 +19,7 @@ import { TableHeader } from '../TableHeader';
 import { EmptyState } from '../EmptyState';
 import { CardFooter } from '../CardFooter';
 import { ClientTooltip } from '../ClientTooltip';
+import { RowTooltip } from '../RowTooltip';
 import { Whois } from './Whois';
 
 import s from './TopClients.module.pcss';
@@ -40,6 +40,9 @@ type Props = {
     period?: number;
 };
 
+/** The row is a Query Log link, so the block/unblock menu must not follow it. */
+const preventRowLink = (e: MouseEvent) => e.preventDefault();
+
 export const TopClients = (props: Props) => {
     const {
         confirmState: confirmDialog,
@@ -52,7 +55,7 @@ export const TopClients = (props: Props) => {
     const [openMenuClient, setOpenMenuClient] = createSignal<string | null>(null);
 
     const isDesktop = useIsDesktop();
-    const { sortedData: sortedClients } = useSortedData(
+    const { sortedData: sortedClients, hasMore } = useSortedData(
         () => props.topClients,
         TOP_CLIENTS_VISIBLE_ITEMS,
     );
@@ -63,38 +66,20 @@ export const TopClients = (props: Props) => {
     };
 
     const getClientMenu = (client: ClientInfo) => {
-        const isBlocked = isClientBlocked(client.name);
+        // A memo, not a plain read: the row mapper is untracked, so the menu
+        // must track the access list itself to follow a block/unblock.
+        const blocked = createMemo(() => isClientBlocked(client.name));
 
         return (
             <div class={s.protectionMenu}>
-                <Show
-                    when={isBlocked}
-                    fallback={
-                        <div
-                            class={cn(
-                                theme.text.t2,
-                                theme.text.condenced,
-                                s.protectionMenuItem,
-                                s.protectionMenuItemRed,
-                            )}
-                            onClick={() => openClientConfirmDialog(client.name, 'block')}
-                        >
-                            {intl.getMessage('block_client')}
-                        </div>
-                    }
-                >
-                    <div
-                        class={cn(
-                            theme.text.t2,
-                            theme.text.condenced,
-                            theme.dropdown.item,
-                            s.protectionMenuItem,
-                        )}
-onClick={() => openClientConfirmDialog(client.name, 'unblock')}
-                    >
-                        {intl.getMessage('unblock_client')}
-                    </div>
-                </Show>
+                <ClientBlockMenuItem
+                    action={blocked() ? 'unblock' : 'block'}
+                    class={cn(
+                        s.tableRowMenuItem,
+                        blocked() ? s.tableRowMenuItemGreen : s.tableRowMenuItemRed,
+                    )}
+                    onClick={(action) => openClientConfirmDialog(client.name, action)}
+                />
             </div>
         );
     };
@@ -123,35 +108,33 @@ onClick={() => openClientConfirmDialog(client.name, 'unblock')}
                                     ? (client.count / props.numDnsQueries) * 100
                                     : 0,
                             );
-                            const isBlocked = isClientBlocked(client.name);
 
                             return (
-                                <div class={s.clientRow} data-testid="top-client-row">
-                                    <div class={s.clientInfo}>
-                                        <Link
-                                            to={RoutePath.QueryLog}
-                                            query={{ search: `"${client.name}"` }}
-                                            class={cn(
-                                                theme.text.t3,
-                                                theme.text.condenced,
-                                                s.clientIp,
-                                                s.clientIpLink,
-                                            )}
-                                            title={client.name}
-                                        >
-                                            <Tooltip
-                                                position="bottomLeft"
-                                                content={
-                                                    <ClientTooltip
-                                                        address={client.name}
-                                                        whoisInfo={client.info?.whois_info}
-                                                        blocked={isBlocked}
-                                                    />
-                                                }
-                                                class={theme.common.noShrink}
+                                <RowTooltip
+                                    content={
+                                        <ClientTooltip
+                                            address={client.name}
+                                            whoisInfo={client.info?.whois_info}
+                                            blocked={isClientBlocked(client.name)}
+                                        />
+                                    }
+                                >
+                                    <Link
+                                        to={RoutePath.QueryLog}
+                                        query={{ search: `"${client.name}"` }}
+                                        class={cn(s.clientRow, s.clientRowLink)}
+                                        data-testid="top-client-row"
+                                    >
+                                        <div class={s.clientInfo}>
+                                            <div
+                                                class={cn(
+                                                    theme.text.t3,
+                                                    theme.text.condenced,
+                                                    s.clientIp,
+                                                )}
                                             >
                                                 <Show
-                                                    when={isBlocked}
+                                                    when={isClientBlocked(client.name)}
                                                     fallback={
                                                         <Icon icon="wifi" class={s.tableRowIcon} />
                                                     }
@@ -164,16 +147,14 @@ onClick={() => openClientConfirmDialog(client.name, 'unblock')}
                                                         )}
                                                     />
                                                 </Show>
-                                            </Tooltip>
 
-                                            <span class={s.clientIpText}>{client.name}</span>
-                                        </Link>
-                                    </div>
+                                                <span class={s.clientIpText}>{client.name}</span>
+                                            </div>
+                                        </div>
 
-                                    <div class={s.tableRowRight}>
-                                        <Show when={isDesktop()}>
-                                            <div class={s.dropdowWrapper}>
-                                                <QueriesTooltip count={client.count}>
+                                        <div class={s.tableRowRight}>
+                                            <Show when={isDesktop()}>
+                                                <div class={s.dropdownWrapper}>
                                                     <div
                                                         class={cn(
                                                             theme.text.t3,
@@ -181,9 +162,7 @@ onClick={() => openClientConfirmDialog(client.name, 'unblock')}
                                                             s.queryCount,
                                                         )}
                                                     >
-                                                        <Link
-                                                            to={RoutePath.QueryLog}
-                                                            query={{ search: `"${client.name}"` }}
+                                                        <span
                                                             class={cn(
                                                                 theme.text.t3,
                                                                 theme.text.condenced,
@@ -191,7 +170,7 @@ onClick={() => openClientConfirmDialog(client.name, 'unblock')}
                                                             )}
                                                         >
                                                             {formatCompactNumber(client.count)}
-                                                        </Link>
+                                                        </span>
 
                                                         <div
                                                             class={cn(
@@ -203,122 +182,145 @@ onClick={() => openClientConfirmDialog(client.name, 'unblock')}
                                                             ({percent().toFixed(1)}%)
                                                         </div>
                                                     </div>
-                                                </QueriesTooltip>
-                                            </div>
-                                        </Show>
+                                                </div>
+                                            </Show>
 
-                                        <Show when={isDesktop()}>
-                                            <div class={s.queryBar}>
-                                                <div
-                                                    class={s.queryBarFill}
-                                                    style={{ width: `${percent()}%` }}
-                                                />
-                                            </div>
-                                        </Show>
+                                            <Show when={isDesktop()}>
+                                                <div class={s.queryBar}>
+                                                    <div
+                                                        class={s.queryBarFill}
+                                                        style={{ width: `${percent()}%` }}
+                                                    />
+                                                </div>
+                                            </Show>
 
-                                        <div class={s.dropdownWrapper}>
-                                            <Dropdown
-                                                wrapClass={s.clientActionsDropdown}
-                                                menu={getClientMenu(client)}
-                                                position="bottomRight"
-                                                noIcon
-                                                open={openMenuClient() === client.name}
-                                                onOpenChange={(isOpen: boolean) =>
-                                                    setOpenMenuClient(isOpen ? client.name : null)
+                                            <div class={s.dropdownWrapper} onClick={preventRowLink}>
+                                                <Dropdown
+                                                    wrapClass={s.clientActionsDropdown}
+                                                    menu={getClientMenu(client)}
+                                                    position="bottomRight"
+                                                    noIcon
+                                                    open={openMenuClient() === client.name}
+                                                    onOpenChange={(isOpen: boolean) =>
+                                                        setOpenMenuClient(
+                                                            isOpen ? client.name : null,
+                                                        )
+                                                    }
+                                                >
+                                                    <button type="button" class={s.actionButton}>
+                                                        <Icon icon="bullets" />
+                                                    </button>
+                                                </Dropdown>
+                                            </div>
+                                        </div>
+
+                                        <div class={s.tableRowInfo}>
+                                            <Show
+                                                when={props.processingClientInfo}
+                                                fallback={
+                                                    <Show
+                                                        when={client.info?.name}
+                                                        fallback={
+                                                            <div
+                                                                data-testid="top-client-name"
+                                                                class={cn(
+                                                                    theme.text.t4,
+                                                                    theme.text.condenced,
+                                                                    s.clientName,
+                                                                )}
+                                                            >
+                                                                {intl.getMessage('not_available')}
+                                                            </div>
+                                                        }
+                                                    >
+                                                        <div
+                                                            data-testid="top-client-name"
+                                                            class={cn(
+                                                                theme.text.t4,
+                                                                theme.text.condenced,
+                                                                s.clientName,
+                                                            )}
+                                                        >
+                                                            {client.info.name}
+                                                        </div>
+                                                    </Show>
                                                 }
                                             >
-                                                <button type="button" class={s.actionButton}>
-                                                    <Icon icon="bullets" />
-                                                </button>
-                                            </Dropdown>
-                                        </div>
-                                    </div>
+                                                <div
+                                                    class={s.clientInfoSkeleton}
+                                                    data-testid="client-info-skeleton"
+                                                />
+                                            </Show>
 
-                                    <div class={s.tableRowInfo}>
-                                        <Show
-                                            when={props.processingClientInfo}
-                                            fallback={
-                                                <Show when={client.info?.name}>
-                                                    <div
-                                                        data-testid="top-client-name"
-                                                        class={cn(
-                                                            theme.text.t4,
-                                                            theme.text.condenced,
-                                                            s.clientName,
-                                                        )}
-                                                    >
-                                                        {client.info?.name}
-                                                    </div>
-                                                </Show>
-                                            }
-                                        >
-                                            <div
-                                                class={s.clientInfoSkeleton}
-                                                data-testid="client-info-skeleton"
-                                            />
-                                        </Show>
-                                        <Show when={!isDesktop()}>
-                                            <Whois info={client.info?.whois_info} />
-                                        </Show>
-                                        <div class={s.tableRowQueriesInfo}>
-                                            <div
-                                                class={cn(
-                                                    theme.text.t3,
-                                                    theme.text.condenced,
-                                                    s.queryCount,
-                                                )}
-                                            >
-                                                <Link
-                                                    to={RoutePath.QueryLog}
-                                                    query={{ search: `"${client.name}"` }}
-                                                    class={cn(
-                                                        theme.text.t3,
-                                                        theme.text.condenced,
-                                                        s.queryCountLink,
-                                                    )}
-                                                >
-                                                    {formatCompactNumber(client.count)}
-                                                </Link>
-
+                                            {/* The tooltip only opens on hover, so the
+                                                location and ISP need a place on touch. */}
+                                            <Show when={!isDesktop()}>
+                                                <Whois info={client.info?.whois_info} />
+                                            </Show>
+                                            <div class={s.tableRowQueriesInfo}>
                                                 <div
                                                     class={cn(
                                                         theme.text.t3,
                                                         theme.text.condenced,
-                                                        s.queryPercent,
+                                                        s.queryCount,
                                                     )}
                                                 >
-                                                    ({percent().toFixed(1)}%)
+                                                    <span
+                                                        class={cn(
+                                                            theme.text.t3,
+                                                            theme.text.condenced,
+                                                            s.queryCountLink,
+                                                        )}
+                                                    >
+                                                        {formatCompactNumber(client.count)}
+                                                    </span>
+
+                                                    <div
+                                                        class={cn(
+                                                            theme.text.t3,
+                                                            theme.text.condenced,
+                                                            s.queryPercent,
+                                                        )}
+                                                    >
+                                                        ({percent().toFixed(1)}%)
+                                                    </div>
+                                                </div>
+
+                                                <div class={s.queryBar}>
+                                                    <div
+                                                        class={s.queryBarFill}
+                                                        style={{ width: `${percent()}%` }}
+                                                    />
                                                 </div>
                                             </div>
 
-                                            <div class={s.queryBar}>
-                                                <div
-                                                    class={s.queryBarFill}
-                                                    style={{ width: `${percent()}%` }}
-                                                />
+                                            <div class={s.tableRowActions} onClick={preventRowLink}>
+                                                {getClientMenu(client)}
                                             </div>
                                         </div>
-
-                                        <div class={s.tableRowActions}>{getClientMenu(client)}</div>
-                                    </div>
-                                </div>
+                                    </Link>
+                                </RowTooltip>
                             );
                         }}
                     </For>
                 </Show>
-
-                <ClientBlockConfirmDialog
-                    state={confirmDialog()}
-                    onClose={closeConfirmDialog}
-                    onConfirm={handleConfirm}
-                />
             </div>
 
-            <CardFooter
-                to={RoutePath.TopClients}
-                testId="show-more-top-clients"
-                query={props.period ? { period: props.period } : undefined}
+            {/* Outside the list so its dialog is not the list's last child,
+                which would give the last row a divider back while it is open. */}
+            <ClientBlockConfirmDialog
+                state={confirmDialog()}
+                onClose={closeConfirmDialog}
+                onConfirm={handleConfirm}
             />
+
+            <Show when={hasMore()}>
+                <CardFooter
+                    to={RoutePath.TopClients}
+                    testId="show-more-top-clients"
+                    query={props.period ? { period: props.period } : undefined}
+                />
+            </Show>
         </div>
     );
 };

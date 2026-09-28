@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from '@solidjs/router';
 import { Banner } from 'panel/common/ui/Banner';
 import { Button } from 'panel/common/ui/Button';
 import { MANUAL_UPDATE_LINK } from 'panel/helpers/constants';
-import { Paths } from 'panel/components/Routes/Paths';
+import { RoutePath, TLS_WIZARD_QUERY_KEY, linkPathBuilder } from 'panel/components/Routes/Paths';
 import intl from 'panel/common/intl';
 import theme from 'panel/lib/theme';
 
@@ -78,6 +78,11 @@ export const Banners = (props: Props) => {
         );
     });
 
+    const openTlsWizard = () =>
+        navigate(
+            linkPathBuilder(RoutePath.Encryption, undefined, { [TLS_WIZARD_QUERY_KEY]: 'true' }),
+        );
+
     const announcementLinkHandler = (announcementUrl: string) => (text: string) => (
         <a href={announcementUrl} class={theme.link.link} target="_blank" rel="noopener noreferrer">
             {text}
@@ -100,7 +105,7 @@ export const Banners = (props: Props) => {
                                             variant="secondary"
                                             size="very-small"
                                             compact
-                                            onClick={() => navigate(Paths.Encryption)}
+                                            onClick={openTlsWizard}
                                             class={s.actionButton}
                                         >
                                             {intl.getMessage('update_button')}
@@ -124,7 +129,7 @@ export const Banners = (props: Props) => {
                                             variant="secondary"
                                             size="very-small"
                                             compact
-                                            onClick={() => navigate(Paths.Encryption)}
+                                            onClick={openTlsWizard}
                                             class={s.actionButton}
                                         >
                                             {intl.getMessage('update_button')}

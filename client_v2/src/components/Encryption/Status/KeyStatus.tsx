@@ -18,10 +18,12 @@ export const KeyStatus = (props: Props) => (
                 : intl.getMessage('encryption_key_invalid')
         }
     >
-        <Show when={props.keyType}>
-            <div class={s.statusText}>
-                {intl.getMessage('encryption_key_type', { value: props.keyType })}
-            </div>
-        </Show>
+            {/* The store keeps a stale `key_type` when a key fails to parse,
+                so an invalid key must not leak the previous algorithm. */}
+            <Show when={props.validKey && props.keyType}>
+                <div class={s.statusText}>
+                    {intl.getMessage('encryption_key_type', { value: props.keyType })}
+                </div>
+            </Show>
     </StatusBlock>
 );

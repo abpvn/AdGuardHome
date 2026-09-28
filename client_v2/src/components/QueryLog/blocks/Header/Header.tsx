@@ -11,7 +11,7 @@ import { FaqTooltip } from 'panel/common/ui/FaqTooltip';
 import { InlineLoader } from 'panel/common/ui/Loader';
 import { IOption } from 'panel/lib/helpers/utils';
 import { DEBOUNCE_FILTER_TIMEOUT } from 'panel/helpers/constants';
-import { useIsMobile } from 'panel/hooks/useIsMobile';
+import { useIsMobile } from 'panel/hooks/useMediaQuery';
 import { dashboardState } from 'panel/stores/dashboard';
 
 import s from './Header.module.pcss';
@@ -167,8 +167,7 @@ export const Header = (props: Props) => {
     });
     const selectedClient = createMemo(
         () =>
-            clientOptions().find((opt) => opt.value === props.currentClient) ||
-            clientOptions()[0],
+            clientOptions().find((opt) => opt.value === props.currentClient) || clientOptions()[0],
     );
 
     return (

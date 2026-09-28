@@ -32,6 +32,9 @@ vi.mock('panel/components/Stats/hooks/useStatsRefresh', () => ({
 
 vi.mock('panel/common/ui/ClientBlockConfirm', () => ({
     ClientBlockConfirmDialog: (): null => null,
+    // The row's block/unblock action lives in the dropdown menu; this suite
+    // only covers the column sizing and the IP cell.
+    ClientBlockMenuItem: (): null => null,
     useClientBlockConfirm: (): {
         confirmState: null;
         isClientBlocked: (client: string) => boolean;

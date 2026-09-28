@@ -69,6 +69,9 @@ const resetStores = () => {
 describe('Banners', () => {
     beforeEach(() => {
         resetStores();
+        // The Update buttons navigate; start every test from the root route so
+        // a previous navigation cannot hide the banner.
+        window.location.hash = '';
     });
 
     // ── Priority logic cases ──
@@ -92,7 +95,9 @@ describe('Banners', () => {
         renderBanners();
 
         expect(screen.getByTestId('banner-tls-expiring')).toBeInTheDocument();
-        expect(screen.getByText(copyPlural('tls_certificate_expiring_days', 2))).toBeInTheDocument();
+        expect(
+            screen.getByText(copyPlural('tls_certificate_expiring_days', 2)),
+        ).toBeInTheDocument();
     });
 
     it('shows auto-update banner when update available and can auto-update', () => {
@@ -231,6 +236,32 @@ describe('Banners', () => {
         // Lower-priority update banner should now appear even though TLS still takes priority
         expect(screen.queryByTestId('banner-tls-expiring')).not.toBeInTheDocument();
         expect(screen.getByTestId('banner-update-auto')).toBeInTheDocument();
+    });
+
+    // ── Update button deep-links into the TLS setup wizard ──
+
+    it('opens the TLS setup wizard from the expired banner', async () => {
+        const user = userEvent.setup();
+        mockEncryptionState.enabled = true;
+        mockEncryptionState.valid_cert = true;
+        mockEncryptionState.not_after = new Date(Date.now() - 86400000).toISOString(); // expired
+
+        renderBanners();
+        await user.click(screen.getByRole('button', { name: copyInDom('update_button') }));
+
+        expect(window.location.hash).toBe('#/encryption?tlsWizard=true');
+    });
+
+    it('opens the TLS setup wizard from the expiring banner', async () => {
+        const user = userEvent.setup();
+        mockEncryptionState.enabled = true;
+        mockEncryptionState.valid_cert = true;
+        mockEncryptionState.not_after = new Date(Date.now() + 2 * 86400000).toISOString(); // 2 days
+
+        renderBanners();
+        await user.click(screen.getByRole('button', { name: copyInDom('update_button') }));
+
+        expect(window.location.hash).toBe('#/encryption?tlsWizard=true');
     });
 
     // ── forceBanner (dev test override) ──

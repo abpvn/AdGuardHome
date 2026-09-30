@@ -15,6 +15,7 @@ type EncryptionState = Partial<
     >
 > & {
     processing: boolean;
+    initialized: boolean;
     processingConfig: boolean;
     processingValidate: boolean;
     status_cert: string;
@@ -30,6 +31,7 @@ type EncryptionState = Partial<
 
 const initialState: EncryptionState = {
     processing: true,
+    initialized: false,
     processingConfig: false,
     processingValidate: false,
     enabled: false,
@@ -155,10 +157,10 @@ export const getTlsStatus = async () => {
     try {
         const data = await tlsStatus();
         const decoded = decodeResponse(data);
-        setState({ ...decoded, processing: false });
+        setState({ ...decoded, processing: false, initialized: true });
     } catch (error) {
         addErrorToast({ error });
-        setState('processing', false);
+        setState({ processing: false, initialized: true });
     }
 };
 

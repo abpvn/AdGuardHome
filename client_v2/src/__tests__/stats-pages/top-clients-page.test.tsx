@@ -7,8 +7,9 @@ const mocks = vi.hoisted(() => ({
         topClients: [] as { name: string; count: number; info?: unknown }[],
         numDnsQueries: 0,
         processingStats: false,
+        statsInitialized: true,
     },
-    accessState: { disallowed_clients: '', processing: false },
+    accessState: { disallowed_clients: '', processing: false, initialized: true },
 }));
 
 vi.mock('panel/stores/stats', () => ({
@@ -84,7 +85,9 @@ describe('TopClientsPage', () => {
         ];
         mocks.statsState.numDnsQueries = 10;
         mocks.statsState.processingStats = false;
+        mocks.statsState.statsInitialized = true;
         mocks.accessState.disallowed_clients = '';
+        mocks.accessState.initialized = true;
     });
 
     const renderPage = () =>

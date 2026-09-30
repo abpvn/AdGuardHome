@@ -219,9 +219,7 @@ export const TopClientsPage = () => {
                             <div class={s.protectionMenu}>
                                 <ClientBlockMenuItem
                                     action={isBlocked(row.name) ? 'unblock' : 'block'}
-                                    onClick={(action) =>
-                                        openClientConfirmDialog(row.name, action)
-                                    }
+                                    onClick={(action) => openClientConfirmDialog(row.name, action)}
                                 />
                             </div>
                         }
@@ -328,7 +326,7 @@ export const TopClientsPage = () => {
                 columns={columns()}
                 getRowId={(row) => row.name}
                 defaultSort={{ key: 'queries', direction: 'desc' }}
-                loading={statsState.processingStats || accessState.processing}
+                loading={!statsState.statsInitialized || !accessState.initialized}
                 emptyText={intl.getMessage('nothing_found')}
                 onRefresh={handleRefresh}
                 searchTextForRow={(row) => `${row.name} ${row.info?.name ?? ''}`}

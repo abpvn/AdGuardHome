@@ -29,6 +29,7 @@ type DashboardState = {
     isCoreRunning: boolean;
     processingVersion: boolean;
     processingClients: boolean;
+    clientsInitialized: boolean;
     processingUpdate: boolean;
     processingProfile: boolean;
     protectionEnabled: boolean;
@@ -58,6 +59,7 @@ const initialState: DashboardState = {
     isCoreRunning: true,
     processingVersion: true,
     processingClients: true,
+    clientsInitialized: false,
     processingUpdate: false,
     processingProfile: true,
     protectionEnabled: false,
@@ -309,10 +311,11 @@ export const getClients = async () => {
             autoClients: sortClients(data.auto_clients || []),
             supportedTags: data.supported_tags || [],
             processingClients: false,
+            clientsInitialized: true,
         });
     } catch (error) {
         addErrorToast({ error });
-        setState('processingClients', false);
+        setState({ processingClients: false, clientsInitialized: true });
     }
 };
 

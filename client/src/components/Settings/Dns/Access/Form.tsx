@@ -2,7 +2,7 @@ import React, { ReactNode, useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
 
-import { CLIENT_ID_LINK } from '../../../../helpers/constants';
+import { CLIENT_ID_LINK, DB_IP_LINK } from '../../../../helpers/constants';
 import { removeEmptyLines, trimMultilineString } from '../../../../helpers/helpers';
 import { Textarea } from '../../../ui/Controls/Textarea';
 
@@ -91,14 +91,28 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
         {
             id: 'allowed_countries',
             title: t('access_allowed_countries_title'),
-            subtitle: t('access_allowed_countries_desc'),
+            subtitle: (
+                <Trans
+                    components={{
+                        a: <a href={DB_IP_LINK} target="_blank" rel="noopener noreferrer" />,
+                    }}>
+                    access_allowed_countries_desc
+                </Trans>
+            ),
             placeholder: 'example_countries_placeholder',
             normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
         },
         {
             id: 'blocked_countries',
             title: t('access_blocked_countries_title'),
-            subtitle: t('access_blocked_countries_desc'),
+            subtitle: (
+                <Trans
+                    components={{
+                        a: <a href={DB_IP_LINK} target="_blank" rel="noopener noreferrer" />,
+                    }}>
+                    access_blocked_countries_desc
+                </Trans>
+            ),
             placeholder: 'example_countries_placeholder',
             normalizeOnBlur: (text: string) => removeEmptyLines(text.toUpperCase()),
         },

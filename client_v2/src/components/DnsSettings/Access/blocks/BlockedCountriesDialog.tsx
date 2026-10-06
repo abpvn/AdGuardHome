@@ -4,6 +4,7 @@ import { accessState, setAccessList } from 'panel/stores/access';
 import intl from 'panel/common/intl';
 import { ConfigDialog } from 'panel/common/ui/ConfigDialog';
 import { Textarea } from 'panel/common/controls/Textarea';
+import { DB_IP_LINK } from 'panel/helpers/constants';
 import { useField } from 'panel/hooks/useField';
 import theme from 'panel/lib/theme';
 
@@ -23,7 +24,25 @@ export const BlockedCountriesDialog = (props: Props) => {
         <ConfigDialog
             open={props.open()}
             title={intl.getMessage('dns_blocked_countries')}
-            description={<p>{intl.getMessage('dns_blocked_countries_desc')}</p>}
+            description={
+                <>
+                    <p>{intl.getMessage('dns_blocked_countries_desc')}</p>
+                    <p>
+                        {intl.getMessage('dns_blocked_countries_desc_2', {
+                            a: (text: string) => (
+                                <a
+                                    href={DB_IP_LINK}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class={theme.link.link}
+                                >
+                                    {text}
+                                </a>
+                            ),
+                        })}
+                    </p>
+                </>
+            }
             onClose={props.onClose}
             onSubmit={() => {
                 field.submitIfValid((v) => {

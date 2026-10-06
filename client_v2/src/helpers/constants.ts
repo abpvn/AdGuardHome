@@ -70,6 +70,7 @@ export const REPOSITORY = {
 };
 
 export const CLIENT_ID_LINK = 'https://github.com/AdguardTeam/AdGuardHome/wiki/Clients#clientid';
+export const DB_IP_LINK = 'https://db-ip.com/';
 export const LETSENCRYPT_LINK = 'https://letsencrypt.org/';
 export const MANUAL_UPDATE_LINK =
     'https://github.com/AdguardTeam/AdGuardHome/wiki/FAQ#manual-update';

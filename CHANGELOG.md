@@ -22,6 +22,10 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 - Go version has been updated to prevent the possibility of exploiting the Go vulnerabilities fixed in [1.27.1][go-1.27.1].
 
+### Changed
+
+- The allowed and blocked countries descriptions now match the legacy Web UI and link to the GeoIP database.
+
 ### Fixed
 
 - Reading partially received TCP prefix.

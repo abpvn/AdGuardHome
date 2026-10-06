@@ -1,10 +1,9 @@
 package configmgr
 
 import (
-	"fmt"
 	"net/netip"
 
-	"github.com/AdguardTeam/AdGuardHome/internal/dnsforward"
+	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/netutil"
 	"github.com/AdguardTeam/golibs/timeutil"
@@ -28,7 +27,7 @@ type DNSConfig struct {
 	UpstreamDNSFileName string `yaml:"upstream_dns_file"`
 
 	// UpstreamMode determines the logic through which upstreams will be used.
-	UpstreamMode string `yaml:"upstream_mode"`
+	UpstreamMode proxy.UpstreamMode `yaml:"upstream_mode"`
 
 	// BindHosts are the addresses to listen on.
 	BindHosts []netip.Addr `yaml:"bind_hosts"`
@@ -48,10 +47,16 @@ type DNSConfig struct {
 	// empty slice for this field makes Proxy not trust any address.
 	TrustedProxies []netutil.Prefix `yaml:"trusted_proxies"`
 
+	// AllowedCountries is the list of countries that should be allowed.
+	AllowedCountries []string `yaml:"allowed_countries"`
+
 	// AllowedClients is the slice of IP addresses, CIDR networks, and ClientIDs
 	// of allowed clients.  If not empty, only these clients are allowed, and
 	// DisallowedClients are ignored.
 	AllowedClients []string `yaml:"allowed_clients"`
+
+	// BlockedCountries is the list of countries that should be blocked.
+	BlockedCountries []string `yaml:"blocked_countries"`
 
 	// BlockedHosts is the list of hosts that should be blocked.
 	BlockedHosts []string `yaml:"blocked_hosts"`
@@ -160,6 +165,10 @@ type DNSConfig struct {
 	// HandleDDR, if true, handle DDR requests
 	HandleDDR bool `yaml:"handle_ddr"`
 
+	// IgnoreNoneClientLog defines whether to only store the query log of the
+	// configured clients.
+	IgnoreNoneClientLog bool `yaml:"ignore_non_client_log"`
+
 	// HostsFileEnabled defines whether to use information from the system hosts
 	// file to resolve queries.
 	HostsFileEnabled bool `yaml:"hostsfile_enabled"`
@@ -224,15 +233,7 @@ func (c *DNSConfig) Validate() (err error) {
 		return errors.ErrNoValue
 	}
 
-	var errs []error
-	if c.UpstreamMode != "" {
-		_, err = dnsforward.NewUpstreamMode(c.UpstreamMode)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("upstream_mode: %w", err))
-		}
-	}
-
 	// TODO(d.kolyshev):  Add more validations.
 
-	return errors.Join(errs...)
+	return nil
 }

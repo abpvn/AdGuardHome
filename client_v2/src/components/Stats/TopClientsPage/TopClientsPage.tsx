@@ -19,7 +19,7 @@ import { initClientForm } from 'panel/stores/clientForm';
 import { LOCAL_STORAGE_KEYS } from 'panel/helpers/localStorageHelper';
 import { STATS_TOP_CLIENTS_LIMIT } from 'panel/helpers/constants';
 import { computePercent } from 'panel/helpers/statistics';
-import { queryLogSearchQuery, splitByNewLine } from 'panel/helpers/helpers';
+import { queryLogSearchQuery, sortIpOrString, splitByNewLine } from 'panel/helpers/helpers';
 import type { IOption } from 'panel/lib/helpers/utils';
 import { PlusButton } from 'panel/common/ui/PlusButton';
 import { TruncatedText } from 'panel/common/ui/TruncatedText';
@@ -172,6 +172,7 @@ export const TopClientsPage = () => {
             minWidth: 210,
             accessor: (row) => row.name,
             sortable: true,
+            sortFn: sortIpOrString,
             render: (_v, row) => (
                 <TruncatedText
                     text={row.name}

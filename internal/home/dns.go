@@ -249,7 +249,7 @@ func ipsToUDPAddrs(ips []netip.Addr, port uint16) (udpAddrs []*net.UDPAddr) {
 func newServerConfig(
 	dnsConf *configmgr.DNSConfig,
 	clientSrcConf *clientSourcesConfig,
-	dohConf *doHConfig,
+	dohConf *configmgr.DoHConfig,
 	tlsManager aghtls.Manager,
 	dohAddr netip.AddrPort,
 	httpReg aghhttp.Registrar,

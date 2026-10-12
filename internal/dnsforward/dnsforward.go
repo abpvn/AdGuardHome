@@ -1077,7 +1077,18 @@ func (s *Server) performAccessChecks(ip netip.Addr, clientID string, findInCache
 	var countryRule string
 	var whois *whois.Info
 	if countryChecked {
-		blockedByCountry, countryRule, whois = s.isBlockedCountry(ip, findInCacheOnly)
+		if s.isPersistentClient(ip, clientID) {
+			// Persistent clients are exempt from country blocking and can
+			// access the server from any country, including blocked ones.
+			s.logger.DebugContext(
+				context.TODO(),
+				"skipping country check for persistent client",
+				"ip", ip,
+				"client_id", clientID,
+			)
+		} else {
+			blockedByCountry, countryRule, whois = s.isBlockedCountry(ip, findInCacheOnly)
+		}
 	}
 
 	return accessChecks{
@@ -1091,6 +1102,16 @@ func (s *Server) performAccessChecks(ip netip.Addr, clientID string, findInCache
 		countryRule:       countryRule,
 		whois:             whois,
 	}
+}
+
+// isPersistentClient reports whether the client identified by ip or clientID is
+// a configured persistent client.
+func (s *Server) isPersistentClient(ip netip.Addr, clientID string) (ok bool) {
+	if s.conf.ClientsContainer == nil {
+		return false
+	}
+
+	return s.conf.ClientsContainer.IsPersistentClient(clientID, ip)
 }
 
 // handleAllowlistMode handles allowlist mode logic.

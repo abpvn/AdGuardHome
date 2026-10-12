@@ -1292,6 +1292,116 @@ func TestStorage_CustomUpstreamConfig(t *testing.T) {
 	})
 }
 
+func TestStorage_IsPersistentClient(t *testing.T) {
+	const existingClientID = "existing_client_id"
+
+	var (
+		existingIP    = netip.MustParseAddr("192.0.2.1")
+		nonExistingIP = netip.MustParseAddr("198.51.100.1")
+
+		existingSubnet = netip.MustParsePrefix("192.0.2.128/25")
+		inSubnetIP     = netip.MustParseAddr("192.0.2.200")
+
+		dhcpCliIP  = netip.MustParseAddr("192.0.2.2")
+		dhcpCliMAC = errors.Must(net.ParseMAC("02:00:00:00:00:00"))
+	)
+
+	ctx := testutil.ContextWithTimeout(t, testTimeout)
+	ipToMAC := map[netip.Addr]net.HardwareAddr{
+		dhcpCliIP: dhcpCliMAC,
+	}
+
+	dhcp := &testDHCP{
+		OnLeases: func() (_ []*dhcpsvc.Lease) { panic(testutil.UnexpectedCall()) },
+		OnHostBy: func(ip netip.Addr) (_ string) { panic(testutil.UnexpectedCall(ip)) },
+		OnMACBy: func(ip netip.Addr) (mac net.HardwareAddr) {
+			return ipToMAC[ip]
+		},
+	}
+
+	s, err := client.NewStorage(ctx, &client.StorageConfig{
+		BaseLogger: testLogger,
+		Logger:     testLogger,
+		DHCP:       dhcp,
+	})
+	require.NoError(t, err)
+
+	testutil.CleanupAndRequireSuccess(t, func() (err error) {
+		return s.Shutdown(testutil.ContextWithTimeout(t, testTimeout))
+	})
+
+	err = s.Add(ctx, &client.Persistent{
+		Name:      "client_first",
+		IPs:       []netip.Addr{existingIP},
+		ClientIDs: []client.ClientID{existingClientID},
+		UID:       client.MustNewUID(),
+	})
+	require.NoError(t, err)
+
+	err = s.Add(ctx, &client.Persistent{
+		Name:    "client_subnet",
+		Subnets: []netip.Prefix{existingSubnet},
+		UID:     client.MustNewUID(),
+	})
+	require.NoError(t, err)
+
+	err = s.Add(ctx, &client.Persistent{
+		Name: "client_dhcp",
+		MACs: []net.HardwareAddr{dhcpCliMAC},
+		UID:  client.MustNewUID(),
+	})
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name    string
+		cliID   string
+		cliAddr netip.Addr
+		want    bool
+	}{{
+		name:    "client_id",
+		cliID:   existingClientID,
+		cliAddr: netip.Addr{},
+		want:    true,
+	}, {
+		name:    "client_addr",
+		cliID:   "",
+		cliAddr: existingIP,
+		want:    true,
+	}, {
+		name:    "client_subnet",
+		cliID:   "",
+		cliAddr: inSubnetIP,
+		want:    true,
+	}, {
+		name:    "client_dhcp",
+		cliID:   "",
+		cliAddr: dhcpCliIP,
+		want:    true,
+	}, {
+		name:    "non_existing_client_id",
+		cliID:   "non_existing_client_id",
+		cliAddr: netip.Addr{},
+		want:    false,
+	}, {
+		name:    "non_existing_client_addr",
+		cliID:   "",
+		cliAddr: nonExistingIP,
+		want:    false,
+	}, {
+		name:    "empty_client_id",
+		cliID:   "",
+		cliAddr: netip.Addr{},
+		want:    false,
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := s.IsPersistentClient(tc.cliID, tc.cliAddr)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func BenchmarkFindParams_Set(b *testing.B) {
 	const (
 		testIPStr    = "192.0.2.1"

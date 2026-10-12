@@ -4,11 +4,38 @@ import (
 	"net/netip"
 	"testing"
 
+	"github.com/AdguardTeam/AdGuardHome/internal/client"
+	"github.com/AdguardTeam/AdGuardHome/internal/constants"
+	"github.com/AdguardTeam/AdGuardHome/internal/geoip"
+	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/urlfilter/rules"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// fakeGeoIP is a mock [geoip.Interface] implementation for tests.
+type fakeGeoIP struct {
+	country string
+}
+
+// type check
+var _ geoip.Interface = (*fakeGeoIP)(nil)
+
+// Country implements the [geoip.Interface] interface for *fakeGeoIP.
+func (g *fakeGeoIP) Country(_ netip.Addr) (country string, err error) {
+	return g.country, nil
+}
+
+// Update implements the [geoip.Interface] interface for *fakeGeoIP.
+func (g *fakeGeoIP) Update(_ netip.Addr, _ string) (err error) {
+	return nil
+}
+
+// Close implements the [geoip.Interface] interface for *fakeGeoIP.
+func (g *fakeGeoIP) Close() (err error) {
+	return nil
+}
 
 func TestIsBlockedClientID(t *testing.T) {
 	clientID := "client-1"
@@ -223,5 +250,87 @@ func TestIsBlockedCountry(t *testing.T) {
 				assert.Equal(t, tc.wantBlocked, blocked)
 			})
 		}
+	})
+}
+
+func TestIsBlockedCountryPersistentClient(t *testing.T) {
+	const (
+		persistentClientID = "persistent_client_id"
+		otherClientID      = "other_client_id"
+	)
+
+	var (
+		persistentIP = netip.MustParseAddr("192.0.2.1")
+		otherIP      = netip.MustParseAddr("192.0.2.2")
+	)
+
+	newServer := func(t *testing.T, blockedCountries, allowedCountries []string) (s *Server) {
+		t.Helper()
+
+		access, err := newAccessCtx(nil, nil, nil, nil, allowedCountries, blockedCountries)
+		require.NoError(t, err)
+
+		cc := &clientsContainer{
+			OnCustomUpstreamConfig: func(_ string, _ netip.Addr) (conf *proxy.CustomUpstreamConfig) {
+				return nil
+			},
+			OnUpdateCommonUpstreamConfig: func(_ *client.CommonUpstreamConfig) {},
+			OnClearUpstreamCache:         func() {},
+			OnIsPersistentClient: func(clientID string, cliAddr netip.Addr) (ok bool) {
+				return clientID == persistentClientID || cliAddr == persistentIP
+			},
+		}
+
+		s = &Server{
+			baseLogger: testLogger,
+			logger:     testLogger,
+			addrProc:   client.EmptyAddrProc{},
+			// Set the geoIP to a fixed country to make the lookup deterministic.
+			geoIP:  &fakeGeoIP{country: "US"},
+			access: access,
+		}
+		s.conf.ClientsContainer = cc
+
+		return s
+	}
+
+	t.Run("blocklist", func(t *testing.T) {
+		s := newServer(t, []string{"US"}, nil)
+
+		blocked, _, _ := s.IsBlockedClient(persistentIP, persistentClientID)
+		assert.False(t, blocked, "persistent client must bypass country block")
+
+		blocked, rule, _ := s.IsBlockedClient(otherIP, otherClientID)
+		assert.True(t, blocked, "non-persistent client must be blocked")
+		assert.Equal(t, constants.CountryPrefix+"US", rule)
+
+		blocked, _, _ = s.IsBlockedClient(otherIP, "")
+		assert.True(t, blocked, "non-persistent ip must be blocked")
+	})
+
+	t.Run("allowlist", func(t *testing.T) {
+		s := newServer(t, nil, []string{"JP"})
+
+		blocked, _, _ := s.IsBlockedClient(persistentIP, persistentClientID)
+		assert.False(t, blocked, "persistent client must bypass country allowlist")
+
+		blocked, _, _ = s.IsBlockedClient(otherIP, otherClientID)
+		assert.True(t, blocked, "non-persistent client must be blocked by country allowlist")
+	})
+
+	t.Run("ip_blocklist_still_applies", func(t *testing.T) {
+		access, err := newAccessCtx(nil, nil, []string{persistentIP.String()}, nil, nil, []string{"US"})
+		require.NoError(t, err)
+
+		s := &Server{
+			baseLogger: testLogger,
+			logger:     testLogger,
+			addrProc:   client.EmptyAddrProc{},
+			geoIP:      &fakeGeoIP{country: "US"},
+			access:     access,
+		}
+
+		blocked, _, _ := s.IsBlockedClient(persistentIP, persistentClientID)
+		assert.True(t, blocked, "persistent client must still be blocked by ip blocklist")
 	})
 }

@@ -20,6 +20,10 @@ type ClientsContainer interface {
 	// ClearUpstreamCache clears the upstream cache for each stored custom
 	// client upstream configuration.
 	ClearUpstreamCache()
+
+	// IsPersistentClient reports whether the client identified by clientID or
+	// cliAddr is a configured persistent client.
+	IsPersistentClient(clientID string, cliAddr netip.Addr) (ok bool)
 }
 
 // EmptyClientsContainer is an [ClientsContainer] implementation that does nothing.
@@ -44,3 +48,9 @@ func (EmptyClientsContainer) UpdateCommonUpstreamConfig(conf *client.CommonUpstr
 // ClearUpstreamCache implements the [ClientsContainer] interface for
 // EmptyClientsContainer.
 func (EmptyClientsContainer) ClearUpstreamCache() {}
+
+// IsPersistentClient implements the [ClientsContainer] interface for
+// EmptyClientsContainer.
+func (EmptyClientsContainer) IsPersistentClient(_ string, _ netip.Addr) (ok bool) {
+	return false
+}

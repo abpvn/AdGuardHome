@@ -751,16 +751,38 @@ func (s *Storage) CustomUpstreamConfig(
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	c, ok := s.index.findByClientID(ClientID(id))
-	if !ok {
-		c, ok = s.findByIP(addr)
-	}
-
+	c, ok := s.findByIDOrAddr(id, addr)
 	if !ok {
 		return nil
 	}
 
 	return s.upstreamManager.customUpstreamConfig(c.UID, c.Name)
+}
+
+// IsPersistentClient implements the [dnsforward.ClientsContainer] interface for
+// *Storage.  It prioritizes ClientID over the client IP address to identify the
+// client.
+func (s *Storage) IsPersistentClient(id string, addr netip.Addr) (ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, ok = s.findByIDOrAddr(id, addr)
+
+	return ok
+}
+
+// findByIDOrAddr finds a persistent client by ClientID or IP address.  s.mu is
+// expected to be locked.
+func (s *Storage) findByIDOrAddr(id string, addr netip.Addr) (c *Persistent, ok bool) {
+	if id != "" {
+		c, ok = s.index.findByClientID(ClientID(id))
+	}
+
+	if !ok && addr.IsValid() {
+		c, ok = s.findByIP(addr)
+	}
+
+	return c, ok
 }
 
 // UpdateCommonUpstreamConfig implements the [dnsforward.ClientsContainer]

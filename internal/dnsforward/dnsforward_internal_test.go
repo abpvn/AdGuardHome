@@ -88,6 +88,8 @@ type clientsContainer struct {
 	OnUpdateCommonUpstreamConfig func(conf *client.CommonUpstreamConfig)
 
 	OnClearUpstreamCache func()
+
+	OnIsPersistentClient func(clientID string, cliAddr netip.Addr) (ok bool)
 }
 
 // CustomUpstreamConfig implements the [ClientsContainer] interface for
@@ -109,6 +111,16 @@ func (c *clientsContainer) UpdateCommonUpstreamConfig(conf *client.CommonUpstrea
 // *clientsContainer.
 func (c *clientsContainer) ClearUpstreamCache() {
 	c.OnClearUpstreamCache()
+}
+
+// IsPersistentClient implements the [ClientsContainer] interface for
+// *clientsContainer.
+func (c *clientsContainer) IsPersistentClient(clientID string, cliAddr netip.Addr) (ok bool) {
+	if c.OnIsPersistentClient == nil {
+		return false
+	}
+
+	return c.OnIsPersistentClient(clientID, cliAddr)
 }
 
 // startDeferStop starts the server and stops it when the test ends.

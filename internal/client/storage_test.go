@@ -1353,14 +1353,14 @@ func TestStorage_IsPersistentClient(t *testing.T) {
 	require.NoError(t, err)
 
 	testCases := []struct {
-		name    string
-		cliID   string
 		cliAddr netip.Addr
+		cliID   string
+		name    string
 		want    bool
 	}{{
-		name:    "client_id",
-		cliID:   existingClientID,
 		cliAddr: netip.Addr{},
+		cliID:   existingClientID,
+		name:    "client_id",
 		want:    true,
 	}, {
 		name:    "client_addr",

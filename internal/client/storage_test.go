@@ -1334,21 +1334,21 @@ func TestStorage_IsPersistentClient(t *testing.T) {
 		Name:      "client_first",
 		IPs:       []netip.Addr{existingIP},
 		ClientIDs: []client.ClientID{existingClientID},
-		UID:       client.MustNewUID(),
+		UID:       client.NewUID(),
 	})
 	require.NoError(t, err)
 
 	err = s.Add(ctx, &client.Persistent{
 		Name:    "client_subnet",
 		Subnets: []netip.Prefix{existingSubnet},
-		UID:     client.MustNewUID(),
+		UID:     client.NewUID(),
 	})
 	require.NoError(t, err)
 
 	err = s.Add(ctx, &client.Persistent{
 		Name: "client_dhcp",
 		MACs: []net.HardwareAddr{dhcpCliMAC},
-		UID:  client.MustNewUID(),
+		UID:  client.NewUID(),
 	})
 	require.NoError(t, err)
 

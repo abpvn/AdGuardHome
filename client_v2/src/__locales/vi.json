@@ -44,7 +44,7 @@
   "average_time_processing_tooltip": "Thời gian trung bình (tính bằng mili giây) để xử lý một truy vấn DNS",
   "average_upstream_response_time": "Thời gian phản hồi trung bình từ máy chủ thượng nguồn",
   "avg_response_time": "Thời gian phản hồi trung bình",
-  "back": "Back",
+  "back": "Quay lại",
   "block": "Chặn",
   "block_client": "Chặn máy khách",
   "block_for_this_client_only": "Chỉ chặn ứng dụng khách này",

@@ -20,13 +20,15 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Security
 
-- Go version has been updated to prevent the possibility of exploiting the Go vulnerabilities fixed in [1.27.1][go-1.27.1].
+- Go version has been updated to prevent the possibility of exploiting the Go vulnerabilities fixed in [1.27.2][go-1.27.2].
 
 ### Changed
 
 - The allowed and blocked countries descriptions now match the legacy Web UI and link to the GeoIP database.
 
 ### Fixed
+
+- Incorrect behaviour on the first launch with the `--check-config` flag.
 
 - Reading partially received TCP prefix.
 
@@ -56,7 +58,7 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Removed
 
-- The support for macOS 13 Ventura, see [Go 1.27 release notes][go-1.27.1-notes].
+- The support for macOS 13 Ventura, see [Go 1.27 release notes][go-1.27-notes].
 
 [#8565]:           https://github.com/AdguardTeam/AdGuardHome/issues/8565
 [#8572]:           https://github.com/AdguardTeam/AdGuardHome/issues/8572
@@ -66,8 +68,8 @@ NOTE: Add new changes BELOW THIS COMMENT.
 [#8613]:           https://github.com/AdguardTeam/AdGuardHome/issues/8613
 [#8636]:           https://github.com/AdguardTeam/AdGuardHome/issues/8636
 [#8637]:           https://github.com/AdguardTeam/AdGuardHome/issues/8637
-[go-1.27.1]:       https://groups.google.com/g/golang-announce/c/QiTRm-HGGtI
-[go-1.27.1-notes]: https://go.dev/doc/go1.27#darwin
+[go-1.27.2]:       https://groups.google.com/g/golang-announce/c/U2fTuyDJznI
+[go-1.27-notes]:   https://go.dev/doc/go1.27#darwin
 
 <!--
 NOTE: Add new changes ABOVE THIS COMMENT.

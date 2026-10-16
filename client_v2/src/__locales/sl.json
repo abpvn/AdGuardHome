@@ -559,7 +559,6 @@
   "password_requirements_characters": "Najmanj 8 znakov",
   "password_requirements_lowercase": "Vsaj 1 mala črka",
   "password_requirements_match": "Gesli se ujemata",
-  "password_requirements_special": "Angleške črke, številke in posebni znaki",
   "password_requirements_uppercase": "Vsaj 1 velika črka",
   "path_to_file_placeholder": "Pot do datoteke: lokalni ali internetni naslov",
   "pause_for_hour": "Začasno ustavi za %count% uro",

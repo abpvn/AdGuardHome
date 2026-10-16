@@ -22,6 +22,7 @@ import {
     getAccessList,
     accessState,
 } from 'panel/stores/access';
+import { resetStore } from 'panel/__tests__/helpers/resetStore';
 import { copy } from 'panel/__tests__/helpers/copy';
 
 describe('toggleClientBlock', () => {
@@ -165,7 +166,7 @@ describe('setAccessList', () => {
 describe('getAccessList — initialized flag', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        accessState.initialized = false;
+        resetStore(accessState, { initialized: false });
     });
 
     it('marks initialized after a successful request', async () => {

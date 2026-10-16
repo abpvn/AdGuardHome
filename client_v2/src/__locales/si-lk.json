@@ -554,7 +554,6 @@
   "password_requirements_characters": "අවම වශයෙන් අක්ෂර 8ක්",
   "password_requirements_lowercase": "අවම වශයෙන් කුඩා අකුරක් 1ක්",
   "password_requirements_match": "මුරපද ගැළපේ",
-  "password_requirements_special": "ඉංග්‍රීසි අකුරු, ඉලක්කම් සහ විශේෂ අක්ෂර",
   "password_requirements_uppercase": "අවම වශයෙන් ලොකු අකුරක් 1ක්",
   "path_to_file_placeholder": "ගොනුවට මාර්ගය: දේශීය හෝ අන්තර්ජාල ලිපිනය",
   "pause_for_hour": "පැය %count%ක් සඳහා විරාම කරන්න",

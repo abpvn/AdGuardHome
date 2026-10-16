@@ -605,7 +605,6 @@
   "password_requirements_characters": "Minimum 8 tegn",
   "password_requirements_lowercase": "Minimum 1 minuskel",
   "password_requirements_match": "Adgangskoder matcher",
-  "password_requirements_special": "Engelske bogstaver, tal og specialtegn",
   "password_requirements_uppercase": "Minimum 1 majuskel",
   "path_to_file_placeholder": "Sti til fil: Lokal- eller internetadresse",
   "pause_for_hour": "Pauseret i %count% time",

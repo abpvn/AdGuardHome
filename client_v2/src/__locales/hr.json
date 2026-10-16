@@ -559,7 +559,6 @@
   "password_requirements_characters": "Minimalno 8 znakova",
   "password_requirements_lowercase": "Najmanje jedno slovo malim slovom",
   "password_requirements_match": "Lozinke se podudaraju",
-  "password_requirements_special": "Engleska slova, brojevi i posebni znakovi",
   "password_requirements_uppercase": "Najmanje jedno veliko slovo",
   "path_to_file_placeholder": "Put do datoteke: lokalna ili internetska adresa",
   "pause_for_hour": "Pauza na %count% sat",

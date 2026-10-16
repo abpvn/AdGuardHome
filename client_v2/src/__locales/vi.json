@@ -596,7 +596,6 @@
   "password_requirements_characters": "Tối thiểu 8 ký tự",
   "password_requirements_lowercase": "Ít nhất 1 chữ cái viết thường",
   "password_requirements_match": "Mật khẩu trùng khớp",
-  "password_requirements_special": "Chữ cái tiếng Anh, số và ký tự đặc biệt",
   "password_requirements_uppercase": "Ít nhất 1 chữ cái viết hoa",
   "path_to_file_placeholder": "Đường dẫn tệp: địa chỉ cục bộ hoặc Internet",
   "pause_for_hour": "Tạm dừng trong %count% giờ",

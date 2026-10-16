@@ -559,7 +559,6 @@
   "password_requirements_characters": "Minimum 8 tegn",
   "password_requirements_lowercase": "Minst 1 liten bokstav",
   "password_requirements_match": "Passordene samsvarer",
-  "password_requirements_special": "Engelske bokstaver, tall og spesialtegn",
   "password_requirements_uppercase": "Minst 1 stor bokstav",
   "path_to_file_placeholder": "Filbane: lokal adresse eller internettadresse",
   "pause_for_hour": "Pause i %count% time",

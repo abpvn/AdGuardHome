@@ -559,7 +559,6 @@
   "password_requirements_characters": "Minst 8 tecken",
   "password_requirements_lowercase": "Minst 1 gemen bokstav",
   "password_requirements_match": "Lösenorden matchar",
-  "password_requirements_special": "Engelska bokstäver, siffror och specialtecken",
   "password_requirements_uppercase": "Minst 1 versal bokstav",
   "path_to_file_placeholder": "Sökväg till fil: lokal adress eller internetadress",
   "pause_for_hour": "Pausa i %count% timme",

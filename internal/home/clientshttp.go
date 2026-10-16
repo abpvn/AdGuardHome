@@ -704,16 +704,17 @@ func (clients *clientsContainer) updateClientsFiltersByClient(fy *filtering.Clie
 		isExistWhitelistFilter, wFilterName, isEnabledWhiteList := existsFilters(*fy.FilterYAML, c.WhitelistFilters)
 		if !isExistFilters && !isExistWhitelistFilter {
 			delete(fy.Names, c.Name)
-		} else {
-			*needDelete = false
-			if isExistFilters {
-				fy.Names[c.Name] = filterName
-			}
-			if isExistWhitelistFilter {
-				fy.Names[c.Name] = wFilterName
-			}
-			*shoudEnable = !c.UseGlobalFilters && (isEnabled || isEnabledWhiteList)
+			return true
 		}
+
+		*needDelete = false
+		if isExistFilters {
+			fy.Names[c.Name] = filterName
+		}
+		if isExistWhitelistFilter {
+			fy.Names[c.Name] = wFilterName
+		}
+		*shoudEnable = !c.UseGlobalFilters && (isEnabled || isEnabledWhiteList)
 		return true
 	})
 }

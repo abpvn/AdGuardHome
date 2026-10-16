@@ -559,7 +559,6 @@
   "password_requirements_characters": "8 أحرف على الأقل",
   "password_requirements_lowercase": "على الأقل 1 حرف صغير",
   "password_requirements_match": "كلمتا المرور متطابقتان",
-  "password_requirements_special": "حروف إنجليزية وأرقام ورموز خاصة",
   "password_requirements_uppercase": "على الأقل 1 حرف كبير",
   "path_to_file_placeholder": "طريق الملف: عنوان محلي أو عنوان على الشبكة العنكبوتية",
   "pause_for_hour": "إيقاف مؤقت لمدة %count% ساعة",

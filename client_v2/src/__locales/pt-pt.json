@@ -600,7 +600,6 @@
   "password_requirements_characters": "Mínimo de 8 caracteres",
   "password_requirements_lowercase": "Pelo menos 1 letra minúscula",
   "password_requirements_match": "As palavras-passe coincidem",
-  "password_requirements_special": "Letras inglesas, números e caracteres especiais",
   "password_requirements_uppercase": "Pelo menos 1 letra maiúscula",
   "path_to_file_placeholder": "Caminho para o arquivo: endereço local ou da Internet",
   "pause_for_hour": "Pausar por %count% hora",

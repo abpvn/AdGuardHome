@@ -596,7 +596,6 @@
   "password_requirements_characters": "Mindestens 8 Zeichen",
   "password_requirements_lowercase": "Mindestens 1 Kleinbuchstabe",
   "password_requirements_match": "Passwörter stimmen überein",
-  "password_requirements_special": "Englische Buchstaben, Zahlen und Sonderzeichen",
   "password_requirements_uppercase": "Mindestens 1 Großbuchstabe",
   "path_to_file_placeholder": "Pfad zur Datei: lokale oder Internetadresse",
   "pause_for_hour": "Pause für %count% Stunde",

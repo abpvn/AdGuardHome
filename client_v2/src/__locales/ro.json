@@ -559,7 +559,6 @@
   "password_requirements_characters": "Minimum 8 caractere",
   "password_requirements_lowercase": "Cel puțin 1 literă mică",
   "password_requirements_match": "Parolele corespund",
-  "password_requirements_special": "Litere englezești, cifre și caractere speciale",
   "password_requirements_uppercase": "Cel puțin 1 literă mare",
   "path_to_file_placeholder": "Calea către fișier: adresă locală sau de Internet",
   "pause_for_hour": "Întrerupeți pentru %count% oră",

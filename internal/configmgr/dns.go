@@ -165,9 +165,9 @@ type DNSConfig struct {
 	// HandleDDR, if true, handle DDR requests
 	HandleDDR bool `yaml:"handle_ddr"`
 
-	// IgnoreNoneClientLog defines whether to only store the query log of the
+	// IgnoreNonClientLog defines whether to only store the query log of the
 	// configured clients.
-	IgnoreNoneClientLog bool `yaml:"ignore_non_client_log"`
+	IgnoreNonClientLog bool `yaml:"ignore_non_client_log"`
 
 	// HostsFileEnabled defines whether to use information from the system hosts
 	// file to resolve queries.

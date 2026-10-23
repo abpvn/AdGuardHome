@@ -37,7 +37,7 @@ type configJSON struct {
 	// pointers.
 	AnonymizeClientIP aghalg.NullBool `json:"anonymize_client_ip"`
 
-	IgnoreNoneClientLog aghalg.NullBool `json:"ignore_non_client_log"`
+	IgnoreNonClientLog aghalg.NullBool `json:"ignore_non_client_log"`
 }
 
 // getConfigResp is the JSON structure for the querylog configuration.
@@ -221,8 +221,8 @@ func (l *queryLog) handleQueryLogConfig(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	if newConf.IgnoreNoneClientLog != aghalg.NBNull {
-		conf.IgnoreNonClientLog = newConf.IgnoreNoneClientLog == aghalg.NBTrue
+	if newConf.IgnoreNonClientLog != aghalg.NBNull {
+		conf.IgnoreNonClientLog = newConf.IgnoreNonClientLog == aghalg.NBTrue
 	}
 
 	l.conf = &conf

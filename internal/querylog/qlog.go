@@ -155,6 +155,7 @@ func (l *queryLog) WriteDiskConfig(dc *configmgr.QueryLogConfig, dnsConf *config
 	dc.IgnoredEnabled = c.Ignored.IsEnabled()
 
 	dnsConf.AnonymizeClientIP = c.AnonymizeClientIP
+	dnsConf.IgnoreNonClientLog = c.IgnoreNonClientLog
 }
 
 // Clear memory buffer and remove log files

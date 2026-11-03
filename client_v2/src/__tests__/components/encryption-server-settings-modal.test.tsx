@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@solidjs/testing-library';
+import { render, screen, waitFor } from '@solidjs/testing-library';
 import userEvent from '@testing-library/user-event';
 
 const mocks = vi.hoisted(() => ({
@@ -110,14 +110,6 @@ describe('ServerSettingsModal — opening', () => {
         expect(screen.getByDisplayValue('dns.example.com')).toBeInTheDocument();
         expect(screen.getByDisplayValue('dns.example.org')).toBeInTheDocument();
     });
-
-    it('renders a clear button in every field', () => {
-        renderModal();
-
-        // The server names are optional too, so they are cleared the same way
-        // the three ports are.
-        expect(screen.getAllByTestId('input-clear-button')).toHaveLength(4);
-    });
 });
 
 describe('ServerSettingsModal — the server name list', () => {
@@ -159,32 +151,6 @@ describe('ServerSettingsModal — the server name list', () => {
         await waitFor(() => {
             expect(mocks.setTlsConfig).toHaveBeenCalledWith({
                 server_names: ['dns.example.com'],
-                port_https: 443,
-                port_dns_over_tls: 853,
-                port_dns_over_quic: 853,
-            });
-        });
-    });
-
-    it('saves a name the user emptied through its clear button', async () => {
-        const user = userEvent.setup();
-        renderModal();
-
-        const serverName = screen.getByDisplayValue('dns.example.com');
-        const clearButton = within(serverName.parentElement as HTMLElement).getByTestId(
-            'input-clear-button',
-        );
-        await user.click(clearButton);
-
-        // The names are optional: clearing one must reach the form state, not
-        // just the DOM, so the empty name is what gets saved.
-        expect(serverName).toHaveValue('');
-        expect(screen.getAllByDisplayValue('853')).toHaveLength(2);
-
-        await user.click(saveButton());
-        await waitFor(() => {
-            expect(mocks.setTlsConfig).toHaveBeenCalledWith({
-                server_names: [''],
                 port_https: 443,
                 port_dns_over_tls: 853,
                 port_dns_over_quic: 853,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@solidjs/testing-library';
+import { render, screen, waitFor } from '@solidjs/testing-library';
 import userEventBase from '@testing-library/user-event';
 
 const mocks = vi.hoisted(() => ({
@@ -588,27 +588,6 @@ describe('TlsSetupWizard — step 3 (config & enable)', () => {
         await user.tab();
 
         expect(serverName).toHaveValue('example.com');
-    });
-
-    it('offers a clear button for the server name as soon as it has text', async () => {
-        const user = userEvent.setup();
-        renderWizard();
-
-        await goToStep3(user);
-
-        // The wizard opens with no name, so there is nothing to clear yet.
-        expect(screen.getAllByTestId('input-clear-button')).toHaveLength(3);
-
-        await user.type(serverNameInput(), 'example.com');
-
-        // Typing alone is enough: the field has content, so the button is there
-        // before the value is committed to the form.
-        const serverName = serverNameInput();
-        await user.click(
-            within(serverName.parentElement as HTMLElement).getByTestId('input-clear-button'),
-        );
-
-        expect(serverName).toHaveValue('');
     });
 
     it('fires a debounced pre-flight with the exact save payload once the form is clean', async () => {

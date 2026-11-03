@@ -27,7 +27,7 @@ vi.mock('panel/common/intl', () => ({
 
 import { DAY } from 'panel/helpers/constants';
 
-import { getStats, getStatsConfig, statsState } from 'panel/stores/stats';
+import { getStats, getStatsConfig, enrichTopClients, statsState } from 'panel/stores/stats';
 
 describe('getStats', () => {
     beforeEach(() => {
@@ -219,6 +219,115 @@ describe('getStats', () => {
                 { id: '10.0.0.5' },
             ],
         });
+    });
+
+    it('skips the client search when the enrichment limit is 0', async () => {
+        mocks.stats.mockResolvedValue({
+            top_clients: [{ '10.0.0.1': 5 }],
+            avg_processing_time: 0,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+
+        await getStats(undefined, 0);
+
+        expect(mocks.clientsSearch).not.toHaveBeenCalled();
+        expect(statsState.processingClientInfo).toBe(false);
+    });
+
+    it('enriches only the requested clients and keeps the info of the others', async () => {
+        mocks.stats.mockResolvedValue({
+            top_clients: [{ '10.0.0.1': 5 }, { '10.0.0.2': 3 }],
+            avg_processing_time: 0,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+        await getStats(undefined, 0);
+
+        mocks.clientsSearch.mockResolvedValueOnce([{ '10.0.0.1': { name: 'Phone' } }]);
+        await enrichTopClients(['10.0.0.1']);
+
+        expect(mocks.clientsSearch).toHaveBeenCalledWith({ clients: [{ id: '10.0.0.1' }] });
+        expect(statsState.topClients[0].info).toEqual({ name: 'Phone' });
+
+        mocks.clientsSearch.mockResolvedValueOnce([{ '10.0.0.2': { name: 'Laptop' } }]);
+        await enrichTopClients(['10.0.0.2']);
+
+        expect(statsState.topClients[0].info).toEqual({ name: 'Phone' });
+        expect(statsState.topClients[1].info).toEqual({ name: 'Laptop' });
+    });
+
+    it('reuses cached client info instead of searching again', async () => {
+        mocks.stats.mockResolvedValue({
+            top_clients: [{ '10.0.0.1': 5 }],
+            avg_processing_time: 0,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+        await getStats(undefined, 0);
+
+        await enrichTopClients(['10.0.0.1']);
+        await enrichTopClients(['10.0.0.1']);
+
+        expect(mocks.clientsSearch).toHaveBeenCalledTimes(1);
+    });
+
+    it('deduplicates IDs that already have a search in flight', async () => {
+        mocks.stats.mockResolvedValue({
+            top_clients: [{ '10.0.0.1': 5 }],
+            avg_processing_time: 0,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+        await getStats(undefined, 0);
+
+        let resolveSearch!: (value: unknown) => void;
+        const deferred = new Promise((resolve) => {
+            resolveSearch = resolve;
+        });
+        mocks.clientsSearch.mockReturnValueOnce(deferred as never);
+
+        const first = enrichTopClients(['10.0.0.1']);
+        await enrichTopClients(['10.0.0.1']);
+
+        expect(mocks.clientsSearch).toHaveBeenCalledTimes(1);
+
+        resolveSearch([{ '10.0.0.1': { name: 'Phone' } }]);
+        await first;
+    });
+
+    it('ignores a stale enrichment response after a newer stats refresh', async () => {
+        mocks.stats.mockResolvedValue({
+            top_clients: [{ '10.0.0.1': 5 }],
+            avg_processing_time: 0,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+        await getStats(undefined, 0);
+
+        let resolveSearch!: (value: unknown) => void;
+        const deferred = new Promise((resolve) => {
+            resolveSearch = resolve;
+        });
+        mocks.clientsSearch.mockReturnValueOnce(deferred as never);
+
+        const enrichment = enrichTopClients(['10.0.0.1']);
+        await getStats(undefined, 0);
+
+        resolveSearch([{ '10.0.0.1': { name: 'Stale' } }]);
+        await enrichment;
+
+        expect(statsState.topClients[0].info).toEqual({});
     });
 });
 

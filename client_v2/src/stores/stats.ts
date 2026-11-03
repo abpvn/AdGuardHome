@@ -26,6 +26,7 @@ import {
 } from 'panel/helpers/helpers';
 import type { GetStatsConfigResponse } from 'panel/api/model/getStatsConfigResponse';
 import type { ClientFindSubEntry } from 'panel/api/model/clientFindSubEntry';
+import type { ClientsFindEntry } from 'panel/api/model/clientsFindEntry';
 
 type StatsState = {
     processingGetConfig: boolean;
@@ -105,6 +106,39 @@ const [state, setState] = createStore<StatsState>(initialState);
 let statsSequence = 0;
 
 /**
+ * Client info resolved for the rows currently displayed on the Top clients
+ * page, keyed by client ID.  Pages enrich rows on demand, so paging back and
+ * forth must not send the same IDs to the backend again.
+ */
+let clientInfoCache = new Map<string, ClientFindSubEntry>();
+/** IDs with a client-info request in flight, mapped to that request's ID. */
+let clientInfoInFlight = new Map<string, number>();
+let clientInfoRequestId = 0;
+
+const resetClientInfoSearch = () => {
+    clientInfoCache = new Map();
+    clientInfoInFlight = new Map();
+};
+
+const cacheClientInfo = (
+    clients: ClientsFindEntry[],
+    ids: string[],
+): Map<string, ClientFindSubEntry> => {
+    const found = new Map<string, ClientFindSubEntry>();
+    clients.forEach((entry) => {
+        ids.forEach((id) => {
+            const info = entry[id];
+            if (info) {
+                found.set(id, info);
+            }
+        });
+    });
+    ids.forEach((id) => clientInfoCache.set(id, found.get(id) ?? {}));
+
+    return found;
+};
+
+/**
  * Fetches statistics and optionally enriches the top clients with client info
  * (names, WHOIS, blocked status) via `POST /control/clients/search`.
  *
@@ -112,15 +146,17 @@ let statsSequence = 0;
  * @param enrichClientsLimit How many top clients to request client info for.
  * The dashboard renders only `TOP_CLIENTS_VISIBLE_ITEMS` rows, so by default
  * only those are looked up.  Pass `STATS_TOP_CLIENTS_LIMIT` when all top
- * clients must be enriched (the "Show more" Top clients page and the Clients
- * page, which aggregates per-client query counts by resolved name).
+ * clients must be enriched (the Clients page, which aggregates per-client
+ * query counts by resolved name).  Pass `0` to skip the lookup entirely and
+ * use `enrichTopClients` for the rows a page actually displays.
  */
 export const getStats = async (
     period?: number,
     enrichClientsLimit: number = TOP_CLIENTS_VISIBLE_ITEMS,
 ) => {
-    setState('processingStats', true);
+    setState({ processingStats: true, processingClientInfo: false });
     const sequence = ++statsSequence;
+    resetClientInfoSearch();
     try {
         // Clamp by the real retention so callers don't have to know it.
         const data = await stats(
@@ -129,8 +165,10 @@ export const getStats = async (
 
         const normalizedTopClientsList = normalizeTopStats(data.top_clients || []);
         const topClientsToEnrich = normalizedTopClientsList.slice(0, enrichClientsLimit);
-        const clientsParams = getParamsForClientsSearch(topClientsToEnrich, 'name');
-        const clientsPromise = clientsSearch(clientsParams);
+        const idsToEnrich = topClientsToEnrich.map((client) => client.name);
+        const clientsPromise = idsToEnrich.length
+            ? clientsSearch(getParamsForClientsSearch(topClientsToEnrich, 'name'))
+            : null;
 
         // Render stats right away; client info arrives asynchronously.
         const topClientsWithEmptyInfo = addClientInfo(normalizedTopClientsList, [], 'name');
@@ -159,15 +197,20 @@ export const getStats = async (
             ),
             topUpstreamsResponses: normalizeTopStats(data.top_upstreams_responses || []),
             processingStats: false,
-            processingClientInfo: true,
+            processingClientInfo: clientsPromise !== null,
             statsInitialized: true,
         });
+
+        if (clientsPromise === null) {
+            return;
+        }
 
         try {
             const clients = await clientsPromise;
             if (sequence !== statsSequence) {
                 return;
             }
+            cacheClientInfo(clients, idsToEnrich);
             const topClientsWithInfo = addClientInfo(normalizedTopClientsList, clients, 'name');
             setState({
                 topClients: topClientsWithInfo,
@@ -184,6 +227,66 @@ export const getStats = async (
     } catch (error) {
         addErrorToast({ error });
         setState({ processingStats: false, statsInitialized: true });
+    }
+};
+
+/**
+ * Fetches client info for specific top clients and merges it into
+ * `topClients`.
+ *
+ * The Top clients page calls this with the rows of the current table page
+ * instead of enriching every top client up front.  Resolved IDs are cached
+ * until the next `getStats`.
+ *
+ * @param ids Client IDs (IP addresses, CIDRs, MAC addresses, or ClientIDs).
+ */
+export const enrichTopClients = async (ids: string[]): Promise<void> => {
+    const sequence = statsSequence;
+    const missing = [...new Set(ids)].filter(
+        (id) => !clientInfoCache.has(id) && !clientInfoInFlight.has(id),
+    );
+    if (missing.length === 0) {
+        return;
+    }
+
+    const requestId = ++clientInfoRequestId;
+    missing.forEach((id) => clientInfoInFlight.set(id, requestId));
+    setState('processingClientInfo', true);
+
+    try {
+        const clients = await clientsSearch({
+            clients: missing.map((id) => ({ id })),
+        });
+        if (sequence !== statsSequence) {
+            return;
+        }
+
+        const found = cacheClientInfo(clients, missing);
+        if (found.size === 0) {
+            return;
+        }
+
+        setState(
+            'topClients',
+            state.topClients.map((client) => {
+                const info = found.get(client.name);
+                return info ? { ...client, info } : client;
+            }),
+        );
+    } catch (error) {
+        if (sequence !== statsSequence) {
+            return;
+        }
+        addErrorToast({ error });
+    } finally {
+        missing.forEach((id) => {
+            if (clientInfoInFlight.get(id) === requestId) {
+                clientInfoInFlight.delete(id);
+            }
+        });
+        if (sequence === statsSequence) {
+            setState('processingClientInfo', clientInfoInFlight.size > 0);
+        }
     }
 };
 

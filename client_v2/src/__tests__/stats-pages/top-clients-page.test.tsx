@@ -16,6 +16,7 @@ vi.mock('panel/stores/stats', () => ({
     statsState: mocks.statsState,
     getStats: vi.fn(),
     getStatsConfig: vi.fn(),
+    enrichTopClients: vi.fn(),
 }));
 
 vi.mock('panel/stores/access', () => ({
@@ -52,6 +53,8 @@ vi.mock('panel/common/ui/ClientBlockConfirm', () => ({
 }));
 
 import { TopClientsPage } from 'panel/components/Stats/TopClientsPage';
+import { useStatsRefresh } from 'panel/components/Stats/hooks/useStatsRefresh';
+import { enrichTopClients } from 'panel/stores/stats';
 
 const mockMatchMedia = (matches: boolean) => {
     Object.defineProperty(window, 'matchMedia', {
@@ -113,5 +116,21 @@ describe('TopClientsPage', () => {
         const fullIpv6 = '2001:db8:85a3::8a2e:370:7334';
         const cells = screen.getAllByTestId('client-ip-cell');
         expect(cells.map((cell) => cell.textContent)).toContain(fullIpv6);
+    });
+
+    it('does not enrich every top client when the stats are fetched', () => {
+        renderPage();
+
+        expect(useStatsRefresh).toHaveBeenCalledWith({ enrichClientsLimit: 0 });
+    });
+
+    it('enriches only the clients on the current page', () => {
+        renderPage();
+
+        expect(enrichTopClients).toHaveBeenCalled();
+        const ids = vi.mocked(enrichTopClients).mock.lastCall?.[0] as string[];
+        expect(ids).toEqual(
+            expect.arrayContaining(['10.0.0.1', '2001:db8:85a3::8a2e:370:7334']),
+        );
     });
 });

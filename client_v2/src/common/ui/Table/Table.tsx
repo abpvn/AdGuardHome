@@ -63,6 +63,11 @@ export interface TableProps<T = any> {
      * clipped by `text-overflow: ellipsis`
      */
     headerTooltip?: boolean;
+    /**
+     * Called with the rows of the current page whenever they change, so pages
+     * that need per-row detail can fetch only what is actually displayed.
+     */
+    onVisibleRowsChange?: (rows: T[]) => void;
 }
 
 export const Table = <T extends Record<string, any>>(props: TableProps<T>) => {
@@ -133,6 +138,12 @@ export const Table = <T extends Record<string, any>>(props: TableProps<T>) => {
         }
         const startIndex = state.currentPage * state.pageSize;
         return sortedData().slice(startIndex, startIndex + state.pageSize);
+    });
+
+    // The callback must not subscribe this effect to the parent's signals.
+    createEffect(() => {
+        const rows = paginatedData();
+        untrack(() => props.onVisibleRowsChange?.(rows));
     });
 
     const totalPages = () => Math.ceil(sortedData().length / state.pageSize);

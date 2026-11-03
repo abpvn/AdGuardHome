@@ -44,6 +44,11 @@ type StatsPageProps<T> = {
     sortStorageKey: string;
     mobileSortOptions: IOption<string>[];
     renderMobileCard: (row: T) => JSX.Element;
+    /**
+     * Reports the rows of the current page (desktop table or mobile cards) so
+     * pages that need per-row detail can fetch only what is displayed.
+     */
+    onVisibleRowsChange?: (rows: T[]) => void;
     controlsBefore?: JSX.Element;
     controlsAfter?: JSX.Element;
     controlsUnderTitle?: boolean;
@@ -156,6 +161,14 @@ export function StatsPage<T>(props: StatsPageProps<T>) {
     const mobilePagedRows = createMemo(() => {
         const start = currentPage() * pageSize();
         return sortedMobileRows().slice(start, start + pageSize());
+    });
+
+    // The desktop Table reports its own page; the mobile list reports here.
+    // Only one of the two layouts is mounted at a time.
+    createEffect(() => {
+        if (isMobile()) {
+            props.onVisibleRowsChange?.(mobilePagedRows());
+        }
     });
 
     const handlePageSizeChange = (size: number) => {
@@ -331,6 +344,7 @@ export function StatsPage<T>(props: StatsPageProps<T>) {
                         onPageSizeChange={handlePageSizeChange}
                         emptyTable={<EmptyState message={props.emptyText} />}
                         rowLink={props.rowLink}
+                        onVisibleRowsChange={props.onVisibleRowsChange}
                     />
                 </Show>
             </div>

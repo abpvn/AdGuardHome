@@ -399,6 +399,10 @@ must not depend on stores or components. Helpers are pure and dependency-free.
   If the child uses that prop in a `render` closure inside another
   `createMemo` (e.g., table columns), **access the prop in the memo body**
   so SolidJS tracks the dependency.
+- **Page-scoped lookups**: When a page needs per-row detail from an API
+  (client info, WHOIS), request it only for the rows the page renders — the
+  current table page plus the active filter — and cache the result until the
+  next refresh. Do not enrich the whole dataset up front.
 - **Stores**: Module-scoped `createStore` singletons exported directly — no
   Context/Provider. Async actions set a `processing*` flag, call generated
   API functions, then `setState`. Errors are reported via `addErrorToast`.

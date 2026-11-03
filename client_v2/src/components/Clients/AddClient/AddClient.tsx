@@ -1,5 +1,5 @@
-import { createMemo, createEffect, createSignal, Show, onMount } from 'solid-js';
-import { useNavigate, useParams, useLocation } from '@solidjs/router';
+import { createMemo, createEffect, createSignal, Show } from 'solid-js';
+import { useNavigate, useLocation } from '@solidjs/router';
 import cn from 'clsx';
 
 import intl from 'panel/common/intl';
@@ -8,23 +8,20 @@ import { Select } from 'panel/common/controls/Select';
 import type { IOption } from 'panel/lib/helpers/utils';
 import { Textarea } from 'panel/common/controls/Textarea';
 import { Button } from 'panel/common/ui/Button';
-import { Icon } from 'panel/common/ui/Icon';
-import { Link } from 'panel/common/ui/Link';
 import { PageLoader } from 'panel/common/ui/Loader';
+import { SettingLink } from 'panel/common/ui/SettingLink';
 import { SwitchGroup } from 'panel/common/ui/SettingsGroup';
 import { ConfirmDialog } from 'panel/common/ui/ConfirmDialog';
-import type { Client } from 'panel/initialState';
 import {
     clientFormState,
     updateClientFormField,
     clearClientForm,
     saveClient,
-    initClientForm,
-    buildFormPayload,
     setFormErrors,
 } from 'panel/stores/clientForm';
-import { dashboardState, getClients } from 'panel/stores/dashboard';
+import { dashboardState } from 'panel/stores/dashboard';
 import { clearClientCache } from 'panel/stores/clients';
+import { useInitClientFormFromRoute } from 'panel/hooks/useInitClientFormFromRoute';
 import { validateUpstreams, validateCacheSize } from 'panel/helpers/validators';
 import { RoutePath, Paths } from 'panel/components/Routes/Paths';
 import theme from 'panel/lib/theme';
@@ -36,8 +33,9 @@ import s from './AddClient.module.pcss';
 
 export const AddClient = () => {
     const navigate = useNavigate();
-    const params = useParams<{ clientName?: string }>();
     const location = useLocation();
+
+    useInitClientFormFromRoute();
 
     const [nameError, setNameError] = createSignal<string | undefined>();
     const [cacheSizeError, setCacheSizeError] = createSignal<string | undefined>();
@@ -57,10 +55,6 @@ export const AddClient = () => {
         );
     });
 
-    onMount(() => {
-        getClients();
-    });
-
     const handleNameChange = (e: Event) => {
         const value = (e.target as HTMLInputElement).value;
         updateClientFormField({ field: 'name', value });
@@ -75,32 +69,6 @@ export const AddClient = () => {
         }
 
         updateClientFormField({ field: 'ids', value: [id] });
-    });
-
-    // When on the edit route and clients are loaded, initialize the form
-    // from the URL param. This handles page refreshes on the edit page.
-    createEffect(() => {
-        const urlClientName = params.clientName;
-        const clients = dashboardState.clients || [];
-
-        if (!urlClientName || !clients.length) {
-            return;
-        }
-
-        if (clientFormState.mode !== 'add' || clientFormState.originalName) {
-            return;
-        }
-
-        const decodedName = decodeURIComponent(urlClientName);
-        const client = clients.find((c: Client) => c.name === decodedName);
-
-        if (!client) {
-            clearClientForm();
-            navigate(Paths.Clients, { replace: true });
-            return;
-        }
-
-        initClientForm(buildFormPayload(client));
     });
 
     const isEdit = createMemo(() => clientFormState.mode === 'edit');
@@ -294,11 +262,22 @@ export const AddClient = () => {
                         onChange={handleUseGlobalSettings}
                     />
 
-                    <h2
-                        class={cn(theme.layout.subtitle, theme.title.h5, theme.title.h4_tablet, {
-                            [s.disabledText]: clientFormState.use_global_settings,
-                        })}
-                    >
+                    <SettingLink
+                        to={protectionRoute()}
+                        linkProps={routeProps()}
+                        title={intl.getMessage('clients_protection')}
+                        description={intl.getMessage('clients_protection_desc')}
+                        disabled={clientFormState.use_global_settings}
+                    />
+
+                    <SettingLink
+                        to={blockedServicesRoute()}
+                        linkProps={routeProps()}
+                        title={intl.getMessage('blocked_services')}
+                        description={intl.getMessage('blocked_services_desc')}
+                    />
+
+                    <h2 class={cn(theme.layout.subtitle, theme.title.h5, theme.title.h4_tablet)}>
                         {intl.getMessage('filters')}
                     </h2>
 
@@ -307,110 +286,30 @@ export const AddClient = () => {
                         title={intl.getMessage('use_global_filters')}
                         checked={clientFormState.use_global_filters}
                         onChange={handleUseGlobalFilters}
-                        disabled={clientFormState.use_global_settings}
                     />
 
-                    <Link
-                        to={protectionRoute()}
-                        props={routeProps()}
-                        class={cn(s.navLink, {
-                            [s.navLinkDisabled]: clientFormState.use_global_settings,
-                        })}
-                        disabled={clientFormState.use_global_settings}
-                    >
-                        <div class={s.navItem}>
-                            <div class={s.navItemContent}>
-                                <div class={cn(theme.text.t2, theme.text.semibold, s.navTitle)}>
-                                    {intl.getMessage('clients_protection')}
-                                </div>
-                                <div class={cn(theme.text.t3, s.navDesc)}>
-                                    {intl.getMessage('clients_protection_desc')}
-                                </div>
-                            </div>
-                            <Icon icon="arrow" color="gray" />
-                        </div>
-                    </Link>
-
-                    <Link
-                        to={blockedServicesRoute()}
-                        props={routeProps()}
-                        class={cn(s.navLink, {
-                            [s.navLinkDisabled]: clientFormState.use_global_settings,
-                        })}
-                        disabled={clientFormState.use_global_settings}
-                    >
-                        <div class={s.navItem}>
-                            <div class={s.navItemContent}>
-                                <div class={cn(theme.text.t2, theme.text.semibold, s.navTitle)}>
-                                    {intl.getMessage('blocked_services')}
-                                </div>
-                                <div class={cn(theme.text.t3, s.navDesc)}>
-                                    {intl.getMessage('blocked_services_desc')}
-                                </div>
-                            </div>
-                            <Icon icon="arrow" color="gray" />
-                        </div>
-                    </Link>
-
-                    <Link
+                    <SettingLink
                         to={dnsBlocklistsRoute()}
-                        props={routeProps()}
-                        class={cn(s.navLink, {
-                            [s.navLinkDisabled]: clientFormState.use_global_settings,
-                        })}
-                        disabled={clientFormState.use_global_settings}
-                    >
-                        <div class={s.navItem}>
-                            <div class={s.navItemContent}>
-                                <div class={cn(theme.text.t2, theme.text.semibold, s.navTitle)}>
-                                    {intl.getMessage('dns_blocklists')}
-                                </div>
-                            </div>
-                            <Icon icon="arrow" color="gray" />
-                        </div>
-                    </Link>
+                        linkProps={routeProps()}
+                        title={intl.getMessage('dns_blocklists')}
+                        disabled={clientFormState.use_global_filters}
+                    />
 
-                    <Link
+                    <SettingLink
                         to={dnsAllowlistsRoute()}
-                        props={routeProps()}
-                        class={cn(s.navLink, {
-                            [s.navLinkDisabled]: clientFormState.use_global_settings,
-                        })}
-                        disabled={clientFormState.use_global_settings}
-                    >
-                        <div class={s.navItem}>
-                            <div class={s.navItemContent}>
-                                <div class={cn(theme.text.t2, theme.text.semibold, s.navTitle)}>
-                                    {intl.getMessage('dns_allowlists')}
-                                </div>
-                            </div>
-                            <Icon icon="arrow" color="gray" />
-                        </div>
-                    </Link>
+                        linkProps={routeProps()}
+                        title={intl.getMessage('dns_allowlists')}
+                        disabled={clientFormState.use_global_filters}
+                    />
 
-                    <Link
+                    <SettingLink
                         to={customRulesRoute()}
-                        props={routeProps()}
-                        class={cn(s.navLink, {
-                            [s.navLinkDisabled]: clientFormState.use_global_settings,
-                        })}
-                        disabled={clientFormState.use_global_settings}
-                    >
-                        <div class={s.navItem}>
-                            <div class={s.navItemContent}>
-                                <div class={cn(theme.text.t2, theme.text.semibold, s.navTitle)}>
-                                    {intl.getMessage('custom_filtering_rules')}
-                                </div>
-                            </div>
-                            <Icon icon="arrow" color="gray" />
-                        </div>
-                    </Link>
+                        linkProps={routeProps()}
+                        title={intl.getMessage('custom_filtering_rules')}
+                        disabled={clientFormState.use_global_filters}
+                    />
 
-                    <h2
-                        class={cn(theme.layout.subtitle, theme.title.h5, theme.title.h4_tablet, {
-                            [s.disabledText]: clientFormState.use_global_settings,
-                        })}
-                    >
+                    <h2 class={cn(theme.layout.subtitle, theme.title.h5, theme.title.h4_tablet)}>
                         {intl.getMessage('upstream_dns_servers_title')}
                     </h2>
 
@@ -423,7 +322,6 @@ export const AddClient = () => {
                             placeholder={intl.getMessage('upstream_dns_placeholder')}
                             label={intl.getMessage('clients_upstreams_desc')}
                             rows={4}
-                            disabled={clientFormState.use_global_settings}
                             errorMessage={upstreamsError()}
                             highlightComments
                         />
@@ -434,7 +332,6 @@ export const AddClient = () => {
                         title={intl.getMessage('clients_use_dns_cache')}
                         checked={clientFormState.upstreams_cache_enabled}
                         onChange={handleUpstreamsCacheEnabled}
-                        disabled={clientFormState.use_global_settings}
                     >
                         {clientFormState.upstreams_cache_enabled && (
                             <Input

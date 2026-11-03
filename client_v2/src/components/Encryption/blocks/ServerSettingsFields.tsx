@@ -116,7 +116,8 @@ export const ServerSettingsFields = (props: Props) => {
                     values change as the user types, so the inputs must be
                     updated in place — `For` would recreate the row and drop the
                     caret with it. */}
-                <Index each={names()}>
+                <div class={s.serverNameList}>
+                    <Index each={names()}>
                     {(name, index) => (
                         <div class={s.serverNameRow}>
                             <Input
@@ -134,7 +135,6 @@ export const ServerSettingsFields = (props: Props) => {
                                     ])
                                 }
                                 onBlur={() => props.onFieldBlur('server_names')}
-                                isClearable={props.clearable}
                                 label={
                                     <>
                                         {intl.getMessage('encryption_server')}
@@ -172,6 +172,7 @@ export const ServerSettingsFields = (props: Props) => {
                         </div>
                     )}
                 </Index>
+                </div>
                 <Show when={props.onAddServerName}>
                     <Button
                         variant="secondary"

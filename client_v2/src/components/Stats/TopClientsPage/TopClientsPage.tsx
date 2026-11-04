@@ -1,4 +1,4 @@
-import { Show, createMemo, createSignal, onMount } from 'solid-js';
+import { Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import cn from 'clsx';
 import { useNavigate } from '@solidjs/router';
 
@@ -13,11 +13,10 @@ import {
     useClientBlockConfirm,
 } from 'panel/common/ui/ClientBlockConfirm';
 import { Icon } from 'panel/common/ui/Icon';
-import { statsState } from 'panel/stores/stats';
+import { statsState, enrichTopClients } from 'panel/stores/stats';
 import { accessState, getAccessList } from 'panel/stores/access';
 import { initClientForm } from 'panel/stores/clientForm';
 import { LOCAL_STORAGE_KEYS } from 'panel/helpers/localStorageHelper';
-import { STATS_TOP_CLIENTS_LIMIT } from 'panel/helpers/constants';
 import { computePercent } from 'panel/helpers/statistics';
 import { queryLogSearchQuery, sortIpOrString, splitByNewLine } from 'panel/helpers/helpers';
 import type { IOption } from 'panel/lib/helpers/utils';
@@ -42,9 +41,20 @@ const preventRowLink = (e: MouseEvent) => e.preventDefault();
 
 export const TopClientsPage = () => {
     const navigate = useNavigate();
-    // The full page renders every top client, so all of them must be enriched
-    // with client info, not just the ones shown on the dashboard.
-    const refreshStats = useStatsRefresh({ enrichClientsLimit: STATS_TOP_CLIENTS_LIMIT });
+    // Client info is looked up per table page (see `enrichTopClients`), so the
+    // stats request itself must not search every top client up front.
+    const refreshStats = useStatsRefresh({ enrichClientsLimit: 0 });
+
+    const [visibleClientIds, setVisibleClientIds] = createSignal<string[]>([]);
+
+    // Enrich only the rows of the current table page; the store caches them
+    // until the next stats refresh.
+    createEffect(() => {
+        const ids = visibleClientIds();
+        if (ids.length > 0 && statsState.statsInitialized) {
+            void enrichTopClients(ids);
+        }
+    });
 
     onMount(() => {
         refreshStats();
@@ -331,6 +341,7 @@ export const TopClientsPage = () => {
                 emptyText={intl.getMessage('nothing_found')}
                 onRefresh={handleRefresh}
                 searchTextForRow={(row) => `${row.name} ${row.info?.name ?? ''}`}
+                onVisibleRowsChange={(rows) => setVisibleClientIds(rows.map((row) => row.name))}
                 rowLink={(row) => ({
                     to: RoutePath.QueryLog,
                     query: queryLogSearchQuery(row.name),

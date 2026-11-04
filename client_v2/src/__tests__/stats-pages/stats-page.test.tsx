@@ -247,6 +247,39 @@ describe('StatsPage', () => {
         const rows = Array.from(container.querySelectorAll('[class*="tableRow"]'));
         rows.forEach((row) => expect(row.tagName).toBe('DIV'));
     });
+
+    it('reports only the rows on the current page (desktop)', () => {
+        mockMatchMedia(true);
+        const onVisibleRowsChange = vi.fn();
+        const manyRows = Array.from({ length: DEFAULT_PAGE_SIZE * 2 }, (_, index) => ({
+            name: `domain-${index}.org`,
+            count: index,
+        }));
+
+        renderPage({ rows: manyRows, onVisibleRowsChange });
+
+        const firstPage = onVisibleRowsChange.mock.lastCall?.[0] as Row[];
+        expect(firstPage).toHaveLength(DEFAULT_PAGE_SIZE);
+        expect(firstPage.map((row) => row.name)).toContain(`domain-${manyRows.length - 1}.org`);
+
+        fireEvent.click(screen.getByTestId('pagination-next-button'));
+
+        const secondPage = onVisibleRowsChange.mock.lastCall?.[0] as Row[];
+        expect(secondPage).toHaveLength(DEFAULT_PAGE_SIZE);
+        expect(secondPage.map((row) => row.name)).not.toContain(
+            `domain-${manyRows.length - 1}.org`,
+        );
+    });
+
+    it('reports the mobile cards on the current page', () => {
+        mockMatchMedia(false);
+        const onVisibleRowsChange = vi.fn();
+
+        renderPage({ onVisibleRowsChange });
+
+        const visibleRows = onVisibleRowsChange.mock.lastCall?.[0] as Row[];
+        expect(visibleRows.map((row) => row.name)).toEqual(['c.org', 'b.org', 'a.org']);
+    });
 });
 
 describe('StatsPage — the pagination footer', () => {

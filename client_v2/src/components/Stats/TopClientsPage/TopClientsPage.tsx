@@ -45,7 +45,17 @@ export const TopClientsPage = () => {
     // stats request itself must not search every top client up front.
     const refreshStats = useStatsRefresh({ enrichClientsLimit: 0 });
 
-    const [visibleClientIds, setVisibleClientIds] = createSignal<string[]>([]);
+    const [visibleClientIds, setVisibleClientIds] = createSignal<string[]>();
+
+    // Initialize visible client IDs from the current top clients so that
+    // enrichTopClients runs immediately on first visit rather than waiting
+    // for the Table's onVisibleRowsChange callback.
+    createEffect(() => {
+        if (statsState.statsInitialized && statsState.topClients.length > 0) {
+            const ids = statsState.topClients.map((c) => c.name);
+            setVisibleClientIds(ids);
+        }
+    });
 
     // Enrich only the rows of the current table page; the store caches them
     // until the next stats refresh.

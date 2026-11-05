@@ -1,4 +1,4 @@
-import { Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
+import { Show, createMemo, createSignal, onMount } from 'solid-js';
 import cn from 'clsx';
 import { useNavigate } from '@solidjs/router';
 
@@ -45,30 +45,9 @@ export const TopClientsPage = () => {
     // stats request itself must not search every top client up front.
     const refreshStats = useStatsRefresh({ enrichClientsLimit: 0 });
 
-    const [visibleClientIds, setVisibleClientIds] = createSignal<string[]>();
-
-    // Initialize visible client IDs from the current top clients so that
-    // enrichTopClients runs immediately on first visit rather than waiting
-    // for the Table's onVisibleRowsChange callback.
-    createEffect(() => {
-        if (statsState.statsInitialized && statsState.topClients.length > 0) {
-            const ids = statsState.topClients.map((c) => c.name);
-            setVisibleClientIds(ids);
-        }
-    });
-
-    // Enrich only the rows of the current table page; the store caches them
-    // until the next stats refresh.
-    createEffect(() => {
-        const ids = visibleClientIds();
-        if (ids.length > 0 && statsState.statsInitialized) {
-            void enrichTopClients(ids);
-        }
-    });
-
-    onMount(() => {
-        refreshStats();
+    onMount(async () => {
         getAccessList();
+        await refreshStats();
     });
 
     const handleAddClient = () => {
@@ -351,7 +330,11 @@ export const TopClientsPage = () => {
                 emptyText={intl.getMessage('nothing_found')}
                 onRefresh={handleRefresh}
                 searchTextForRow={(row) => `${row.name} ${row.info?.name ?? ''}`}
-                onVisibleRowsChange={(rows) => setVisibleClientIds(rows.map((row) => row.name))}
+                onVisibleRowsChange={(rows) => {
+                    // Only the rows on screen are looked up, so changing page
+                    // size from 10 to 20 covers all of them too.
+                    void enrichTopClients(rows.map((row) => row.name));
+                }}
                 rowLink={(row) => ({
                     to: RoutePath.QueryLog,
                     query: queryLogSearchQuery(row.name),

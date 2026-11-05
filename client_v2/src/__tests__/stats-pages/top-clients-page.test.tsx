@@ -75,6 +75,7 @@ const mockMatchMedia = (matches: boolean) => {
 
 describe('TopClientsPage', () => {
     beforeEach(() => {
+        vi.clearAllMocks();
         mockMatchMedia(true);
         localStorage.clear();
         window.location.hash = '#/';
@@ -132,5 +133,20 @@ describe('TopClientsPage', () => {
         expect(ids).toEqual(
             expect.arrayContaining(['10.0.0.1', '2001:db8:85a3::8a2e:370:7334']),
         );
+    });
+
+    it('enriches every row when the page size is 20', () => {
+        const manyClients = Array.from({ length: 25 }, (_, index) => ({
+            name: `10.0.0.${index + 1}`,
+            count: 25 - index,
+            info: { name: '', whois_info: {} },
+        }));
+        mocks.statsState.topClients = manyClients;
+        localStorage.setItem('top_clients_page_size', '20');
+
+        renderPage();
+
+        const ids = vi.mocked(enrichTopClients).mock.lastCall?.[0] as string[];
+        expect(ids).toEqual(manyClients.slice(0, 20).map((client) => client.name));
     });
 });

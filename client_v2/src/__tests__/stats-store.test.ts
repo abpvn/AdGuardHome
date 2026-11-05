@@ -304,7 +304,65 @@ describe('getStats', () => {
         await first;
     });
 
-    it('ignores a stale enrichment response after a newer stats refresh', async () => {
+    it('keeps client info when the search resolves before the stats response', async () => {
+        const statsPayload = {
+            top_clients: [{ '10.0.0.1': 5 }],
+            avg_processing_time: 0,
+            top_blocked_domains: [] as unknown[],
+            top_queried_domains: [] as unknown[],
+            top_upstreams_avg_time: [] as unknown[],
+            top_upstreams_responses: [] as unknown[],
+        };
+        mocks.stats.mockResolvedValueOnce(statsPayload);
+        await getStats(undefined, 0);
+        expect(statsState.topClients[0].info).toEqual({});
+
+        // A refresh starts (clearing the client-info cache) and the page
+        // enriches the visible row before the stats response arrives.
+        let resolveStats!: (value: unknown) => void;
+        const statsDeferred = new Promise((resolve) => {
+            resolveStats = resolve;
+        });
+        mocks.stats.mockReturnValueOnce(statsDeferred as never);
+        mocks.clientsSearch.mockResolvedValueOnce([{ '10.0.0.1': { name: 'Phone' } }]);
+
+        const refresh = getStats(undefined, 0);
+        const enrichment = enrichTopClients(['10.0.0.1']);
+        await enrichment;
+
+        expect(statsState.topClients[0].info).toEqual({ name: 'Phone' });
+
+        resolveStats({ ...statsPayload, top_clients: [{ '10.0.0.1': 6 }] });
+        await refresh;
+
+        // The stats response must not replace the info the fast search
+        // already resolved for the same client.
+        expect(statsState.topClients[0].count).toBe(6);
+        expect(statsState.topClients[0].info).toEqual({ name: 'Phone' });
+    });
+
+    it('does not rewrite rows when the cached info is already applied', async () => {
+        mocks.stats.mockResolvedValue({
+            top_clients: [{ '10.0.0.1': 5 }],
+            avg_processing_time: 0,
+            top_blocked_domains: [],
+            top_queried_domains: [],
+            top_upstreams_avg_time: [],
+            top_upstreams_responses: [],
+        });
+        await getStats(undefined, 0);
+
+        mocks.clientsSearch.mockResolvedValueOnce([{ '10.0.0.1': { name: 'Phone' } }]);
+        await enrichTopClients(['10.0.0.1']);
+
+        // A cache hit must leave the rows untouched; rewriting them would make
+        // the page's visible-rows effect re-run forever.
+        const row = statsState.topClients[0];
+        await enrichTopClients(['10.0.0.1']);
+        expect(statsState.topClients[0]).toBe(row);
+    });
+
+    it('applies client info resolved while a newer stats refresh is running', async () => {
         mocks.stats.mockResolvedValue({
             top_clients: [{ '10.0.0.1': 5 }],
             avg_processing_time: 0,
@@ -324,10 +382,12 @@ describe('getStats', () => {
         const enrichment = enrichTopClients(['10.0.0.1']);
         await getStats(undefined, 0);
 
-        resolveSearch([{ '10.0.0.1': { name: 'Stale' } }]);
+        resolveSearch([{ '10.0.0.1': { name: 'Phone' } }]);
         await enrichment;
 
-        expect(statsState.topClients[0].info).toEqual({});
+        // Client info is keyed by client ID and does not depend on the stats
+        // snapshot, so it is still valid for the newer rows.
+        expect(statsState.topClients[0].info).toEqual({ name: 'Phone' });
     });
 });
 

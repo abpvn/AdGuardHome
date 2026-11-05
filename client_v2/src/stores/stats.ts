@@ -1,4 +1,4 @@
-import { createStore } from 'solid-js/store';
+import { createStore, unwrap } from 'solid-js/store';
 import { untrack } from 'solid-js';
 import {
     stats,
@@ -102,28 +102,27 @@ const initialState: StatsState = {
 
 const [state, setState] = createStore<StatsState>(initialState);
 
-// Guards against stale client-info updates overwriting a newer stats refresh.
+// Guards against a slower stats request overwriting a newer stats snapshot.
 let statsSequence = 0;
 
 /**
  * Client info resolved for the rows currently displayed on the Top clients
  * page, keyed by client ID.  Pages enrich rows on demand, so paging back and
  * forth must not send the same IDs to the backend again.
+ *
+ * The cache is cleared on every stats refresh, but in-flight requests are
+ * kept so an enrichment started before the refresh is not requested twice.
  */
 let clientInfoCache = new Map<string, ClientFindSubEntry>();
 /** IDs with a client-info request in flight, mapped to that request's ID. */
-let clientInfoInFlight = new Map<string, number>();
+const clientInfoInFlight = new Map<string, number>();
 let clientInfoRequestId = 0;
 
-const resetClientInfoSearch = () => {
+const resetClientInfoCache = () => {
     clientInfoCache = new Map();
-    clientInfoInFlight = new Map();
 };
 
-const cacheClientInfo = (
-    clients: ClientsFindEntry[],
-    ids: string[],
-): Map<string, ClientFindSubEntry> => {
+const cacheClientInfo = (clients: ClientsFindEntry[], ids: string[]): void => {
     const found = new Map<string, ClientFindSubEntry>();
     clients.forEach((entry) => {
         ids.forEach((id) => {
@@ -134,8 +133,41 @@ const cacheClientInfo = (
         });
     });
     ids.forEach((id) => clientInfoCache.set(id, found.get(id) ?? {}));
+};
 
-    return found;
+type TopClient = StatsState['topClients'][number];
+
+/**
+ * Folds already-resolved client info into a top-clients list.
+ *
+ * A stats refresh and the client search run concurrently and either may finish
+ * first.  Both writers must therefore consult the cache: otherwise a fast
+ * search merges its info into the previous list, the stats response then
+ * replaces the list with empty info, and the now-cached IDs prevent the page
+ * from ever requesting them again.
+ */
+const withResolvedClientInfo = (clients: TopClient[]): TopClient[] =>
+    clients.map((client) => {
+        const info = clientInfoCache.get(client.name);
+        // The store returns proxies, so compare the underlying object.
+        return info && unwrap(client.info) !== info ? { ...client, info } : client;
+    });
+
+/**
+ * Re-applies cached client info to the rows currently in the store.  Does
+ * nothing when every row already carries the cached info, so repeated calls
+ * from the page's visible-rows effect cannot loop.
+ */
+const applyResolvedClientInfo = (): void => {
+    const topClients = withResolvedClientInfo(state.topClients);
+    if (topClients.every((client, index) => client === state.topClients[index])) {
+        return;
+    }
+
+    setState({
+        topClients,
+        normalizedTopClients: normalizeTopClients(topClients),
+    });
 };
 
 /**
@@ -156,7 +188,7 @@ export const getStats = async (
 ) => {
     setState({ processingStats: true, processingClientInfo: false });
     const sequence = ++statsSequence;
-    resetClientInfoSearch();
+    resetClientInfoCache();
     try {
         // Clamp by the real retention so callers don't have to know it.
         const data = await stats(
@@ -170,8 +202,12 @@ export const getStats = async (
             ? clientsSearch(getParamsForClientsSearch(topClientsToEnrich, 'name'))
             : null;
 
-        // Render stats right away; client info arrives asynchronously.
-        const topClientsWithEmptyInfo = addClientInfo(normalizedTopClientsList, [], 'name');
+        // Render stats right away; client info arrives asynchronously.  Info
+        // resolved while the stats request was running is folded in here so a
+        // fast client search is not lost.
+        const topClientsWithEmptyInfo = withResolvedClientInfo(
+            addClientInfo(normalizedTopClientsList, [], 'name'),
+        );
 
         setState({
             dnsQueries: data.dns_queries || [],
@@ -211,7 +247,9 @@ export const getStats = async (
                 return;
             }
             cacheClientInfo(clients, idsToEnrich);
-            const topClientsWithInfo = addClientInfo(normalizedTopClientsList, clients, 'name');
+            // Use the live rows, not the local snapshot: the page may have
+            // merged info for other rows while this request was in flight.
+            const topClientsWithInfo = withResolvedClientInfo(state.topClients);
             setState({
                 topClients: topClientsWithInfo,
                 normalizedTopClients: normalizeTopClients(topClientsWithInfo),
@@ -238,14 +276,26 @@ export const getStats = async (
  * instead of enriching every top client up front.  Resolved IDs are cached
  * until the next `getStats`.
  *
+ * Client info is keyed by client ID and does not depend on the stats
+ * snapshot, so a response is applied even when a newer stats refresh has
+ * started in the meantime.
+ *
  * @param ids Client IDs (IP addresses, CIDRs, MAC addresses, or ClientIDs).
  */
 export const enrichTopClients = async (ids: string[]): Promise<void> => {
-    const sequence = statsSequence;
-    const missing = [...new Set(ids)].filter(
+    const uniqueIds = [...new Set(ids)];
+    if (uniqueIds.length === 0) {
+        return;
+    }
+
+    const missing = uniqueIds.filter(
         (id) => !clientInfoCache.has(id) && !clientInfoInFlight.has(id),
     );
+
     if (missing.length === 0) {
+        // Cached already, but a stats refresh may have replaced the rows with
+        // empty info in the meantime.
+        applyResolvedClientInfo();
         return;
     }
 
@@ -257,26 +307,10 @@ export const enrichTopClients = async (ids: string[]): Promise<void> => {
         const clients = await clientsSearch({
             clients: missing.map((id) => ({ id })),
         });
-        if (sequence !== statsSequence) {
-            return;
-        }
 
-        const found = cacheClientInfo(clients, missing);
-        if (found.size === 0) {
-            return;
-        }
-
-        setState(
-            'topClients',
-            state.topClients.map((client) => {
-                const info = found.get(client.name);
-                return info ? { ...client, info } : client;
-            }),
-        );
+        cacheClientInfo(clients, missing);
+        applyResolvedClientInfo();
     } catch (error) {
-        if (sequence !== statsSequence) {
-            return;
-        }
         addErrorToast({ error });
     } finally {
         missing.forEach((id) => {
@@ -284,9 +318,7 @@ export const enrichTopClients = async (ids: string[]): Promise<void> => {
                 clientInfoInFlight.delete(id);
             }
         });
-        if (sequence === statsSequence) {
-            setState('processingClientInfo', clientInfoInFlight.size > 0);
-        }
+        setState('processingClientInfo', clientInfoInFlight.size > 0);
     }
 };
 

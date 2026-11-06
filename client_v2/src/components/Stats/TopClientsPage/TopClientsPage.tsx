@@ -100,6 +100,14 @@ export const TopClientsPage = () => {
     const hasWhoisInfo = (row: ClientStat) =>
         Boolean(whoisOrg(row) || whoisCountry(row) || whoisCity(row));
 
+    // Client info arrives after the stats response, so rows that have no
+    // resolved info yet show a shimmer instead of an empty value.
+    const isLoadingName = (row: ClientStat) =>
+        statsState.processingClientInfo && !row.info?.name;
+
+    const isLoadingWhois = (row: ClientStat) =>
+        statsState.processingClientInfo && !hasWhoisInfo(row);
+
     const whoisCardItem = (row: ClientStat): StatCardItem => ({
         label: intl.getMessage('whois'),
         layout: 'column',
@@ -121,6 +129,12 @@ export const TopClientsPage = () => {
         ),
     });
 
+    const whoisCardSkeleton = (): StatCardItem => ({
+        label: intl.getMessage('whois'),
+        layout: 'column',
+        value: <div class={s.clientInfoSkeleton} data-testid="client-whois-skeleton" />,
+    });
+
     const columns = (): TableColumn<ClientStat>[] => [
         {
             key: 'name',
@@ -128,11 +142,18 @@ export const TopClientsPage = () => {
             accessor: (row) => row.info?.name || row.name,
             sortable: true,
             render: (_v, row) => (
-                <TruncatedText
-                    text={row.info?.name || '—'}
-                    testId="client-name-cell"
-                    class={cn(theme.text.t3, theme.text.condenced, s.nameCell)}
-                />
+                <Show
+                    when={isLoadingName(row)}
+                    fallback={
+                        <TruncatedText
+                            text={row.info?.name || '—'}
+                            testId="client-name-cell"
+                            class={cn(theme.text.t3, theme.text.condenced, s.nameCell)}
+                        />
+                    }
+                >
+                    <div class={s.clientInfoSkeleton} data-testid="client-name-skeleton" />
+                </Show>
             ),
         },
         {
@@ -186,18 +207,25 @@ export const TopClientsPage = () => {
             accessor: (row) => `${whoisOrg(row)} ${whoisCountry(row)}`,
             width: 219,
             render: (_v, row) => (
-                <span class={cn(theme.text.t3, s.whoisCell)}>
-                    <div>{whoisOrg(row) || '—'}</div>
-                    <Show when={whoisCountry(row) || whoisCity(row)}>
-                        <div class={s.whoisSub}>
-                            <span>{whoisCountry(row)}</span>
-                            <Show when={whoisCountry(row) && whoisCity(row)}>
-                                <span class={s.whoisDivider} />
+                <Show
+                    when={isLoadingWhois(row)}
+                    fallback={
+                        <span class={cn(theme.text.t3, s.whoisCell)}>
+                            <div>{whoisOrg(row) || '—'}</div>
+                            <Show when={whoisCountry(row) || whoisCity(row)}>
+                                <div class={s.whoisSub}>
+                                    <span>{whoisCountry(row)}</span>
+                                    <Show when={whoisCountry(row) && whoisCity(row)}>
+                                        <span class={s.whoisDivider} />
+                                    </Show>
+                                    <span>{whoisCity(row)}</span>
+                                </div>
                             </Show>
-                            <span>{whoisCity(row)}</span>
-                        </div>
-                    </Show>
-                </span>
+                        </span>
+                    }
+                >
+                    <div class={s.clientInfoSkeleton} data-testid="client-whois-skeleton" />
+                </Show>
             ),
         },
         {
@@ -252,9 +280,16 @@ export const TopClientsPage = () => {
         return (
             <StatMobileCard
                 title={
-                    <span class={s.mobileTitle} data-testid="client-name-cell">
-                        {row.info?.name || row.name}
-                    </span>
+                    <Show
+                        when={isLoadingName(row)}
+                        fallback={
+                            <span class={s.mobileTitle} data-testid="client-name-cell">
+                                {row.info?.name || row.name}
+                            </span>
+                        }
+                    >
+                        <div class={s.clientInfoSkeleton} data-testid="client-name-skeleton" />
+                    </Show>
                 }
                 cardLink={{
                     to: RoutePath.QueryLog,
@@ -282,7 +317,11 @@ export const TopClientsPage = () => {
                         label: intl.getMessage('ip_address'),
                         value: row.name,
                     },
-                    ...(hasWhoisInfo(row) ? [whoisCardItem(row)] : []),
+                    ...(isLoadingWhois(row)
+                        ? [whoisCardSkeleton()]
+                        : hasWhoisInfo(row)
+                          ? [whoisCardItem(row)]
+                          : []),
                 ]}
                 actions={
                     <button

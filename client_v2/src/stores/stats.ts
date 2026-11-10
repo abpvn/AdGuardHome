@@ -48,10 +48,8 @@ type StatsState = {
     replacedSafebrowsing: number[];
     topBlockedDomains: { name: string; count: number }[];
     topClients: { name: string; count: number; info: ClientFindSubEntry }[];
-    normalizedTopClients: {
-        auto: Record<string, number>;
-        configured: Record<string, number>;
-    };
+    /** Request counts for the clients in `topClients`, keyed by client ID. */
+    normalizedTopClients: Record<string, number>;
     topQueriedDomains: { name: string; count: number }[];
     numBlockedFiltering: number;
     numDnsQueries: number;
@@ -84,7 +82,7 @@ const initialState: StatsState = {
     replacedSafebrowsing: [],
     topBlockedDomains: [],
     topClients: [],
-    normalizedTopClients: { auto: {}, configured: {} },
+    normalizedTopClients: {},
     topQueriedDomains: [],
     numBlockedFiltering: 0,
     numDnsQueries: 0,
@@ -177,10 +175,9 @@ const applyResolvedClientInfo = (): void => {
  * @param period Stats period in milliseconds.
  * @param enrichClientsLimit How many top clients to request client info for.
  * The dashboard renders only `TOP_CLIENTS_VISIBLE_ITEMS` rows, so by default
- * only those are looked up.  Pass `STATS_TOP_CLIENTS_LIMIT` when all top
- * clients must be enriched (the Clients page, which aggregates per-client
- * query counts by resolved name).  Pass `0` to skip the lookup entirely and
- * use `enrichTopClients` for the rows a page actually displays.
+ * only those are looked up.  Pass an explicit limit when more rows need
+ * enrichment.  Pass `0` to skip the lookup entirely and use `enrichTopClients`
+ * for the rows a page actually displays.
  */
 export const getStats = async (
     period?: number,

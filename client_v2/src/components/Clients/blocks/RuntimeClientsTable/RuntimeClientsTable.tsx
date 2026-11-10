@@ -24,7 +24,11 @@ export const RuntimeClientsTable = (props: Props) => {
             undefined,
     );
 
-    const columns = createMemo<TableColumn<AutoClient>[]>(() => [
+    const columns = createMemo<TableColumn<AutoClient>[]>(() => {
+        // Read the prop here so a stats refresh rebuilds the columns.
+        const topClients = props.normalizedTopClients;
+
+        return [
         {
             key: 'ip',
             header: {
@@ -108,21 +112,20 @@ export const RuntimeClientsTable = (props: Props) => {
                 text: intl.getMessage('requests_table_header'),
                 className: s.headerCell,
             },
-            accessor: (row: AutoClient) => props.normalizedTopClients?.auto[row.ip] || 0,
+            accessor: (row: AutoClient) => topClients?.[row.ip] || 0,
             sortable: true,
             render: (_value: unknown, row: AutoClient) => (
                 <div class={s.cell}>
                     <span class={s.cellLabel}>{intl.getMessage('requests_table_header')}</span>
 
                     <div class={s.cellValue}>
-                        <span>
-                            {(props.normalizedTopClients?.auto[row.ip] || 0).toLocaleString()}
-                        </span>
+                        <span>{(topClients?.[row.ip] || 0).toLocaleString()}</span>
                     </div>
                 </div>
             ),
         },
-    ]);
+        ];
+    });
 
     const handlePageSizeChange = (newSize: number) => {
         LocalStorageHelper.setItem(LOCAL_STORAGE_KEYS.AUTO_CLIENTS_PAGE_SIZE, newSize);

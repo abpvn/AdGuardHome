@@ -78,8 +78,8 @@ describe('getStats', () => {
         expect(mocks.clientsSearch).toHaveBeenCalledWith({
             clients: [{ id: '1.2.3.4' }],
         });
-        // normalizedTopClients is populated (configured bucket carries info name)
-        expect(Object.keys(statsState.normalizedTopClients.auto)).toContain('1.2.3.4');
+        // top client counts are keyed by client ID
+        expect(Object.keys(statsState.normalizedTopClients)).toContain('1.2.3.4');
     });
 
     it('converts avg_processing_time to milliseconds, falsy passthrough', async () => {

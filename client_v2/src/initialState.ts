@@ -152,10 +152,7 @@ export type RewritesData = RewriteSettings & {
     list: RewriteEntry[];
 };
 
-export type NormalizedTopClients = {
-    auto: Record<string, number>;
-    configured: Record<string, number>;
-};
+export type NormalizedTopClients = Record<string, number>;
 
 export type StatsData = Omit<
     Stats,

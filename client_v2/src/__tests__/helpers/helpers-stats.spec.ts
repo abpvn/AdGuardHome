@@ -39,12 +39,12 @@ describe('addClientInfo', () => {
 });
 
 describe('normalizeTopClients', () => {
-    it('splits into auto/configured by name and info', () => {
+    it('maps top clients to request counts by client ID', () => {
         const r = normalizeTopClients([
-            { name: '192.168.1.1', count: 7, info: { name: 'MyPhone' } },
+            { name: '192.168.1.1', count: 7 },
+            { name: 'cli42', count: 2 },
         ]);
-        expect(r.auto).toStrictEqual({ '192.168.1.1': 7 });
-        expect(r.configured).toStrictEqual({ MyPhone: 7 });
+        expect(r).toStrictEqual({ '192.168.1.1': 7, cli42: 2 });
     });
 });
 

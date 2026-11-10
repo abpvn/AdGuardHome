@@ -215,6 +215,10 @@ func TestMigrateConfig_Migrate(t *testing.T) {
 		yamlEqFunc:    require.YAMLEq,
 		name:          "v35",
 		targetVersion: 35,
+	}, {
+		yamlEqFunc:    require.YAMLEq,
+		name:          "v36",
+		targetVersion: 36,
 	}}
 
 	for _, tc := range testCases {
@@ -228,9 +232,10 @@ func TestMigrateConfig_Migrate(t *testing.T) {
 			require.NoError(t, err)
 
 			migrator := configmigrate.New(&configmigrate.Config{
-				Logger:     testLogger,
-				WorkingDir: t.Name(),
-				DataDir:    filepath.Join(t.Name(), "data"),
+				Logger:           testLogger,
+				WorkingDir:       t.Name(),
+				DataDir:          filepath.Join(t.Name(), "data"),
+				LegacyNoEtcHosts: true,
 			})
 			ctx := testutil.ContextWithTimeout(t, testTimeout)
 			newBody, upgraded, err := migrator.Migrate(ctx, body, tc.targetVersion)
@@ -284,4 +289,26 @@ func TestMigrateConfig_Migrate_v30(t *testing.T) {
 	require.True(t, upgraded)
 
 	require.YAMLEq(t, string(wantBody), string(newBody))
+}
+
+func TestMigrateConfig_Migrate_v36NoChange(t *testing.T) {
+	t.Parallel()
+
+	body, err := fs.ReadFile(testdata, "TestMigrateConfig_Migrate/v36/input.yml")
+	require.NoError(t, err)
+
+	wantBody := bytes.Replace(body, []byte(`schema_version: 35`), []byte(`schema_version: 36`), 1)
+	migrator := configmigrate.New(&configmigrate.Config{
+		Logger:           testLogger,
+		WorkingDir:       t.Name(),
+		DataDir:          "TestMigrateConfig_Migrate/v36/data",
+		LegacyNoEtcHosts: false,
+	})
+
+	ctx := testutil.ContextWithTimeout(t, testTimeout)
+	gotBody, upgraded, err := migrator.Migrate(ctx, body, 36)
+	require.NoError(t, err)
+	require.True(t, upgraded)
+
+	require.YAMLEq(t, string(wantBody), string(gotBody))
 }

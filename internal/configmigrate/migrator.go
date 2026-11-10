@@ -20,21 +20,27 @@ type Config struct {
 
 	// DataDir is the absolute path to the data directory of AdGuardHome.
 	DataDir string
+
+	// LegacyNoEtcHosts shows if /etc/hosts handling should be disabled during a
+	// migration to version 36.
+	LegacyNoEtcHosts bool
 }
 
 // Migrator performs the YAML configuration file migrations.
 type Migrator struct {
-	logger     *slog.Logger
-	workingDir string
-	dataDir    string
+	logger           *slog.Logger
+	workingDir       string
+	dataDir          string
+	legacyNoEtcHosts bool
 }
 
 // New creates a new Migrator.
 func New(c *Config) (m *Migrator) {
 	return &Migrator{
-		logger:     c.Logger,
-		workingDir: c.WorkingDir,
-		dataDir:    c.DataDir,
+		logger:           c.Logger,
+		workingDir:       c.WorkingDir,
+		dataDir:          c.DataDir,
+		legacyNoEtcHosts: c.LegacyNoEtcHosts,
 	}
 }
 
@@ -146,6 +152,7 @@ func (m *Migrator) upgradeConfigSchema(
 		32: m.migrateTo33,
 		33: m.migrateTo34,
 		34: m.migrateTo35,
+		35: m.migrateTo36,
 	}
 
 	for i, migrate := range upgrades[current:target] {

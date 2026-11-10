@@ -585,10 +585,6 @@ func (s *server) handleDHCPFindActiveServer(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 	l := s.conf.Logger
 
-	if aghhttp.WriteTextPlainDeprecated(ctx, l, w, r) {
-		return
-	}
-
 	req := &findActiveServerReq{}
 	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {

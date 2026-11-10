@@ -4,7 +4,7 @@ import copy from 'copy-to-clipboard';
 
 import intl from 'panel/common/intl';
 import type { Client, NormalizedTopClients } from 'panel/initialState';
-import { sortIpOrString } from 'panel/helpers/helpers';
+import { sortIpOrString, countClientsStatistics } from 'panel/helpers/helpers';
 import { LOCAL_STORAGE_KEYS, LocalStorageHelper } from 'panel/helpers/localStorageHelper';
 import { Table, type TableColumn } from 'panel/common/ui/Table';
 import { Icon } from 'panel/common/ui/Icon';
@@ -45,6 +45,11 @@ export const PersistentClientsTable = (props: Props) => {
         // Access serviceMap here so the memo re-runs when it changes.
         // It's used inside render closures below, which SolidJS doesn't track.
         const svcMap = props.serviceMap;
+        // Same for the request counts: read the prop here so a stats refresh
+        // rebuilds the columns instead of leaving stale counts.
+        const topClients = props.normalizedTopClients;
+        const getRequestCount = (row: Client) =>
+            countClientsStatistics(row.ids ?? [], topClients ?? {});
 
         return [
             {
@@ -269,11 +274,10 @@ export const PersistentClientsTable = (props: Props) => {
                     text: intl.getMessage('requests_table_header'),
                     className: s.headerCell,
                 },
-                accessor: (row: Client) =>
-                    props.normalizedTopClients?.configured[row.name ?? ''] || 0,
+                accessor: (row: Client) => getRequestCount(row),
                 sortable: true,
                 render: (_value: unknown, row: Client) => {
-                    const count = props.normalizedTopClients?.configured[row.name ?? ''] || 0;
+                    const count = getRequestCount(row);
                     const clientName = row.name;
                     const value = count.toLocaleString();
                     return (

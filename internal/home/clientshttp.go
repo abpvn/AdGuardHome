@@ -56,11 +56,9 @@ type clientJSON struct {
 	UserRules       *[]string               `json:"user_rules,omitempty"`
 	Upstreams       *[]string               `json:"upstreams,omitempty"`
 
-	FilteringEnabled    *bool `json:"filtering_enabled,omitempty"`
-	ParentalEnabled     *bool `json:"parental_enabled,omitempty"`
-	SafeBrowsingEnabled *bool `json:"safebrowsing_enabled,omitempty"`
-	// Deprecated: use safeSearchConf.
-	SafeSearchEnabled        *bool `json:"safesearch_enabled,omitempty"`
+	FilteringEnabled         *bool `json:"filtering_enabled,omitempty"`
+	ParentalEnabled          *bool `json:"parental_enabled,omitempty"`
+	SafeBrowsingEnabled      *bool `json:"safebrowsing_enabled,omitempty"`
 	UseGlobalBlockedServices *bool `json:"use_global_blocked_services,omitempty"`
 	UseGlobalSettings        *bool `json:"use_global_settings,omitempty"`
 	UseGlobalFilters         *bool `json:"use_global_filters,omitempty"`
@@ -230,57 +228,6 @@ func (clients *clientsContainer) handleClearClientCache(w http.ResponseWriter, r
 	aghhttp.OK(ctx, l, w)
 }
 
-// initPrev initializes the persistent client with the default or previous
-// client properties.
-func initPrev(cj clientJSON, prev *client.Persistent) (c *client.Persistent, err error) {
-	var (
-		uid              client.UID
-		ignoreQueryLog   bool
-		ignoreStatistics bool
-		upsCacheEnabled  bool
-		upsCacheSize     uint32
-	)
-
-	if prev != nil {
-		uid = prev.UID
-		ignoreQueryLog = prev.IgnoreQueryLog
-		ignoreStatistics = prev.IgnoreStatistics
-		upsCacheEnabled = prev.UpstreamsCacheEnabled
-		upsCacheSize = prev.UpstreamsCacheSize
-	}
-
-	if cj.IgnoreQueryLog != aghalg.NBNull {
-		ignoreQueryLog = cj.IgnoreQueryLog == aghalg.NBTrue
-	}
-
-	if cj.IgnoreStatistics != aghalg.NBNull {
-		ignoreStatistics = cj.IgnoreStatistics == aghalg.NBTrue
-	}
-
-	if cj.UpstreamsCacheEnabled != aghalg.NBNull {
-		upsCacheEnabled = cj.UpstreamsCacheEnabled == aghalg.NBTrue
-		upsCacheSize = cj.UpstreamsCacheSize
-	}
-
-	svcs, err := copyBlockedServices(cj.Schedule, ensureStrings(cj.BlockedServices), prev)
-	if err != nil {
-		return nil, fmt.Errorf("invalid blocked services: %w", err)
-	}
-
-	if (uid == client.UID{}) {
-		uid = client.NewUID()
-	}
-
-	return &client.Persistent{
-		BlockedServices:       svcs,
-		UID:                   uid,
-		IgnoreQueryLog:        ignoreQueryLog,
-		IgnoreStatistics:      ignoreStatistics,
-		UpstreamsCacheEnabled: upsCacheEnabled,
-		UpstreamsCacheSize:    upsCacheSize,
-	}, nil
-}
-
 // ensureBool ensure *bool variable to bool
 func ensureBool(boolVal *bool) bool {
 	if boolVal == nil {
@@ -310,9 +257,9 @@ func ensureStrings(strings *[]string) []string {
 func (clients *clientsContainer) jsonToClient(
 	ctx context.Context,
 	cj clientJSON,
-	prev *client.Persistent,
 ) (c *client.Persistent, err error) {
-	c, err = initPrev(cj, prev)
+	c = &client.Persistent{}
+	err = initPersistentFromJSON(c, cj)
 	if err != nil {
 		// Don't wrap the error since it's informative enough as is.
 		return nil, err
@@ -324,7 +271,6 @@ func (clients *clientsContainer) jsonToClient(
 		return nil, err
 	}
 
-	c.SafeSearchConf = copySafeSearch(cj.SafeSearchConf, ensureBool(cj.SafeSearchEnabled))
 	c.Name = cj.Name
 	c.Tags = ensureStrings(cj.Tags)
 	c.Upstreams = ensureStrings(cj.Upstreams)
@@ -340,6 +286,10 @@ func (clients *clientsContainer) jsonToClient(
 	}
 	for _, fj := range ensureListFilterJSON(cj.WhitelistFilter) {
 		c.WhitelistFilters = append(c.WhitelistFilters, fj.ToFilterYAML())
+	}
+
+	if ssc := cj.SafeSearchConf; ssc != nil {
+		c.SafeSearchConf = *ssc
 	}
 
 	if c.SafeSearchConf.Enabled {
@@ -365,47 +315,46 @@ func (clients *clientsContainer) jsonToClient(
 	return c, nil
 }
 
-// copySafeSearch returns safe search config created from provided parameters.
-func copySafeSearch(
-	jsonConf *filtering.SafeSearchConfig,
-	enabled bool,
-) (conf filtering.SafeSearchConfig) {
-	if jsonConf != nil {
-		return *jsonConf
+// initPersistentFromJSON initializes c values from the JSON for the following
+// fields:
+//   - [client.Persistent.BlockedServices]
+//   - [client.Persistent.IgnoreQueryLog]
+//   - [client.Persistent.IgnoreStatistics]
+//   - [client.Persistent.UpstreamsCacheEnabled]
+//   - [client.Persistent.UpstreamsCacheSize]
+//
+// c must not be nil.
+func initPersistentFromJSON(c *client.Persistent, cj clientJSON) (err error) {
+	if cj.IgnoreQueryLog != aghalg.NBNull {
+		c.IgnoreQueryLog = cj.IgnoreQueryLog == aghalg.NBTrue
 	}
 
-	// TODO(d.kolyshev): Remove after cleaning the deprecated
-	// [clientJSON.SafeSearchEnabled] field.
-	conf = filtering.SafeSearchConfig{
-		Enabled: enabled,
+	if cj.IgnoreStatistics != aghalg.NBNull {
+		c.IgnoreStatistics = cj.IgnoreStatistics == aghalg.NBTrue
 	}
 
-	// Set default service flags for enabled safesearch.
-	if conf.Enabled {
-		conf.Bing = true
-		conf.DuckDuckGo = true
-		conf.Ecosia = true
-		conf.Google = true
-		conf.Pixabay = true
-		conf.Yandex = true
-		conf.YouTube = true
+	if cj.UpstreamsCacheEnabled != aghalg.NBNull {
+		c.UpstreamsCacheEnabled = cj.UpstreamsCacheEnabled == aghalg.NBTrue
+		c.UpstreamsCacheSize = cj.UpstreamsCacheSize
 	}
 
-	return conf
+	c.BlockedServices, err = copyBlockedServices(cj.Schedule, ensureStrings(cj.BlockedServices))
+	if err != nil {
+		return fmt.Errorf("invalid blocked services: %w", err)
+	}
+
+	return nil
 }
 
-// copyBlockedServices converts a json blocked services to an internal blocked
+// copyBlockedServices converts a JSON blocked services to an internal blocked
 // services.
 func copyBlockedServices(
 	sch *schedule.Weekly,
 	svcStrs []string,
-	prev *client.Persistent,
 ) (svcs *filtering.BlockedServices, err error) {
 	var weekly *schedule.Weekly
 	if sch != nil {
 		weekly = sch.Clone()
-	} else if prev != nil {
-		weekly = prev.BlockedServices.Schedule.Clone()
 	} else {
 		weekly = schedule.EmptyWeekly()
 	}
@@ -425,8 +374,6 @@ func copyBlockedServices(
 
 // clientToJSON converts persistent client object to JSON object.
 func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
-	// TODO(d.kolyshev): Remove after cleaning the deprecated
-	// [clientJSON.SafeSearchEnabled] field.
 	if !isFull {
 		ids := c.Identifiers()
 		return &clientJSON{
@@ -463,7 +410,6 @@ func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
 		UseGlobalFilters:    &c.UseGlobalFilters,
 		FilteringEnabled:    &c.FilteringEnabled,
 		ParentalEnabled:     &c.ParentalEnabled,
-		SafeSearchEnabled:   &safeSearchConf.Enabled,
 		SafeSearchConf:      safeSearchConf,
 		SafeBrowsingEnabled: &c.SafeBrowsingEnabled,
 
@@ -521,7 +467,7 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 		return
 	}
 
-	c, err := clients.jsonToClient(ctx, cj, nil)
+	c, err := clients.jsonToClient(ctx, cj)
 	if err != nil {
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "%s", err)
 
@@ -535,6 +481,7 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 	appendClientFilter(addedFiltersIndexs, c.Filters, c.Name)
 	appendClientFilter(addedFiltersIndexsWhitelist, c.WhitelistFilters, c.Name)
 
+	c.UID = client.NewUID()
 	err = clients.storage.Add(ctx, c)
 	if err != nil {
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "%s", err)
@@ -767,7 +714,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 		return
 	}
 
-	c, err := clients.jsonToClient(ctx, dj.Data, nil)
+	c, err := clients.jsonToClient(ctx, dj.Data)
 	if err != nil {
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "%s", err)
 
@@ -838,39 +785,6 @@ func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, h
 			globalContext.filters.InitForClient(c.Name, c.WhitelistFilters, c.Filters, c.UserRules)
 		}
 	}
-}
-
-// handleFindClient is the handler for GET /control/clients/find HTTP API.
-//
-// Deprecated:  Remove it when migration to the new API is over.
-func (clients *clientsContainer) handleFindClient(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	l := clients.logger
-
-	q := r.URL.Query()
-	data := make([]map[string]*clientJSON, 0, len(q))
-	params := &client.FindParams{}
-	var err error
-
-	for i := range len(q) {
-		idStr := q.Get(fmt.Sprintf("ip%d", i))
-		if idStr == "" {
-			break
-		}
-
-		err = params.Set(idStr)
-		if err != nil {
-			l.DebugContext(ctx, "finding client", "id", idStr, slogutil.KeyError, err)
-
-			continue
-		}
-
-		data = append(data, map[string]*clientJSON{
-			idStr: clients.findClient(idStr, params),
-		})
-	}
-
-	aghhttp.WriteJSONResponseOK(ctx, l, w, r, data)
 }
 
 // findClient returns available information about a client by params from the
@@ -1013,7 +927,4 @@ func (clients *clientsContainer) registerWebHandlers() {
 	clients.httpReg.Register(http.MethodPost, "/control/clients/delete", clients.handleDelClient)
 	clients.httpReg.Register(http.MethodPost, "/control/clients/update", clients.handleUpdateClient)
 	clients.httpReg.Register(http.MethodPost, "/control/clients/search", clients.handleSearchClient)
-
-	// Deprecated handler.
-	clients.httpReg.Register(http.MethodGet, "/control/clients/find", clients.handleFindClient)
 }

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
         topClients: [] as { name: string; count: number; info?: unknown }[],
         numDnsQueries: 0,
         processingStats: false,
+        processingClientInfo: false,
         statsInitialized: true,
     },
     accessState: { disallowed_clients: '', processing: false, initialized: true },
@@ -75,6 +76,7 @@ const mockMatchMedia = (matches: boolean) => {
 
 describe('TopClientsPage', () => {
     beforeEach(() => {
+        vi.clearAllMocks();
         mockMatchMedia(true);
         localStorage.clear();
         window.location.hash = '#/';
@@ -88,6 +90,7 @@ describe('TopClientsPage', () => {
         ];
         mocks.statsState.numDnsQueries = 10;
         mocks.statsState.processingStats = false;
+        mocks.statsState.processingClientInfo = false;
         mocks.statsState.statsInitialized = true;
         mocks.accessState.disallowed_clients = '';
         mocks.accessState.initialized = true;
@@ -132,5 +135,38 @@ describe('TopClientsPage', () => {
         expect(ids).toEqual(
             expect.arrayContaining(['10.0.0.1', '2001:db8:85a3::8a2e:370:7334']),
         );
+    });
+
+    it('enriches every row when the page size is 20', () => {
+        const manyClients = Array.from({ length: 25 }, (_, index) => ({
+            name: `10.0.0.${index + 1}`,
+            count: 25 - index,
+            info: { name: '', whois_info: {} },
+        }));
+        mocks.statsState.topClients = manyClients;
+        localStorage.setItem('top_clients_page_size', '20');
+
+        renderPage();
+
+        const ids = vi.mocked(enrichTopClients).mock.lastCall?.[0] as string[];
+        expect(ids).toEqual(manyClients.slice(0, 20).map((client) => client.name));
+    });
+
+    it('shows a skeleton while the client search is in flight', () => {
+        mocks.statsState.processingClientInfo = true;
+
+        renderPage();
+
+        expect(screen.getAllByTestId('client-name-skeleton')).toHaveLength(2);
+        expect(screen.getAllByTestId('client-whois-skeleton')).toHaveLength(2);
+        expect(screen.queryByTestId('client-name-cell')).not.toBeInTheDocument();
+    });
+
+    it('replaces the skeleton once the client info is resolved', () => {
+        renderPage();
+
+        expect(screen.queryByTestId('client-name-skeleton')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('client-whois-skeleton')).not.toBeInTheDocument();
+        expect(screen.getAllByTestId('client-name-cell')).toHaveLength(2);
     });
 });

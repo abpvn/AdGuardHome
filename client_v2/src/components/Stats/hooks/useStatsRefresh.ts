@@ -29,7 +29,7 @@ export const useStatsRefresh = (options?: StatsRefreshOptions) => {
         if (!statsState.configLoaded) {
             await getStatsConfig();
         }
-        getStats(
+        await getStats(
             resolveStatsPeriod(searchParams, statsState.interval),
             options?.enrichClientsLimit,
         );

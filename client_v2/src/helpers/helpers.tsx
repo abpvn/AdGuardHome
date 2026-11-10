@@ -117,8 +117,6 @@ export const normalizeLogs = (logs: QueryLogItem[]): NormalizedQueryLogItem[] =>
             reason,
             status,
             time,
-            filterId,
-            rule,
             rules,
             service_name,
             original_answer,
@@ -143,17 +141,6 @@ export const normalizeLogs = (logs: QueryLogItem[]): NormalizedQueryLogItem[] =>
                   })
                 : [];
 
-        let newRules = Array.isArray(rules) ? rules : [];
-        /* TODO 'filterId' and 'rule' are deprecated, will be removed in 0.106 */
-        if (rule !== undefined && filterId !== undefined && newRules.length === 0) {
-            newRules = [
-                {
-                    filter_list_id: filterId,
-                    text: rule,
-                },
-            ];
-        }
-
         return {
             time,
             domain,
@@ -170,10 +157,7 @@ export const normalizeLogs = (logs: QueryLogItem[]): NormalizedQueryLogItem[] =>
                       whois: client_info.whois || {},
                   }
                 : null,
-            /* TODO 'filterId' and 'rule' are deprecated, will be removed in 0.106 */
-            filterId,
-            rule,
-            rules: newRules,
+            rules: Array.isArray(rules) ? rules : [],
             status,
             service_name,
             serviceName: service_name,
@@ -423,39 +407,18 @@ export const trimLinesAndRemoveEmpty = (input: string): string =>
         .join('\n');
 
 /**
- * Normalizes the topClients array
+ * Normalizes the topClients array into per-client-identifier request counts.
  *
  * @param {Object[]} topClients
  * @param {string} topClients.name
  * @param {number} topClients.count
- * @param {Object} topClients.info
- * @param {string} topClients.info.name
- * @returns {Object} normalizedTopClients
- * @returns {Object.<string, number>} normalizedTopClients.auto - auto clients
- * @returns {Object.<string, number>} normalizedTopClients.configured - configured clients
+ * @returns {Object.<string, number>} counts keyed by client ID
  */
-export const normalizeTopClients = (
-    topClients: (TopStat & { info: ClientFindSubEntry })[],
-): { auto: Record<string, number>; configured: Record<string, number> } =>
-    topClients.reduce(
-        (
-            acc: { auto: Record<string, number>; configured: Record<string, number> },
-            clientObj: TopStat & { info: ClientFindSubEntry },
-        ) => {
-            const {
-                name,
-                count,
-                info: { name: infoName },
-            } = clientObj;
-            acc.auto[name] = count;
-            acc.configured[infoName] = count;
-            return acc;
-        },
-        {
-            auto: {},
-            configured: {},
-        },
-    );
+export const normalizeTopClients = (topClients: TopStat[]): Record<string, number> =>
+    topClients.reduce<Record<string, number>>((acc, { name, count }) => {
+        acc[name] = count;
+        return acc;
+    }, {});
 
 export const msToSeconds = (milliseconds: number): number => Math.floor(milliseconds / 1000);
 

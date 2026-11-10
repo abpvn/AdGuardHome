@@ -2,4 +2,4 @@
 package configmigrate
 
 // LastSchemaVersion is the most recent schema version.
-const LastSchemaVersion uint = 35
+const LastSchemaVersion uint = 36

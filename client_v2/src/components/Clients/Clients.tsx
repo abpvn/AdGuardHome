@@ -12,7 +12,6 @@ import { servicesState, getAllBlockedServices } from 'panel/stores/services';
 import { initClientForm, buildFormPayload } from 'panel/stores/clientForm';
 import type { Client } from 'panel/initialState';
 import { linkPathBuilder, RoutePath, Paths } from 'panel/components/Routes/Paths';
-import { STATS_TOP_CLIENTS_LIMIT } from 'panel/helpers/constants';
 import theme from 'panel/lib/theme';
 import type { WebService } from './blocks/PersistentClientsTable/ServiceIcons';
 
@@ -42,9 +41,9 @@ export const Clients = () => {
 
     onMount(() => {
         getClients();
-        // Every persistent client's query count is aggregated by its resolved
-        // name, so all top clients must be enriched with client info.
-        getStats(undefined, STATS_TOP_CLIENTS_LIMIT);
+        // Request counts are derived from the top clients returned by the
+        // stats API, so this page needs no client-info search.
+        getStats(undefined, 0);
         getAllBlockedServices();
     });
 

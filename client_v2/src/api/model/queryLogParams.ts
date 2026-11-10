@@ -1,5 +1,4 @@
 import type { FilteringReason } from './filteringReason';
-import type { QueryLogResponseStatus } from './queryLogResponseStatus';
 
 export type QueryLogParams = {
     /**
@@ -23,13 +22,7 @@ export type QueryLogParams = {
      */
     client?: string;
     /**
-     * Deprecated: Use 'reason' parameter instead Filter by response status
-     * NOTE: This parameter cannot be used with 'reason' parameter.
-     */
-    response_status?: QueryLogResponseStatus;
-    /**
      * Filter by response filtering reason.  Multiple reasons can be provided.
-     * NOTE: This parameter cannot be used with 'response_status' parameter.
      */
     reason?: FilteringReason[];
 };

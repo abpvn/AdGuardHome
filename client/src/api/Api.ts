@@ -425,10 +425,9 @@ class Api {
 
     getClientDetail(name: any) {
         const { path, method } = this.GET_CLIENT_DETAIL;
-        const parameters = {
-            params: { name },
-        };
-        return this.makeRequest(path, method, parameters);
+        const url = getPathWithQueryString(path, { name });
+
+        return this.makeRequest(url, method);
     }
 
     addClient(config: any) {

@@ -22,8 +22,12 @@ export const useInitClientFormFromRoute = () => {
     const navigate = useNavigate();
     const params = useParams<{ clientName?: string }>();
 
+    // The Clients page loads the list before navigating here; only a direct
+    // load of this URL (F5, deep link) still needs to fetch it.
     onMount(() => {
-        getClients();
+        if (!dashboardState.clientsInitialized) {
+            getClients();
+        }
     });
 
     createEffect(() => {

@@ -76,8 +76,9 @@ const desktop = {
 describe('useInitClientFormFromRoute', () => {
     beforeEach(() => {
         clearClientForm();
-        dashboardMocks.getClients.mockClear();
+        dashboardMocks.getClients.mockReset();
         dashboardMocks.dashboardState.clients = [laptop, desktop];
+        dashboardMocks.dashboardState.clientsInitialized = true;
     });
 
     it('initializes the form from the client in the route', async () => {
@@ -106,10 +107,35 @@ describe('useInitClientFormFromRoute', () => {
         expect(clientFormState.blocked_services).toEqual(['steam']);
     });
 
-    it('loads clients when a client page mounts', () => {
+    it('initializes the form without fetching when clients are already loaded', async () => {
         renderAt('/clients/edit/Laptop');
 
-        expect(dashboardMocks.getClients).toHaveBeenCalled();
+        await waitFor(() => {
+            expect(clientFormState.mode).toBe('edit');
+        });
+
+        expect(clientFormState.name).toBe('Laptop');
+        expect(dashboardMocks.getClients).not.toHaveBeenCalled();
+    });
+
+    it('fetches clients once when the edit URL loads directly', async () => {
+        dashboardMocks.dashboardState.clients = [];
+        dashboardMocks.dashboardState.clientsInitialized = false;
+        // The plain-object mock is not reactive, so populate synchronously;
+        // the real store re-runs the effect when its async fetch settles.
+        dashboardMocks.getClients.mockImplementation(() => {
+            dashboardMocks.dashboardState.clients = [laptop, desktop];
+            dashboardMocks.dashboardState.clientsInitialized = true;
+        });
+
+        renderAt('/clients/edit/Laptop');
+
+        await waitFor(() => {
+            expect(clientFormState.mode).toBe('edit');
+        });
+
+        expect(dashboardMocks.getClients).toHaveBeenCalledTimes(1);
+        expect(clientFormState.name).toBe('Laptop');
     });
 
     it('re-initializes when the route switches to another client', async () => {

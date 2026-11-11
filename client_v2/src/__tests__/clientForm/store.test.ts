@@ -6,6 +6,11 @@ const dashboardMocks = vi.hoisted(() => ({
     dashboardState: { clients: [] as any[] },
 }));
 
+const apiMocks = vi.hoisted(() => ({
+    clientsUpdate: vi.fn(),
+    clientsAdd: vi.fn(),
+}));
+
 vi.mock('panel/stores/dashboard', async () => {
     const actual =
         await vi.importActual<typeof import('panel/stores/dashboard')>('panel/stores/dashboard');
@@ -15,6 +20,16 @@ vi.mock('panel/stores/dashboard', async () => {
         get dashboardState() {
             return dashboardMocks.dashboardState;
         },
+    };
+});
+
+vi.mock('panel/api/generated', async () => {
+    const actual =
+        await vi.importActual<typeof import('panel/api/generated')>('panel/api/generated');
+    return {
+        ...actual,
+        clientsUpdate: apiMocks.clientsUpdate,
+        clientsAdd: apiMocks.clientsAdd,
     };
 });
 
@@ -158,5 +173,37 @@ describe('saveClient cross-client validation', () => {
         const result = await saveClient();
         expect(result).toBe(false);
         expect(clientFormState.formErrors.upstreams_cache_size).toBeDefined();
+    });
+});
+
+describe('saveClient success path', () => {
+    beforeEach(() => {
+        clearClientForm();
+        dashboardMocks.dashboardState.clients = [];
+        dashboardMocks.getClients.mockReset();
+        apiMocks.clientsUpdate.mockReset();
+        apiMocks.clientsAdd.mockReset();
+    });
+
+    it('updates without refetching clients — the Clients page owns that fetch', async () => {
+        initClientForm({ name: 'Laptop', ids: ['192.168.1.1'] } as any);
+        updateClientFormField({ field: 'name', value: 'Laptop2' });
+
+        const result = await saveClient();
+
+        expect(result).toBe(true);
+        expect(apiMocks.clientsUpdate).toHaveBeenCalledTimes(1);
+        expect(dashboardMocks.getClients).not.toHaveBeenCalled();
+    });
+
+    it('adds without refetching clients — the Clients page owns that fetch', async () => {
+        updateClientFormField({ field: 'name', value: 'New Client' });
+        updateClientFormField({ field: 'ids', value: ['192.168.1.1'] });
+
+        const result = await saveClient();
+
+        expect(result).toBe(true);
+        expect(apiMocks.clientsAdd).toHaveBeenCalledTimes(1);
+        expect(dashboardMocks.getClients).not.toHaveBeenCalled();
     });
 });

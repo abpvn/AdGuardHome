@@ -7,7 +7,7 @@ import { validateIdentifier, validateCacheSize } from 'panel/helpers/validators'
 import { DEFAULT_DNS_CACHE_SIZE } from 'panel/helpers/constants';
 import { DAYS_OF_WEEK } from 'panel/helpers/schedule';
 import { addErrorToast, addSuccessToast } from './toasts';
-import { getClients, dashboardState } from './dashboard';
+import { dashboardState } from './dashboard';
 import { getFilteringStatus } from './filtering';
 
 const getInitialClientFormState = (): ClientFormState => ({
@@ -257,7 +257,8 @@ export const saveClient = async (): Promise<boolean> => {
         try {
             await clientsUpdate({ name: state.originalName, data: config });
             clearClientForm();
-            await getClients();
+            // No clients refetch here: the save flow navigates back to the
+            // Clients page, whose onMount refreshes the list.
             await refreshFiltering();
             return true;
         } catch (error) {
@@ -271,7 +272,6 @@ export const saveClient = async (): Promise<boolean> => {
         try {
             await clientsAdd(config);
             clearClientForm();
-            await getClients();
             await refreshFiltering();
             addSuccessToast({ message: intl.getMessage('client_added') });
             return true;

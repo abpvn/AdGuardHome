@@ -1,93 +1,98 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@solidjs/testing-library';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render } from '@solidjs/testing-library';
 
-import { THEMES } from 'panel/helpers/constants';
+import { LOCAL_STORAGE_KEYS } from 'panel/helpers/localStorageHelper';
+import { getTheme, setUITheme } from 'panel/helpers/helpers';
+import { mockMatchMedia } from './helpers/matchMedia';
 
-type ChangeListener = () => void;
-
-const changeListeners = new Set<ChangeListener>();
-
-vi.stubGlobal(
-    'matchMedia',
-    vi.fn().mockImplementation((query: string) => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: () => {},
-        removeListener: () => {},
-        addEventListener: (_: string, handler: ChangeListener) => changeListeners.add(handler),
-        removeEventListener: (_: string, handler: ChangeListener) => changeListeners.delete(handler),
-        dispatchEvent: () => false,
-    })),
-);
-
+// The store stays userless (no `name`), so App's theme effect follows the
+// guest branch and reads the requested theme from `localStorage`; the
+// OS-scheme listener is registered regardless of the stored preference.
+// Everything else in the chrome is irrelevant here.
 vi.mock('panel/stores/dashboard', () => ({
     dashboardState: {
-        processing: false,
+        processing: true,
         isCoreRunning: true,
-        language: 'en',
-        theme: THEMES.auto,
+        language: '',
         protectionEnabled: false,
     },
     getDnsStatus: vi.fn(),
     getTimerStatus: vi.fn(),
 }));
 
-vi.mock('panel/common/ui/Header', () => ({
-    Header: () => <div data-testid="chrome-header" />,
-}));
-vi.mock('panel/common/ui/Banners', () => ({
-    Banners: () => <div data-testid="chrome-banners" />,
-}));
-vi.mock('panel/common/ui/Sidebar', () => ({
-    Sidebar: () => <div data-testid="chrome-sidebar" />,
-}));
-vi.mock('panel/common/ui/Footer', () => ({
-    Footer: () => <div data-testid="chrome-footer" />,
-}));
+vi.mock('panel/common/ui/Header', () => ({ Header: (): null => null }));
+vi.mock('panel/common/ui/Banners', () => ({ Banners: (): null => null }));
+vi.mock('panel/common/ui/Sidebar', () => ({ Sidebar: (): null => null }));
+vi.mock('panel/common/ui/Footer', () => ({ Footer: (): null => null }));
 vi.mock('panel/common/ui/Icons', () => ({ Icons: (): null => null }));
 vi.mock('panel/components/Toasts', () => ({ Toasts: (): null => null }));
-vi.mock('panel/components/Dashboard', () => ({
-    Dashboard: () => <div data-testid="route-dashboard" />,
+vi.mock('panel/components/Dashboard', () => ({ Dashboard: (): null => null }));
+vi.mock('panel/components/Stats', () => ({
+    TopClientsPage: (): null => null,
+    TopQueriedDomainsPage: (): null => null,
+    TopBlockedDomainsPage: (): null => null,
+    TopUpstreamsPage: (): null => null,
+    UpstreamAvgTimePage: (): null => null,
 }));
 
-import App from '../components/App';
+import App from 'panel/components/App';
 
 describe('App theme effect', () => {
-    beforeEach(() => {
-        changeListeners.clear();
+    afterEach(() => localStorage.clear());
+
+    it('keeps "auto" in storage when the OS scheme changes', () => {
+        const media = mockMatchMedia(false);
         window.location.hash = '#/dashboard';
-    });
 
-    it('subscribes to the OS color scheme when the theme is "auto"', async () => {
         render(() => <App />);
 
-        await screen.findByTestId('route-dashboard');
+        expect(document.documentElement.dataset.theme).toBe('light');
 
-        expect(changeListeners.size).toBe(1);
+        media.set(true);
+
+        // The applied theme follows the OS, but the stored preference must stay
+        // "auto", so the next reload resolves it again instead of freezing it.
+        expect(document.documentElement.dataset.theme).toBe('dark');
+        expect(localStorage.getItem(LOCAL_STORAGE_KEYS.THEME)).toBe(JSON.stringify('auto'));
     });
 
-    it('keeps the "auto" preference when the OS color scheme changes', async () => {
+    it('keeps an explicit guest choice when the OS scheme changes', () => {
+        const media = mockMatchMedia(false);
+        window.location.hash = '#/dashboard';
+
         render(() => <App />);
 
-        await screen.findByTestId('route-dashboard');
+        // What `Footer` does for a userless install: apply and persist the
+        // choice without touching the dashboard store.
+        setUITheme('dark');
+        expect(document.documentElement.dataset.theme).toBe('dark');
 
-        // Simulate the OS switching to light: the handler re-resolves "auto".
-        document.documentElement.dataset.theme = THEMES.dark;
-        changeListeners.forEach((listener) => listener());
+        media.set(true);
 
-        expect(document.documentElement.dataset.theme).toBe(THEMES.light);
-        expect(localStorage.getItem('account_theme')).toBe(JSON.stringify(THEMES.auto));
+        // The guest picked Dark explicitly, so the OS change must not swap the
+        // theme nor rewrite the stored preference to "auto".
+        expect(document.documentElement.dataset.theme).toBe('dark');
+        expect(getTheme()).toBe('dark');
     });
 
-    it('removes the OS color scheme listener on unmount', async () => {
-        const { unmount } = render(() => <App />);
+    it('follows the OS scheme once the guest selects System', () => {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.THEME, JSON.stringify('dark'));
 
-        await screen.findByTestId('route-dashboard');
-        expect(changeListeners.size).toBe(1);
+        const media = mockMatchMedia(false);
+        window.location.hash = '#/dashboard';
 
-        unmount();
+        render(() => <App />);
 
-        expect(changeListeners.size).toBe(0);
+        expect(document.documentElement.dataset.theme).toBe('dark');
+
+        // The guest switches to System after the app has mounted; the listener
+        // registered at startup must already be active.
+        setUITheme('auto');
+        expect(document.documentElement.dataset.theme).toBe('light');
+
+        media.set(true);
+
+        expect(document.documentElement.dataset.theme).toBe('dark');
+        expect(getTheme()).toBe('auto');
     });
 });

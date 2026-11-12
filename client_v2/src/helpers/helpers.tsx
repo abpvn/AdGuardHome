@@ -856,24 +856,7 @@ export const setTheme = (theme: string): void => {
  */
 
 export const getTheme = () =>
-    LocalStorageHelper.getItem<string>(LOCAL_STORAGE_KEYS.THEME) || THEMES.light;
-
-/**
- * Resolves the "auto" theme to the current OS preference.
- *
- * @param theme
- * @returns theme with "auto" replaced by "dark" or "light"
- */
-export const resolveTheme = (theme: string): string => {
-    if (theme !== THEMES.auto) {
-        return theme;
-    }
-
-    const prefersDark =
-        window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    return prefersDark ? THEMES.dark : THEMES.light;
-};
+    LocalStorageHelper.getItem<string>(LOCAL_STORAGE_KEYS.THEME) || THEMES.auto;
 
 /**
  * Sets UI theme.
@@ -881,12 +864,21 @@ export const resolveTheme = (theme: string): string => {
  * @param theme
  */
 export const setUITheme = (theme?: string): void => {
-    const storedTheme = theme || getTheme();
-    const currentTheme = resolveTheme(storedTheme);
+    const requestedTheme = theme || getTheme();
+    let appliedTheme = requestedTheme;
 
-    setTheme(storedTheme);
-    document.documentElement.dataset.theme = currentTheme;
-    document.documentElement.style.colorScheme = currentTheme;
+    if (appliedTheme === THEMES.auto) {
+        const prefersDark =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        appliedTheme = prefersDark ? THEMES.dark : THEMES.light;
+    }
+
+    // Persist the requested theme rather than the resolved one, so that
+    // "auto" survives a reload and the inlined pre-paint script can resolve it
+    // itself.
+    setTheme(requestedTheme);
+    document.documentElement.dataset.theme = appliedTheme;
+    document.documentElement.style.colorScheme = appliedTheme;
 };
 
 /**

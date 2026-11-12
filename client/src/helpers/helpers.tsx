@@ -104,8 +104,6 @@ export const normalizeLogs = (logs: any) =>
             reason,
             status,
             time,
-            filterId,
-            rule,
             rules,
             service_name,
             original_answer,
@@ -125,15 +123,6 @@ export const normalizeLogs = (logs: any) =>
                   })
                 : [];
 
-        let newRules = rules;
-        /* TODO 'filterId' and 'rule' are deprecated, will be removed in 0.106 */
-        if (rule !== undefined && filterId !== undefined && rules !== undefined && rules.length === 0) {
-            newRules = {
-                filter_list_id: filterId,
-                text: rule,
-            };
-        }
-
         return {
             time,
             domain,
@@ -145,10 +134,7 @@ export const normalizeLogs = (logs: any) =>
             client_proto,
             client_id,
             client_info,
-            /* TODO 'filterId' and 'rule' are deprecated, will be removed in 0.106 */
-            filterId,
-            rule,
-            rules: newRules,
+            rules,
             status,
             service_name,
             originalAnswer: original_answer,
@@ -483,7 +469,22 @@ export const normalizeWhois = (whois: any) => {
 };
 
 export const getPathWithQueryString = (path: any, params: any) => {
-    const searchParams = new URLSearchParams(params);
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null) {
+            return;
+        }
+
+        // The backend expects repeated query parameters for array values,
+        // e.g. reason=A&reason=B, not a single comma-separated value.
+        if (Array.isArray(value)) {
+            value.forEach((item) => searchParams.append(key, `${item}`));
+            return;
+        }
+
+        searchParams.append(key, `${value}`);
+    });
 
     return `${path}?${searchParams.toString()}`;
 };

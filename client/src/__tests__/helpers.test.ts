@@ -4,11 +4,12 @@ import {
     sortIp,
     countClientsStatistics,
     findAddressType,
+    getPathWithQueryString,
     isValidCidr,
     isValidIpv6,
     subnetMaskToBitMask,
 } from '../helpers/helpers';
-import { ADDRESS_TYPES } from '../helpers/constants';
+import { ADDRESS_TYPES, RESPONSE_STATUS_TO_REASONS } from '../helpers/constants';
 
 describe('sortIp', () => {
     describe('ipv4', () => {
@@ -552,5 +553,86 @@ describe('isValidIpv6', () => {
     test('rejects non-IPv6 values', () => {
         expect(isValidIpv6('192.168.1.1')).toBe(false);
         expect(isValidIpv6('')).toBe(false);
+    });
+});
+
+describe('getPathWithQueryString', () => {
+    test('expands array values into repeated parameters', () => {
+        const path = getPathWithQueryString('querylog', {
+            reason: ['FilteredBlackList', 'FilteredBlockedService'],
+            older_than: '',
+        });
+
+        expect(path).toBe('querylog?reason=FilteredBlackList&reason=FilteredBlockedService&older_than=');
+    });
+
+    test('skips undefined and null values', () => {
+        const path = getPathWithQueryString('querylog', { search: undefined, client: null, limit: 20 });
+
+        expect(path).toBe('querylog?limit=20');
+    });
+});
+
+describe('RESPONSE_STATUS_TO_REASONS', () => {
+    test('sends no reason filter for all', () => {
+        expect(RESPONSE_STATUS_TO_REASONS.all).toStrictEqual([]);
+    });
+
+    test('maps blocked to all blocked reasons like client_v2', () => {
+        expect(RESPONSE_STATUS_TO_REASONS.blocked).toStrictEqual([
+            'FilteredBlackList',
+            'FilteredSafeBrowsing',
+            'FilteredParental',
+            'FilteredBlockedService',
+        ]);
+    });
+
+    test('maps rewritten to all rewrite reasons', () => {
+        expect(RESPONSE_STATUS_TO_REASONS.rewritten).toStrictEqual([
+            'Rewrite',
+            'RewriteEtcHosts',
+            'RewriteRule',
+        ]);
+    });
+
+    test('maps processed like the legacy response_status', () => {
+        expect(RESPONSE_STATUS_TO_REASONS.processed).toStrictEqual([
+            'NotFilteredNotFound',
+            'NotFilteredError',
+            'FilteredSafeBrowsing',
+            'FilteredParental',
+            'FilteredInvalid',
+            'FilteredSafeSearch',
+            'Rewrite',
+            'RewriteEtcHosts',
+            'RewriteRule',
+        ]);
+    });
+
+    test('maps filtered like the legacy response_status', () => {
+        expect(RESPONSE_STATUS_TO_REASONS.filtered).toStrictEqual([
+            'FilteredBlackList',
+            'NotFilteredWhiteList',
+            'FilteredBlockedService',
+            'Rewrite',
+            'RewriteEtcHosts',
+            'RewriteRule',
+            'FilteredSafeSearch',
+            'FilteredSafeBrowsing',
+            'FilteredParental',
+            'FilteredInvalid',
+        ]);
+    });
+
+    test('maps each specific reason filter to a single reason', () => {
+        expect(RESPONSE_STATUS_TO_REASONS.blocked_services).toStrictEqual([
+            'FilteredBlockedService',
+        ]);
+        expect(RESPONSE_STATUS_TO_REASONS.blocked_safebrowsing).toStrictEqual([
+            'FilteredSafeBrowsing',
+        ]);
+        expect(RESPONSE_STATUS_TO_REASONS.blocked_parental).toStrictEqual(['FilteredParental']);
+        expect(RESPONSE_STATUS_TO_REASONS.safe_search).toStrictEqual(['FilteredSafeSearch']);
+        expect(RESPONSE_STATUS_TO_REASONS.whitelisted).toStrictEqual(['NotFilteredWhiteList']);
     });
 });

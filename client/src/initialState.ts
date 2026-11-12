@@ -97,7 +97,6 @@ export type Client = {
     parental_enabled: boolean;
     safe_search: Record<string, boolean>;
     safebrowsing_enabled: boolean;
-    safesearch_enabled: boolean;
     tags: string[];
     upstreams: string[];
     upstreams_cache_enabled: boolean;

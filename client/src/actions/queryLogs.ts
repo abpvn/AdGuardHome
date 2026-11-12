@@ -3,14 +3,18 @@ import { createAction } from 'redux-actions';
 import apiClient from '../api/Api';
 
 import { normalizeLogs } from '../helpers/helpers';
-import { DEFAULT_LOGS_FILTER, QUERY_LOGS_PAGE_LIMIT } from '../helpers/constants';
+import { DEFAULT_LOGS_FILTER, QUERY_LOGS_PAGE_LIMIT, RESPONSE_STATUS_TO_REASONS } from '../helpers/constants';
 import { addErrorToast, addSuccessToast } from './toasts';
 import { SearchFormValues } from '../components/Logs';
 
 const getLogsWithParams = async (config: any) => {
     const { older_than, filter, ...values } = config;
+    const { response_status, ...restFilter } = filter || {};
+    const reasons = RESPONSE_STATUS_TO_REASONS[response_status] || [];
+
     const rawLogs = await apiClient.getQueryLog({
-        ...filter,
+        ...restFilter,
+        ...(reasons.length > 0 ? { reason: reasons } : {}),
         older_than,
     });
     const { data, oldest } = rawLogs;

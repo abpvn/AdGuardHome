@@ -46,6 +46,10 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Fixed
 
+- CLI update failing when an upstream is specified by a hostname defined only in `/etc/hosts`.
+
+- The *Check the filtering* result in the new web interface showing only the first matched rule ([#8677]).
+
 - Panic on binding to a busy port ([#8656]).
 
 - Expired dynamic leases are served by DNS ([#8671]).
@@ -142,6 +146,7 @@ NOTE: Add new changes BELOW THIS COMMENT.
 [#8661]:       https://github.com/AdguardTeam/AdGuardHome/issues/8661
 [#8670]:       https://github.com/AdguardTeam/AdGuardHome/issues/8670
 [#8671]:       https://github.com/AdguardTeam/AdGuardHome/issues/8671
+[#8677]:       https://github.com/AdguardTeam/AdGuardHome/issues/8677
 [#8681]:       https://github.com/AdguardTeam/AdGuardHome/issues/8681
 [#8686]:       https://github.com/AdguardTeam/AdGuardHome/issues/8686
 [#8699]:       https://github.com/AdguardTeam/AdGuardHome/issues/8699

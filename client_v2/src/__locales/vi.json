@@ -122,7 +122,7 @@
   "clients_dont_collect_stats": "Không thu thập thống kê cho máy khách này",
   "clients_dont_log": "Không ghi nhật ký cho máy khách này",
   "clients_edit": "Chỉnh sửa khách hàng",
-  "clients_filters_name": "Bộ lọc của client: %name%",
+  "clients_filters_name": "Bộ lọc thiết bị: %name%",
   "clients_global_blocked_services_note": "Cài đặt toàn cầu được dùng để định cấu hình các dịch vụ bị chặn",
   "clients_global_inactivity_schedule_note": "Cài đặt toàn cầu được dùng để định cấu hình lịch không hoạt động",
   "clients_identifier_already_used": "Định danh này đã được sử dụng",

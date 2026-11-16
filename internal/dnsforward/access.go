@@ -70,8 +70,8 @@ func processAccessClients(
 	return nil
 }
 
-// newAccessCtx creates a new accessCtx.
-func newAccessCtx(old *accessManager, allowed, blocked, blockedHosts, allowedCountries, blockedCountries []string) (a *accessManager, err error) {
+// newAccessManager creates a new *accessManager.
+func newAccessManager(old *accessManager, allowed, blocked, blockedHosts, allowedCountries, blockedCountries []string) (a *accessManager, err error) {
 	a = &accessManager{
 		allowedIPs: container.NewMapSet[netip.Addr](),
 		blockedIPs: container.NewMapSet[netip.Addr](),
@@ -121,7 +121,7 @@ func newAccessCtx(old *accessManager, allowed, blocked, blockedHosts, allowedCou
 	return a, nil
 }
 
-// allowlistMode returns true if this *accessCtx is in the allowlist mode.
+// allowlistMode returns true if this *accessManager is in the allowlist mode.
 func (a *accessManager) allowlistMode() (ok bool) {
 	return a.allowedIPs.Len() != 0 || a.allowedClientIDs.Len() != 0 || len(a.allowedNets) != 0
 }
@@ -320,7 +320,7 @@ func (s *Server) handleAccessSet(w http.ResponseWriter, r *http.Request) {
 
 	a, err := s.createAccessManager(list)
 	if err != nil {
-		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "creating access ctx: %s", err)
+		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "creating access manager: %s", err)
 		return
 	}
 
@@ -358,7 +358,7 @@ func (s *Server) createAccessManager(list *accessListJSON) (*accessManager, erro
 		list.BlockedCountries[i] = strings.ToUpper(country)
 	}
 
-	return newAccessCtx(s.access, list.AllowedClients, list.DisallowedClients, list.BlockedHosts, list.AllowedCountries, list.BlockedCountries)
+	return newAccessManager(s.access.Load(), list.AllowedClients, list.DisallowedClients, list.BlockedHosts, list.AllowedCountries, list.BlockedCountries)
 }
 
 // updateConfiguration updates the server configuration with the new access settings.
@@ -383,7 +383,8 @@ func (s *Server) updateConfiguration(ctx context.Context, l *slog.Logger, list *
 	s.conf.BlockedHosts = list.BlockedHosts
 	s.conf.AllowedCountries = list.AllowedCountries
 	s.conf.BlockedCountries = list.BlockedCountries
-	s.access = a
+
+	s.access.Store(a)
 
 	s.initializeGeoIPIfNeeded(ctx, list)
 }

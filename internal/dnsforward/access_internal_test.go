@@ -41,19 +41,19 @@ func TestIsBlockedClientID(t *testing.T) {
 	clientID := "client-1"
 	clients := []string{clientID}
 
-	a, err := newAccessCtx(nil, clients, nil, nil, nil, nil)
+	a, err := newAccessManager(nil, clients, nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.False(t, a.isBlockedClientID(clientID))
 
-	a, err = newAccessCtx(nil, nil, clients, nil, nil, nil)
+	a, err = newAccessManager(nil, nil, clients, nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.True(t, a.isBlockedClientID(clientID))
 }
 
 func TestIsBlockedHost(t *testing.T) {
-	a, err := newAccessCtx(nil, nil, nil, []string{
+	a, err := newAccessManager(nil, nil, nil, []string{
 		"host1",
 		"*.host.com",
 		"||host3.com^",
@@ -142,10 +142,10 @@ func TestIsBlockedIP(t *testing.T) {
 		"5.6.7.8/24",
 	}
 
-	allowCtx, err := newAccessCtx(nil, clients, nil, nil, nil, nil)
+	allowManager, err := newAccessManager(nil, clients, nil, nil, nil, nil)
 	require.NoError(t, err)
 
-	blockCtx, err := newAccessCtx(nil, nil, clients, nil, nil, nil)
+	blockManager, err := newAccessManager(nil, nil, clients, nil, nil, nil)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -177,7 +177,7 @@ func TestIsBlockedIP(t *testing.T) {
 
 	t.Run("allow", func(t *testing.T) {
 		for _, tc := range testCases {
-			blocked, rule := allowCtx.isBlockedIP(tc.ip)
+			blocked, rule := allowManager.isBlockedIP(tc.ip)
 			assert.Equal(t, !tc.wantBlocked, blocked)
 			assert.Equal(t, tc.wantRule, rule)
 		}
@@ -185,7 +185,7 @@ func TestIsBlockedIP(t *testing.T) {
 
 	t.Run("block", func(t *testing.T) {
 		for _, tc := range testCases {
-			blocked, rule := blockCtx.isBlockedIP(tc.ip)
+			blocked, rule := blockManager.isBlockedIP(tc.ip)
 			assert.Equal(t, tc.wantBlocked, blocked)
 			assert.Equal(t, tc.wantRule, rule)
 		}
@@ -196,10 +196,10 @@ func TestIsBlockedCountry(t *testing.T) {
 	blockedCountries := []string{"US", "CN"}
 	allowedCountries := []string{"JP", "DE", "EU"}
 
-	blockCtx, err := newAccessCtx(nil, nil, nil, nil, nil, blockedCountries)
+	blockCtx, err := newAccessManager(nil, nil, nil, nil, nil, blockedCountries)
 	require.NoError(t, err)
 
-	allowCtx, err := newAccessCtx(nil, nil, nil, nil, allowedCountries, nil)
+	allowCtx, err := newAccessManager(nil, nil, nil, nil, allowedCountries, nil)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -267,7 +267,7 @@ func TestIsBlockedCountryPersistentClient(t *testing.T) {
 	newServer := func(t *testing.T, blockedCountries, allowedCountries []string) (s *Server) {
 		t.Helper()
 
-		access, err := newAccessCtx(nil, nil, nil, nil, allowedCountries, blockedCountries)
+		access, err := newAccessManager(nil, nil, nil, nil, allowedCountries, blockedCountries)
 		require.NoError(t, err)
 
 		cc := &clientsContainer{
@@ -286,9 +286,9 @@ func TestIsBlockedCountryPersistentClient(t *testing.T) {
 			logger:     testLogger,
 			addrProc:   client.EmptyAddrProc{},
 			// Set the geoIP to a fixed country to make the lookup deterministic.
-			geoIP:  &fakeGeoIP{country: "US"},
-			access: access,
+			geoIP: &fakeGeoIP{country: "US"},
 		}
+		s.access.Store(access)
 		s.conf.ClientsContainer = cc
 
 		return s
@@ -319,7 +319,7 @@ func TestIsBlockedCountryPersistentClient(t *testing.T) {
 	})
 
 	t.Run("ip_blocklist_still_applies", func(t *testing.T) {
-		access, err := newAccessCtx(nil, nil, []string{persistentIP.String()}, nil, nil, []string{"US"})
+		access, err := newAccessManager(nil, nil, []string{persistentIP.String()}, nil, nil, []string{"US"})
 		require.NoError(t, err)
 
 		s := &Server{
@@ -327,8 +327,8 @@ func TestIsBlockedCountryPersistentClient(t *testing.T) {
 			logger:     testLogger,
 			addrProc:   client.EmptyAddrProc{},
 			geoIP:      &fakeGeoIP{country: "US"},
-			access:     access,
 		}
+		s.access.Store(access)
 
 		blocked, _, _ := s.IsBlockedClient(persistentIP, persistentClientID)
 		assert.True(t, blocked, "persistent client must still be blocked by ip blocklist")

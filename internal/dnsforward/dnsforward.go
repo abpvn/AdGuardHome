@@ -147,8 +147,9 @@ type Server struct {
 	// be nil.
 	tlsManager aghtls.Manager
 
-	// access drops disallowed clients.
-	access *accessManager
+	// access drops disallowed clients.  It is an atomic pointer to avoid
+	// reacquiring serverLock during client lookups in query accounting.
+	access atomic.Pointer[accessManager]
 
 	// geoIP provides GeoIP lookups for country blocking.
 	geoIP geoip.Interface
@@ -557,7 +558,7 @@ func (s *Server) Prepare(ctx context.Context, conf *ServerConfig) (err error) {
 
 	s.setupDNS64()
 
-	s.access, err = newAccessCtx(
+	a, err := newAccessManager(
 		nil,
 		s.conf.AllowedClients,
 		s.conf.DisallowedClients,
@@ -568,6 +569,8 @@ func (s *Server) Prepare(ctx context.Context, conf *ServerConfig) (err error) {
 	if err != nil {
 		return fmt.Errorf("preparing access: %w", err)
 	}
+
+	s.access.Store(a)
 
 	err = s.initGeoIP()
 	if err != nil {
@@ -952,8 +955,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) isBlockedCountry(ip netip.Addr, findInCacheOnly bool) (bool, string, *whois.Info) {
-	if s.access.BlockedCountriesIDs.Len() == 0 && !s.access.allowCountryMode() {
+func (s *Server) isBlockedCountry(a *accessManager, ip netip.Addr, findInCacheOnly bool) (bool, string, *whois.Info) {
+	if a.BlockedCountriesIDs.Len() == 0 && !a.allowCountryMode() {
 		return false, "", nil
 	}
 
@@ -967,7 +970,7 @@ func (s *Server) isBlockedCountry(ip netip.Addr, findInCacheOnly bool) (bool, st
 		return false, "", nil
 	}
 
-	return s.access.isBlockedCountry(country), constants.CountryPrefix + country, whoisInfo
+	return a.isBlockedCountry(country), constants.CountryPrefix + country, whoisInfo
 }
 
 // lookupCountry performs country lookup using GeoIP and WHOIS fallback.
@@ -1044,12 +1047,11 @@ func (s *Server) IsBlockedClient(ip netip.Addr, clientID string) (blocked bool, 
 // IsBlockedClientWithWHOIS returns true if the client is blocked by the current access
 // settings.
 func (s *Server) IsBlockedClientWithWHOIS(ip netip.Addr, clientID string, findInCacheOnly bool) (blocked bool, rule string, whois *whois.Info) {
-	s.serverLock.RLock()
-	defer s.serverLock.RUnlock()
+	a := s.access.Load()
 
-	checks := s.performAccessChecks(ip, clientID, findInCacheOnly)
+	checks := s.performAccessChecks(a, ip, clientID, findInCacheOnly)
 
-	if s.access.allowlistMode() {
+	if a.allowlistMode() {
 		return s.handleAllowlistMode(ip, clientID, checks)
 	}
 
@@ -1070,20 +1072,20 @@ type accessChecks struct {
 }
 
 // performAccessChecks performs all access rule checks and returns the results.
-func (s *Server) performAccessChecks(ip netip.Addr, clientID string, findInCacheOnly bool) accessChecks {
-	ipChecked := s.access.allowedIPs.Len() > 0 || s.access.blockedIPs.Len() > 0
-	clientIDChecked := s.access.allowedClientIDs.Len() > 0 || s.access.blockedClientIDs.Len() > 0
-	countryChecked := s.access.AllowedCountriesIDs.Len() > 0 || s.access.BlockedCountriesIDs.Len() > 0
+func (s *Server) performAccessChecks(a *accessManager, ip netip.Addr, clientID string, findInCacheOnly bool) accessChecks {
+	ipChecked := a.allowedIPs.Len() > 0 || a.blockedIPs.Len() > 0
+	clientIDChecked := a.allowedClientIDs.Len() > 0 || a.blockedClientIDs.Len() > 0
+	countryChecked := a.AllowedCountriesIDs.Len() > 0 || a.BlockedCountriesIDs.Len() > 0
 
 	var blockedByIP bool
 	var rule string
 	if ipChecked && ip != (netip.Addr{}) {
-		blockedByIP, rule = s.access.isBlockedIP(ip)
+		blockedByIP, rule = a.isBlockedIP(ip)
 	}
 
 	var blockedByClientID bool
 	if clientIDChecked {
-		blockedByClientID = s.access.isBlockedClientID(clientID)
+		blockedByClientID = a.isBlockedClientID(clientID)
 	}
 
 	var blockedByCountry bool
@@ -1100,7 +1102,7 @@ func (s *Server) performAccessChecks(ip netip.Addr, clientID string, findInCache
 				"client_id", clientID,
 			)
 		} else {
-			blockedByCountry, countryRule, whois = s.isBlockedCountry(ip, findInCacheOnly)
+			blockedByCountry, countryRule, whois = s.isBlockedCountry(a, ip, findInCacheOnly)
 		}
 	}
 

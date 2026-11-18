@@ -831,6 +831,10 @@ func (d *DNSFilter) load(ctx context.Context, flt *FilterYAML) (err error) {
 		return fmt.Errorf("getting filter file stat: %w", err)
 	}
 
+	if !flt.LastUpdated.IsZero() && st.ModTime().Equal(flt.LastUpdated) {
+		return nil
+	}
+
 	d.logger.DebugContext(ctx, "filter file", "id", flt.ID, "path", fileName, "len", st.Size())
 
 	bufPtr := d.bufPool.Get()
@@ -866,6 +870,10 @@ func (d *DNSFilter) loadClientFilter(flt *ClientFilterYAML) (err error) {
 	st, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("getting filter file stat: %w", err)
+	}
+
+	if !flt.LastUpdated.IsZero() && st.ModTime().Equal(flt.LastUpdated) {
+		return nil
 	}
 
 	d.logger.DebugContext(ctx, "filtering: file info", "file", fileName, "id", flt.ID, "length", st.Size())

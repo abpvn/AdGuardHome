@@ -1,4 +1,5 @@
 import { createSignal, createMemo, onMount, Show, For } from 'solid-js';
+import { useParams } from '@solidjs/router';
 import { getAllTimezones, type Timezone } from 'countries-and-timezones';
 import cn from 'clsx';
 import intl from 'panel/common/intl';
@@ -35,9 +36,23 @@ type Props = {
 };
 
 export const InactivitySchedule = (props: Props) => {
+    let params: { clientName?: string };
+    try {
+        params = useParams<{ clientName?: string }>();
+    } catch {
+        params = {};
+    }
     const [modalVisible, setModalVisible] = createSignal(false);
     const [editDay, setEditDay] = createSignal<DayKey | undefined>();
     const [deleteDay, setDeleteDay] = createSignal<DayKey | null>(null);
+
+    const isClientReady = createMemo(
+        () =>
+            !props.clientScope ||
+            !params.clientName ||
+            (clientFormState.mode === 'edit' &&
+                clientFormState.originalName === decodeURIComponent(params.clientName)),
+    );
 
     onMount(() => {
         if (!props.clientScope && !servicesState.list?.ids) {
@@ -285,72 +300,76 @@ export const InactivitySchedule = (props: Props) => {
             }
         >
             {/* clientScope - render inline */}
-            <Show when={isReadOnly()}>
-                <p
-                    class={cn(theme.text.t3, s.readOnlyNote)}
-                    data-testid="inactivity-schedule-read-only-note"
+            <Show when={isClientReady()} fallback={<PageLoader />}>
+                <Show when={isReadOnly()}>
+                    <p
+                        class={cn(theme.text.t3, s.readOnlyNote)}
+                        data-testid="inactivity-schedule-read-only-note"
+                    >
+                        {intl.getMessage('clients_global_inactivity_schedule_note')}
+                    </p>
+                </Show>
+
+                <div
+                    class={cn(s.timezoneWrapper, s.timezoneWrapperClientScope)}
+                    data-testid="inactivity-schedule-timezone"
                 >
-                    {intl.getMessage('clients_global_inactivity_schedule_note')}
-                </p>
-            </Show>
+                    <div class={s.timezoneLabel}>
+                        {intl.getMessage('inactivity_schedule_timezone')}
+                    </div>
+                    <Select
+                        options={TIMEZONE_OPTIONS}
+                        value={timezoneValue()}
+                        onChange={handleTimezoneChange}
+                        size="responsive"
+                        height="big"
+                        isDisabled={clientFormState.processingSave || isReadOnly()}
+                        isSearchable
+                    />
+                </div>
 
-            <div
-                class={cn(s.timezoneWrapper, s.timezoneWrapperClientScope)}
-                data-testid="inactivity-schedule-timezone"
-            >
-                <div class={s.timezoneLabel}>{intl.getMessage('inactivity_schedule_timezone')}</div>
-                <Select
-                    options={TIMEZONE_OPTIONS}
-                    value={timezoneValue()}
-                    onChange={handleTimezoneChange}
-                    size="responsive"
-                    height="big"
-                    isDisabled={clientFormState.processingSave || isReadOnly()}
-                    isSearchable
-                />
-            </div>
+                <div class={s.scheduleList} data-testid="inactivity-schedule-list">
+                    <For each={DAYS_OF_WEEK}>
+                        {(day) => (
+                            <ScheduleRow
+                                day={day}
+                                data={schedule()?.[day] as ScheduleDayData | undefined}
+                                disabled={isReadOnly()}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                onAdd={handleAdd}
+                            />
+                        )}
+                    </For>
+                </div>
 
-            <div class={s.scheduleList} data-testid="inactivity-schedule-list">
-                <For each={DAYS_OF_WEEK}>
-                    {(day) => (
-                        <ScheduleRow
-                            day={day}
-                            data={schedule()?.[day] as ScheduleDayData | undefined}
-                            disabled={isReadOnly()}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            onAdd={handleAdd}
-                        />
-                    )}
-                </For>
-            </div>
+                <Show when={modalVisible()}>
+                    <ScheduleModal
+                        visible={modalVisible()}
+                        currentDay={editDay()}
+                        currentData={
+                            editDay()
+                                ? (schedule()?.[editDay()!] as ScheduleDayData | undefined)
+                                : undefined
+                        }
+                        onClose={handleModalClose}
+                        onSave={handleModalSave}
+                    />
+                </Show>
 
-            <Show when={modalVisible()}>
-                <ScheduleModal
-                    visible={modalVisible()}
-                    currentDay={editDay()}
-                    currentData={
-                        editDay()
-                            ? (schedule()?.[editDay()!] as ScheduleDayData | undefined)
-                            : undefined
-                    }
-                    onClose={handleModalClose}
-                    onSave={handleModalSave}
-                />
-            </Show>
-
-            <Show when={deleteDay()}>
-                <ConfirmDialog
-                    title={intl.getMessage('inactivity_schedule_delete')}
-                    text={intl.getMessage('inactivity_schedule_delete_desc', {
-                        value: getDayName(deleteDay()!),
-                    })}
-                    buttonText={intl.getMessage('delete_btn')}
-                    cancelText={intl.getMessage('cancel_btn')}
-                    onConfirm={confirmDelete}
-                    onClose={() => setDeleteDay(null)}
-                    buttonVariant="danger"
-                />
+                <Show when={deleteDay()}>
+                    <ConfirmDialog
+                        title={intl.getMessage('inactivity_schedule_delete')}
+                        text={intl.getMessage('inactivity_schedule_delete_desc', {
+                            value: getDayName(deleteDay()!),
+                        })}
+                        buttonText={intl.getMessage('delete_btn')}
+                        cancelText={intl.getMessage('cancel_btn')}
+                        onConfirm={confirmDelete}
+                        onClose={() => setDeleteDay(null)}
+                        buttonVariant="danger"
+                    />
+                </Show>
             </Show>
         </Show>
     );

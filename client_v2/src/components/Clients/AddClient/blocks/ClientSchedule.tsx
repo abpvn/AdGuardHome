@@ -1,4 +1,5 @@
 import { createMemo } from 'solid-js';
+import { useParams } from '@solidjs/router';
 import cn from 'clsx';
 import intl from 'panel/common/intl';
 import { clientFormState } from 'panel/stores/clientForm';
@@ -12,8 +13,20 @@ import { ClientsHeader } from './ClientsHeader';
 
 export const ClientSchedule = () => {
     useInitClientFormFromRoute();
+    let params: { clientName?: string };
+    try {
+        params = useParams<{ clientName?: string }>();
+    } catch {
+        params = {};
+    }
 
-    const isEdit = createMemo(() => clientFormState.mode === 'edit');
+    const routeClientName = createMemo(() =>
+        params.clientName ? decodeURIComponent(params.clientName) : '',
+    );
+    const editClientName = createMemo(
+        () => clientFormState.originalName || routeClientName(),
+    );
+    const isEdit = createMemo(() => clientFormState.mode === 'edit' || !!routeClientName());
 
     const blockedServicesPath = createMemo<RoutePathKey>(() =>
         isEdit() ? RoutePath.ClientsEditBlockedServices : RoutePath.ClientsBlockedServices,
@@ -28,7 +41,7 @@ export const ClientSchedule = () => {
                         path: blockedServicesPath(),
                         title: intl.getMessage('blocked_services'),
                         props: isEdit()
-                            ? { clientName: encodeURIComponent(clientFormState.originalName) }
+                            ? { clientName: encodeURIComponent(editClientName()) }
                             : undefined,
                     },
                 ]}

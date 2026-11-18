@@ -1,5 +1,5 @@
 import { createMemo } from 'solid-js';
-import { useMatch } from '@solidjs/router';
+import { useMatch, useParams } from '@solidjs/router';
 import cn from 'clsx';
 import intl from 'panel/common/intl';
 import { Breadcrumbs } from 'panel/common/ui/Breadcrumbs';
@@ -19,15 +19,30 @@ type ClientsHeaderProps = {
 };
 
 export const ClientsHeader = (props: ClientsHeaderProps) => {
+    let params: { clientName?: string };
+    try {
+        params = useParams<{ clientName?: string }>();
+    } catch {
+        params = {};
+    }
     const extraLinks = () => props.extraLinks || [];
-    const isEdit = createMemo(() => clientFormState.mode === 'edit');
+
+    const routeClientName = createMemo(() =>
+        params.clientName ? decodeURIComponent(params.clientName) : '',
+    );
+
+    const editClientName = createMemo(
+        () => clientFormState.originalName || routeClientName(),
+    );
+
+    const isEdit = createMemo(() => clientFormState.mode === 'edit' || !!routeClientName());
 
     const clientPageLink = createMemo(() =>
         isEdit()
             ? {
                   path: RoutePath.ClientsEdit,
-                  title: clientFormState.originalName || intl.getMessage('clients_edit'),
-                  props: { clientName: encodeURIComponent(clientFormState.originalName) },
+                  title: editClientName() || intl.getMessage('clients_edit'),
+                  props: { clientName: encodeURIComponent(editClientName()) },
               }
             : {
                   path: RoutePath.ClientsAdd,
@@ -46,7 +61,7 @@ export const ClientsHeader = (props: ClientsHeaderProps) => {
     );
 
     const breadcrumbCurrent = createMemo(() =>
-        isEdit() && isMainFormPage() ? clientFormState.originalName : pageTitle(),
+        isEdit() && isMainFormPage() ? editClientName() : pageTitle(),
     );
 
     const parentLinks = createMemo(() => [

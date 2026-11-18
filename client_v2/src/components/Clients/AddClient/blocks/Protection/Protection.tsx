@@ -1,8 +1,9 @@
-import { createMemo, For } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
 import cn from 'clsx';
 import intl from 'panel/common/intl';
 import { Checkbox } from 'panel/common/controls/Checkbox';
 import { SwitchGroup } from 'panel/common/ui/SettingsGroup';
+import { PageLoader } from 'panel/common/ui/Loader';
 import { clientFormState, updateClientFormField } from 'panel/stores/clientForm';
 import { useInitClientFormFromRoute } from 'panel/hooks/useInitClientFormFromRoute';
 import {
@@ -17,7 +18,7 @@ import { ClientsHeader } from '../ClientsHeader';
 import s from './Protection.module.pcss';
 
 export const Protection = () => {
-    useInitClientFormFromRoute();
+    const isReady = useInitClientFormFromRoute();
 
     const disabled = createMemo(() => clientFormState.use_global_settings);
 
@@ -59,6 +60,7 @@ export const Protection = () => {
             <ClientsHeader currentTitle={intl.getMessage('clients_protection')} />
 
             <div class={cn(theme.layout.containerIn, theme.layout.containerIn_one_col)}>
+                <Show when={isReady()} fallback={<PageLoader />}>
                 <SwitchGroup
                     id="filtering-enabled"
                     title={intl.getMessage('settings_filter_requests')}
@@ -129,6 +131,7 @@ export const Protection = () => {
                     checked={clientFormState.ignore_statistics}
                     onChange={handleToggle('ignore_statistics')}
                 />
+                </Show>
             </div>
         </div>
     );

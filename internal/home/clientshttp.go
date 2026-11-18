@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/netip"
 	"os"
 	"slices"
+	"sync"
+	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
@@ -87,6 +90,13 @@ type clientListJSON struct {
 	Tags           []string            `json:"supported_tags"`
 }
 
+// clientsListDHCPUpdateInterval is the minimum interval between DHCP runtime
+// client refreshes triggered by the clients list API.  This throttling is an
+// intentional performance tradeoff: DHCP-sourced runtime clients on
+// GET /control/clients may be stale for up to this interval until refreshed by
+// a later list request.
+const clientsListDHCPUpdateInterval = 30 * time.Second
+
 // whoisOrEmpty returns a WHOIS client information or a pointer to an empty
 // struct.  Frontend expects a non-nil value.
 func whoisOrEmpty(r *client.Runtime) (info *whois.Info) {
@@ -101,30 +111,52 @@ func whoisOrEmpty(r *client.Runtime) (info *whois.Info) {
 // handleGetClients is the handler for GET /control/clients HTTP API.
 func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	data := clientListJSON{}
 
 	clients.lock.Lock()
-	defer clients.lock.Unlock()
+	now := time.Now()
+	needDHCPUpdate := clients.lastDHCPUpdate.IsZero() ||
+		now.Sub(clients.lastDHCPUpdate) >= clientsListDHCPUpdateInterval
+	if needDHCPUpdate {
+		// Claim the refresh window to prevent duplicate concurrent updates.
+		clients.lastDHCPUpdate = now
+	}
+	clients.lock.Unlock()
 
+	if needDHCPUpdate {
+		clients.storage.UpdateDHCP(ctx)
+
+		clients.lock.Lock()
+		clients.lastDHCPUpdate = time.Now()
+		clients.lock.Unlock()
+	}
+
+	persist := make([]*client.Persistent, 0)
 	clients.storage.RangeByName(func(c *client.Persistent) (cont bool) {
-		cj := clientToJSON(c, true)
-		data.Clients = append(data.Clients, cj)
+		clone := c.ShallowClone()
+		clone.Filters = slices.Clone(c.Filters)
+		clone.WhitelistFilters = slices.Clone(c.WhitelistFilters)
+		clone.UserRules = slices.Clone(c.UserRules)
+		persist = append(persist, clone)
 
 		return true
 	})
 
-	clients.storage.UpdateDHCP(ctx)
+	data := clientListJSON{
+		Clients: make([]*clientJSON, 0, len(persist)),
+	}
+
+	for _, c := range persist {
+		data.Clients = append(data.Clients, clientToJSON(c, true))
+	}
 
 	clients.storage.RangeRuntime(func(rc *client.Runtime) (cont bool) {
 		src, host := rc.Info()
-		cj := runtimeClientJSON{
+		data.RuntimeClients = append(data.RuntimeClients, runtimeClientJSON{
 			WHOIS:  whoisOrEmpty(rc),
 			Name:   host,
 			Source: src,
 			IP:     rc.Addr(),
-		}
-
-		data.RuntimeClients = append(data.RuntimeClients, cj)
+		})
 
 		return true
 	})
@@ -384,8 +416,8 @@ func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
 	ctx := context.TODO()
 	cloneVal := c.SafeSearchConf
 	safeSearchConf := &cloneVal
-	allowfiltersJSON := []filtering.FilterJSON{}
-	blockedfiltersJSON := []filtering.FilterJSON{}
+	allowfiltersJSON := make([]filtering.FilterJSON, 0, len(c.WhitelistFilters))
+	blockedfiltersJSON := make([]filtering.FilterJSON, 0, len(c.Filters))
 	globalContext.filters.LoadFilters(ctx, c.WhitelistFilters)
 	globalContext.filters.LoadFilters(ctx, c.Filters)
 	for _, filter := range c.WhitelistFilters {
@@ -523,16 +555,6 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusBadRequest, "Client not found")
 
 		return
-	}
-
-	clients.bulkUpdateClientFilters(&cj.Name)
-	if globalContext.filters != nil {
-		globalContext.filters.DeleteClientFtlEngine(cj.Name)
-	}
-
-	clients.bulkUpdateClientFilters(&cj.Name)
-	if globalContext.filters != nil {
-		globalContext.filters.DeleteClientFtlEngine(cj.Name)
 	}
 
 	clients.bulkUpdateClientFilters(&cj.Name)
@@ -830,6 +852,73 @@ type searchClientJSON struct {
 	ID string `json:"id"`
 }
 
+// clientSearchItem is a parsed client search request item.
+type clientSearchItem struct {
+	params client.FindParams
+	id     string
+	idx    int
+}
+
+// collectClientSearchItems parses client search requests and returns valid
+// items in the original order.
+func collectClientSearchItems(
+	ctx context.Context,
+	l *slog.Logger,
+	qs []searchClientJSON,
+) (items []clientSearchItem) {
+	items = make([]clientSearchItem, 0, len(qs))
+	for i, c := range qs {
+		idStr := c.ID
+		params := client.FindParams{}
+		if err := params.Set(idStr); err != nil {
+			l.DebugContext(ctx, "searching client", "id", idStr, slogutil.KeyError, err)
+
+			continue
+		}
+
+		items = append(items, clientSearchItem{
+			idx:    i,
+			id:     idStr,
+			params: params,
+		})
+	}
+
+	return items
+}
+
+// lookupClientSearchItems resolves search items and returns per-index results.
+func (clients *clientsContainer) lookupClientSearchItems(
+	items []clientSearchItem,
+	total int,
+) (results []map[string]*clientJSON, present []bool) {
+	results = make([]map[string]*clientJSON, total)
+	present = make([]bool, total)
+	if len(items) == 0 {
+		return results, present
+	}
+
+	limit := min(len(items), 8)
+	sem := make(chan struct{}, limit)
+	var wg sync.WaitGroup
+	for _, it := range items {
+		it := it
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			results[it.idx] = map[string]*clientJSON{
+				it.id: clients.findClient(it.id, &it.params),
+			}
+			present[it.idx] = true
+		}()
+	}
+	wg.Wait()
+
+	return results, present
+}
+
 // handleSearchClient is the handler for the POST /control/clients/search HTTP
 // API.
 func (clients *clientsContainer) handleSearchClient(w http.ResponseWriter, r *http.Request) {
@@ -852,21 +941,14 @@ func (clients *clientsContainer) handleSearchClient(w http.ResponseWriter, r *ht
 		return
 	}
 
-	data := make([]map[string]*clientJSON, 0, len(q.Clients))
-	params := &client.FindParams{}
+	items := collectClientSearchItems(ctx, l, q.Clients)
+	results, present := clients.lookupClientSearchItems(items, len(q.Clients))
 
-	for _, c := range q.Clients {
-		idStr := c.ID
-		err = params.Set(idStr)
-		if err != nil {
-			l.DebugContext(ctx, "searching client", "id", idStr, slogutil.KeyError, err)
-
-			continue
+	data := make([]map[string]*clientJSON, 0, len(items))
+	for i := range results {
+		if present[i] {
+			data = append(data, results[i])
 		}
-
-		data = append(data, map[string]*clientJSON{
-			idStr: clients.findClient(idStr, params),
-		})
 	}
 
 	aghhttp.WriteJSONResponseOK(ctx, l, w, r, data)

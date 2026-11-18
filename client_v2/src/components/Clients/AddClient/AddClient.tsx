@@ -35,7 +35,7 @@ export const AddClient = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    useInitClientFormFromRoute();
+    const isReady = useInitClientFormFromRoute();
 
     const [nameError, setNameError] = createSignal<string | undefined>();
     const [cacheSizeError, setCacheSizeError] = createSignal<string | undefined>();
@@ -194,11 +194,11 @@ export const AddClient = () => {
             <ClientsHeader currentTitle={intl.getMessage('clients_add')} />
 
             <div class={cn(theme.layout.containerIn, theme.layout.containerIn_one_col)}>
-                <Show when={clientFormState.processingSave}>
+                <Show when={clientFormState.processingSave || !isReady()}>
                     <PageLoader />
                 </Show>
 
-                <Show when={!clientFormState.processingSave}>
+                <Show when={!clientFormState.processingSave && isReady()}>
                     <div class={s.fieldGroupInput}>
                         <Input
                             id="client-name"

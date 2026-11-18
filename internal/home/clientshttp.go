@@ -8,6 +8,7 @@ import (
 	"net/netip"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
@@ -87,6 +88,10 @@ type clientListJSON struct {
 	Tags           []string            `json:"supported_tags"`
 }
 
+// clientsListDHCPUpdateInterval is the minimum interval between DHCP runtime
+// client refreshes triggered by the clients list API.
+const clientsListDHCPUpdateInterval = 30 * time.Second
+
 // whoisOrEmpty returns a WHOIS client information or a pointer to an empty
 // struct.  Frontend expects a non-nil value.
 func whoisOrEmpty(r *client.Runtime) (info *whois.Info) {
@@ -113,7 +118,11 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http
 		return true
 	})
 
-	clients.storage.UpdateDHCP(ctx)
+	now := time.Now()
+	if clients.lastDHCPUpdate.IsZero() || now.Sub(clients.lastDHCPUpdate) >= clientsListDHCPUpdateInterval {
+		clients.storage.UpdateDHCP(ctx)
+		clients.lastDHCPUpdate = now
+	}
 
 	clients.storage.RangeRuntime(func(rc *client.Runtime) (cont bool) {
 		src, host := rc.Info()

@@ -54,6 +54,10 @@ type clientsContainer struct {
 	// more detail.  Use sync.RWMutex.
 	lock sync.Mutex
 
+	// lastDHCPUpdate is the time of the last DHCP runtime clients refresh
+	// triggered by the clients list API.
+	lastDHCPUpdate time.Time
+
 	// safeSearchCacheSize is the size of the safe search cache to use for
 	// persistent clients.
 	safeSearchCacheSize uint

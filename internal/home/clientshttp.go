@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/netip"
 	"os"
@@ -851,6 +852,73 @@ type searchClientJSON struct {
 	ID string `json:"id"`
 }
 
+// clientSearchItem is a parsed client search request item.
+type clientSearchItem struct {
+	params client.FindParams
+	id     string
+	idx    int
+}
+
+// collectClientSearchItems parses client search requests and returns valid
+// items in the original order.
+func collectClientSearchItems(
+	ctx context.Context,
+	l *slog.Logger,
+	qs []searchClientJSON,
+) (items []clientSearchItem) {
+	items = make([]clientSearchItem, 0, len(qs))
+	for i, c := range qs {
+		idStr := c.ID
+		params := client.FindParams{}
+		if err := params.Set(idStr); err != nil {
+			l.DebugContext(ctx, "searching client", "id", idStr, slogutil.KeyError, err)
+
+			continue
+		}
+
+		items = append(items, clientSearchItem{
+			idx:    i,
+			id:     idStr,
+			params: params,
+		})
+	}
+
+	return items
+}
+
+// lookupClientSearchItems resolves search items and returns per-index results.
+func (clients *clientsContainer) lookupClientSearchItems(
+	items []clientSearchItem,
+	total int,
+) (results []map[string]*clientJSON, present []bool) {
+	results = make([]map[string]*clientJSON, total)
+	present = make([]bool, total)
+	if len(items) == 0 {
+		return results, present
+	}
+
+	limit := min(len(items), 8)
+	sem := make(chan struct{}, limit)
+	var wg sync.WaitGroup
+	for _, it := range items {
+		it := it
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			results[it.idx] = map[string]*clientJSON{
+				it.id: clients.findClient(it.id, &it.params),
+			}
+			present[it.idx] = true
+		}()
+	}
+	wg.Wait()
+
+	return results, present
+}
+
 // handleSearchClient is the handler for the POST /control/clients/search HTTP
 // API.
 func (clients *clientsContainer) handleSearchClient(w http.ResponseWriter, r *http.Request) {
@@ -873,55 +941,8 @@ func (clients *clientsContainer) handleSearchClient(w http.ResponseWriter, r *ht
 		return
 	}
 
-	type searchItem struct {
-		idx    int
-		id     string
-		params client.FindParams
-	}
-
-	items := make([]searchItem, 0, len(q.Clients))
-	for i, c := range q.Clients {
-		idStr := c.ID
-		params := client.FindParams{}
-		if err = params.Set(idStr); err != nil {
-			l.DebugContext(ctx, "searching client", "id", idStr, slogutil.KeyError, err)
-
-			continue
-		}
-
-		items = append(items, searchItem{
-			idx:    i,
-			id:     idStr,
-			params: params,
-		})
-	}
-
-	results := make([]map[string]*clientJSON, len(q.Clients))
-	present := make([]bool, len(q.Clients))
-	if len(items) > 0 {
-		limit := 8
-		if len(items) < limit {
-			limit = len(items)
-		}
-
-		sem := make(chan struct{}, limit)
-		var wg sync.WaitGroup
-		for _, it := range items {
-			it := it
-			wg.Add(1)
-			sem <- struct{}{}
-			go func() {
-				defer wg.Done()
-				defer func() { <-sem }()
-
-				results[it.idx] = map[string]*clientJSON{
-					it.id: clients.findClient(it.id, &it.params),
-				}
-				present[it.idx] = true
-			}()
-		}
-		wg.Wait()
-	}
+	items := collectClientSearchItems(ctx, l, q.Clients)
+	results, present := clients.lookupClientSearchItems(items, len(q.Clients))
 
 	data := make([]map[string]*clientJSON, 0, len(items))
 	for i := range results {

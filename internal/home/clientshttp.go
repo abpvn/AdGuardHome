@@ -8,6 +8,7 @@ import (
 	"net/netip"
 	"os"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
@@ -864,21 +865,61 @@ func (clients *clientsContainer) handleSearchClient(w http.ResponseWriter, r *ht
 		return
 	}
 
-	data := make([]map[string]*clientJSON, 0, len(q.Clients))
-	params := &client.FindParams{}
+	type searchItem struct {
+		idx    int
+		id     string
+		params client.FindParams
+	}
 
-	for _, c := range q.Clients {
+	items := make([]searchItem, 0, len(q.Clients))
+	for i, c := range q.Clients {
 		idStr := c.ID
-		err = params.Set(idStr)
-		if err != nil {
+		params := client.FindParams{}
+		if err = params.Set(idStr); err != nil {
 			l.DebugContext(ctx, "searching client", "id", idStr, slogutil.KeyError, err)
 
 			continue
 		}
 
-		data = append(data, map[string]*clientJSON{
-			idStr: clients.findClient(idStr, params),
+		items = append(items, searchItem{
+			idx:    i,
+			id:     idStr,
+			params: params,
 		})
+	}
+
+	results := make([]map[string]*clientJSON, len(q.Clients))
+	present := make([]bool, len(q.Clients))
+	if len(items) > 0 {
+		limit := 8
+		if len(items) < limit {
+			limit = len(items)
+		}
+
+		sem := make(chan struct{}, limit)
+		var wg sync.WaitGroup
+		for _, it := range items {
+			it := it
+			wg.Add(1)
+			sem <- struct{}{}
+			go func() {
+				defer wg.Done()
+				defer func() { <-sem }()
+
+				results[it.idx] = map[string]*clientJSON{
+					it.id: clients.findClient(it.id, &it.params),
+				}
+				present[it.idx] = true
+			}()
+		}
+		wg.Wait()
+	}
+
+	data := make([]map[string]*clientJSON, 0, len(items))
+	for i := range results {
+		if present[i] {
+			data = append(data, results[i])
+		}
 	}
 
 	aghhttp.WriteJSONResponseOK(ctx, l, w, r, data)

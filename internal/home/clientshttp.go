@@ -106,34 +106,47 @@ func whoisOrEmpty(r *client.Runtime) (info *whois.Info) {
 // handleGetClients is the handler for GET /control/clients HTTP API.
 func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	data := clientListJSON{}
 
+	now := time.Now()
 	clients.lock.Lock()
-	defer clients.lock.Unlock()
+	needDHCPUpdate := clients.lastDHCPUpdate.IsZero() ||
+		now.Sub(clients.lastDHCPUpdate) >= clientsListDHCPUpdateInterval
+	if needDHCPUpdate {
+		clients.lastDHCPUpdate = now
+	}
+	clients.lock.Unlock()
 
+	if needDHCPUpdate {
+		clients.storage.UpdateDHCP(ctx)
+	}
+
+	persist := make([]*client.Persistent, 0)
 	clients.storage.RangeByName(func(c *client.Persistent) (cont bool) {
-		cj := clientToJSON(c, true)
-		data.Clients = append(data.Clients, cj)
+		clone := c.ShallowClone()
+		clone.Filters = slices.Clone(c.Filters)
+		clone.WhitelistFilters = slices.Clone(c.WhitelistFilters)
+		clone.UserRules = slices.Clone(c.UserRules)
+		persist = append(persist, clone)
 
 		return true
 	})
 
-	now := time.Now()
-	if clients.lastDHCPUpdate.IsZero() || now.Sub(clients.lastDHCPUpdate) >= clientsListDHCPUpdateInterval {
-		clients.storage.UpdateDHCP(ctx)
-		clients.lastDHCPUpdate = now
+	data := clientListJSON{
+		Clients: make([]*clientJSON, 0, len(persist)),
+	}
+
+	for _, c := range persist {
+		data.Clients = append(data.Clients, clientToJSON(c, true))
 	}
 
 	clients.storage.RangeRuntime(func(rc *client.Runtime) (cont bool) {
 		src, host := rc.Info()
-		cj := runtimeClientJSON{
+		data.RuntimeClients = append(data.RuntimeClients, runtimeClientJSON{
 			WHOIS:  whoisOrEmpty(rc),
 			Name:   host,
 			Source: src,
 			IP:     rc.Addr(),
-		}
-
-		data.RuntimeClients = append(data.RuntimeClients, cj)
+		})
 
 		return true
 	})

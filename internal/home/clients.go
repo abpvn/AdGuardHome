@@ -54,8 +54,11 @@ type clientsContainer struct {
 	// more detail.  Use sync.RWMutex.
 	lock sync.Mutex
 
-	// lastDHCPUpdate is the time of the last DHCP runtime clients refresh
-	// triggered by the clients list API.
+	// lastDHCPUpdate is the time of the last DHCP runtime client refresh
+	// triggered by the clients list API.  The refresh is throttled to reduce
+	// list response latency; newly leased or removed DHCP clients may therefore
+	// appear stale for up to clientsListDHCPUpdateInterval.  A lease-event-driven
+	// refresh would avoid this tradeoff.
 	lastDHCPUpdate time.Time
 
 	// safeSearchCacheSize is the size of the safe search cache to use for

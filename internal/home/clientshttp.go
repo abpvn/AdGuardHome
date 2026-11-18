@@ -90,7 +90,10 @@ type clientListJSON struct {
 }
 
 // clientsListDHCPUpdateInterval is the minimum interval between DHCP runtime
-// client refreshes triggered by the clients list API.
+// client refreshes triggered by the clients list API.  This throttling is an
+// intentional performance tradeoff: DHCP-sourced runtime clients on
+// GET /control/clients may be stale for up to this interval until refreshed by
+// a later list request.
 const clientsListDHCPUpdateInterval = 30 * time.Second
 
 // whoisOrEmpty returns a WHOIS client information or a pointer to an empty
@@ -108,17 +111,22 @@ func whoisOrEmpty(r *client.Runtime) (info *whois.Info) {
 func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	now := time.Now()
 	clients.lock.Lock()
+	now := time.Now()
 	needDHCPUpdate := clients.lastDHCPUpdate.IsZero() ||
 		now.Sub(clients.lastDHCPUpdate) >= clientsListDHCPUpdateInterval
 	if needDHCPUpdate {
+		// Claim the refresh window to prevent duplicate concurrent updates.
 		clients.lastDHCPUpdate = now
 	}
 	clients.lock.Unlock()
 
 	if needDHCPUpdate {
 		clients.storage.UpdateDHCP(ctx)
+
+		clients.lock.Lock()
+		clients.lastDHCPUpdate = time.Now()
+		clients.lock.Unlock()
 	}
 
 	persist := make([]*client.Persistent, 0)

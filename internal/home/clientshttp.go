@@ -530,16 +530,6 @@ func (clients *clientsContainer) handleDelClient(w http.ResponseWriter, r *http.
 		globalContext.filters.DeleteClientFtlEngine(cj.Name)
 	}
 
-	clients.bulkUpdateClientFilters(&cj.Name)
-	if globalContext.filters != nil {
-		globalContext.filters.DeleteClientFtlEngine(cj.Name)
-	}
-
-	clients.bulkUpdateClientFilters(&cj.Name)
-	if globalContext.filters != nil {
-		globalContext.filters.DeleteClientFtlEngine(cj.Name)
-	}
-
 	clients.confModifier.Apply(ctx)
 }
 

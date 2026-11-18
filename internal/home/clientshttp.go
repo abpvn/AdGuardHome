@@ -384,8 +384,8 @@ func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
 	ctx := context.TODO()
 	cloneVal := c.SafeSearchConf
 	safeSearchConf := &cloneVal
-	allowfiltersJSON := []filtering.FilterJSON{}
-	blockedfiltersJSON := []filtering.FilterJSON{}
+	allowfiltersJSON := make([]filtering.FilterJSON, 0, len(c.WhitelistFilters))
+	blockedfiltersJSON := make([]filtering.FilterJSON, 0, len(c.Filters))
 	globalContext.filters.LoadFilters(ctx, c.WhitelistFilters)
 	globalContext.filters.LoadFilters(ctx, c.Filters)
 	for _, filter := range c.WhitelistFilters {

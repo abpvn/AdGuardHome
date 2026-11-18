@@ -17,6 +17,10 @@ import { dashboardState, getClients } from 'panel/stores/dashboard';
  * The client sub-pages (Protection, Blocked services, Inactivity schedule)
  * render outside the main form, so a direct page load must initialize the
  * store themselves; otherwise they read the form defaults.
+ *
+ * Returns whether the form is ready for the current route. On edit routes this
+ * is true only once the matching client has been loaded into the form store,
+ * so subpages can avoid rendering empty defaults during a direct load.
  */
 export const useInitClientFormFromRoute = () => {
     const navigate = useNavigate();
@@ -60,4 +64,16 @@ export const useInitClientFormFromRoute = () => {
 
         initClientForm(buildFormPayload(client));
     });
+
+    return () => {
+        const urlClientName = params.clientName;
+        if (!urlClientName) {
+            return true;
+        }
+
+        return (
+            clientFormState.mode === 'edit' &&
+            clientFormState.originalName === decodeURIComponent(urlClientName)
+        );
+    };
 };

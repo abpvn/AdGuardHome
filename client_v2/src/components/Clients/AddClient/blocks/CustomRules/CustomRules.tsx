@@ -3,9 +3,11 @@ import cn from 'clsx';
 
 import intl from 'panel/common/intl';
 import theme from 'panel/lib/theme';
+import { PageLoader } from 'panel/common/ui/Loader';
 import { Textarea } from 'panel/common/controls/Textarea';
 import { COMMENT_LINE_TOKENS } from 'panel/helpers/constants';
 import { clientFormState, updateClientFormField } from 'panel/stores/clientForm';
+import { useInitClientFormFromRoute } from 'panel/hooks/useInitClientFormFromRoute';
 import { Examples } from 'panel/components/UserRules/blocks/Examples';
 
 import { ClientsHeader } from '../ClientsHeader';
@@ -13,6 +15,8 @@ import { ClientsHeader } from '../ClientsHeader';
 import s from './CustomRules.module.pcss';
 
 export const CustomRules = () => {
+    const isReady = useInitClientFormFromRoute();
+
     const handleChange = (e: Event) => {
         updateClientFormField({
             field: 'user_rules',
@@ -25,27 +29,31 @@ export const CustomRules = () => {
             <div class={cn(theme.layout.containerIn, theme.layout.containerIn_one_col)}>
                 <ClientsHeader currentTitle={intl.getMessage('custom_filtering_rules')} />
 
-                <Show
-                    when={!clientFormState.use_global_filters}
-                    fallback={
-                        <div class={s.useGlobalFilters}>{intl.getMessage('use_global_filters')}</div>
-                    }
-                >
-                    <div class={s.section}>
-                        <Textarea
-                            id="client-user-rules"
-                            value={clientFormState.user_rules}
-                            onChange={handleChange}
-                            placeholder={`# ${intl.getMessage('user_rules_placeholder')}\n\n@@||example.org`}
-                            label={intl.getMessage('user_rules_desc')}
-                            rows={12}
-                            size="large"
-                            highlightComments
-                            commentPrefixes={COMMENT_LINE_TOKENS}
-                        />
-                    </div>
+                <Show when={isReady()} fallback={<PageLoader />}>
+                    <Show
+                        when={!clientFormState.use_global_filters}
+                        fallback={
+                            <div class={s.useGlobalFilters}>
+                                {intl.getMessage('use_global_filters')}
+                            </div>
+                        }
+                    >
+                        <div class={s.section}>
+                            <Textarea
+                                id="client-user-rules"
+                                value={clientFormState.user_rules}
+                                onChange={handleChange}
+                                placeholder={`# ${intl.getMessage('user_rules_placeholder')}\n\n@@||example.org`}
+                                label={intl.getMessage('user_rules_desc')}
+                                rows={12}
+                                size="large"
+                                highlightComments
+                                commentPrefixes={COMMENT_LINE_TOKENS}
+                            />
+                        </div>
 
-                    <Examples />
+                        <Examples />
+                    </Show>
                 </Show>
             </div>
         </div>

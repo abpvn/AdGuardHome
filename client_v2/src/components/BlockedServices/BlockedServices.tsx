@@ -1,4 +1,5 @@
 import { createSignal, createEffect, createMemo, onMount, Show, For } from 'solid-js';
+import { useParams } from '@solidjs/router';
 import cn from 'clsx';
 import intl from 'panel/common/intl';
 import { Input } from 'panel/common/controls/Input';
@@ -15,6 +16,7 @@ import {
 } from 'panel/stores/services';
 
 import { Breadcrumbs } from 'panel/common/ui/Breadcrumbs';
+import { PageLoader } from 'panel/common/ui/Loader';
 import { GroupFilter } from './GroupFilter';
 import { ServiceRow } from './ServiceRow';
 import { NothingFound } from './NothingFound';
@@ -44,11 +46,34 @@ type Props = {
 };
 
 export const BlockedServices = (props: Props) => {
+    let params: { clientName?: string };
+    try {
+        params = useParams<{ clientName?: string }>();
+    } catch {
+        params = {};
+    }
     const [search, setSearch] = createSignal('');
     const [groupFilter, setGroupFilter] = createSignal<string[]>([]);
     const [togglingId, setTogglingId] = createSignal<string | null>(null);
     const [showBlockedOnly, setShowBlockedOnly] = createSignal(false);
     const [showUnblockedOnly, setShowUnblockedOnly] = createSignal(false);
+
+    const routeClientName = createMemo(() =>
+        params.clientName ? decodeURIComponent(params.clientName) : '',
+    );
+    const editClientName = createMemo(
+        () => clientFormState.originalName || routeClientName(),
+    );
+    const isClientEditRoute = createMemo(
+        () => props.clientScope && (clientFormState.mode === 'edit' || !!routeClientName()),
+    );
+    const isClientFormReady = createMemo(
+        () =>
+            !props.clientScope ||
+            !routeClientName() ||
+            (clientFormState.mode === 'edit' &&
+                clientFormState.originalName === routeClientName()),
+    );
 
     onMount(() => {
         if (!props.clientScope) {
@@ -180,19 +205,16 @@ export const BlockedServices = (props: Props) => {
         if (!props.clientScope) {
             return RoutePath.InactivitySchedule;
         }
-        return clientFormState.mode === 'edit'
-            ? RoutePath.ClientsEditSchedule
-            : RoutePath.ClientsSchedule;
+        return isClientEditRoute() ? RoutePath.ClientsEditSchedule : RoutePath.ClientsSchedule;
     };
 
     const scheduleRouteProps = () =>
-        props.clientScope && clientFormState.mode === 'edit'
-            ? { clientName: encodeURIComponent(clientFormState.originalName) }
-            : undefined;
+        isClientEditRoute() ? { clientName: encodeURIComponent(editClientName()) } : undefined;
 
     return (
         <Show when={!isInitialLoading()}>
-            <div class={cn(theme.layout.container, props.class)}>
+            <Show when={isClientFormReady()} fallback={<PageLoader />}>
+                <div class={cn(theme.layout.container, props.class)}>
                 <Show when={props.breadcrumbs}>
                     <div class={s.breadcrumbs}>
                         <Breadcrumbs
@@ -358,7 +380,8 @@ export const BlockedServices = (props: Props) => {
                         </div>
                     </Show>
                 </div>
-            </div>
+                </div>
+            </Show>
         </Show>
     );
 };

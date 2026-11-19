@@ -101,14 +101,23 @@ func questionPayload(ctx context.Context, l *slog.Logger, entry *logEntry) (q jo
 		"name":  hostname,
 	}
 
-	if qhost, err := idna.ToUnicode(hostname); err != nil {
+	if !strings.Contains(strings.ToLower(hostname), "xn--") {
+		return q
+	}
+
+	qhost, err := idna.ToUnicode(hostname)
+	if err != nil {
 		l.DebugContext(
 			ctx,
 			"translating into unicode",
 			"hostname", hostname,
 			slogutil.KeyError, err,
 		)
-	} else if qhost != hostname && qhost != "" {
+
+		return q
+	}
+
+	if qhost != hostname && qhost != "" {
 		q["unicode_name"] = qhost
 	}
 

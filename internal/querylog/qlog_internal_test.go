@@ -124,7 +124,7 @@ func TestQueryLog(t *testing.T) {
 			params := newSearchParams()
 			params.searchCriteria = tc.sCr
 
-			entries, _ = l.search(ctx, params)
+			entries, _ = l.search(ctx, params, l.conf.MemSize)
 			require.Len(t, entries, len(tc.want))
 
 			for i, want := range tc.want {
@@ -214,7 +214,7 @@ func TestQueryLogOffsetLimit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			params.offset = tc.offset
 			params.limit = tc.limit
-			entries, _ := l.search(ctx, params)
+			entries, _ := l.search(ctx, params, l.conf.MemSize)
 			require.Len(t, entries, tc.wantLen)
 
 			if tc.wantLen > 0 {
@@ -256,7 +256,7 @@ func TestQueryLogMaxFileScanEntries(t *testing.T) {
 	for _, maxFileScanEntries := range []int{5, 0} {
 		t.Run(fmt.Sprintf("limit_%d", maxFileScanEntries), func(t *testing.T) {
 			params.maxFileScanEntries = maxFileScanEntries
-			entries, _ := l.search(ctx, params)
+			entries, _ := l.search(ctx, params, l.conf.MemSize)
 			assert.Len(t, entries, entNum-maxFileScanEntries)
 		})
 	}
@@ -280,7 +280,7 @@ func TestQueryLogFileDisabled(t *testing.T) {
 
 	params := newSearchParams()
 	ctx := testutil.ContextWithTimeout(t, testTimeout)
-	ll, _ := l.search(ctx, params)
+	ll, _ := l.search(ctx, params, l.conf.MemSize)
 	require.Len(t, ll, 2)
 
 	assert.Equal(t, "example3.org", ll[0].QHost)

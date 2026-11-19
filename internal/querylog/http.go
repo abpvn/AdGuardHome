@@ -67,14 +67,11 @@ func (l *queryLog) handleQueryLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var entries []*logEntry
-	var oldest time.Time
-	func() {
-		l.confMu.RLock()
-		defer l.confMu.RUnlock()
+	l.confMu.RLock()
+	memSize := l.conf.MemSize
+	l.confMu.RUnlock()
 
-		entries, oldest = l.search(ctx, params)
-	}()
+	entries, oldest := l.search(ctx, params, memSize)
 
 	resp := l.entriesToJSON(ctx, entries, oldest, l.anonymizer.Load())
 

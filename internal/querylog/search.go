@@ -64,6 +64,11 @@ func (l *queryLog) searchMemory(
 	l.bufferLock.Lock()
 	defer l.bufferLock.Unlock()
 
+	needed := params.offset + params.limit
+	if needed < 0 {
+		needed = 0
+	}
+
 	l.buffer.ReverseRange(func(entry *logEntry) (cont bool) {
 		// A shallow clone is enough, since the only thing that this loop
 		// modifies is the client field.
@@ -86,6 +91,9 @@ func (l *queryLog) searchMemory(
 
 		if params.match(e) {
 			entries = append(entries, e)
+			if needed > 0 && len(entries) >= needed {
+				return false
+			}
 		}
 
 		return true

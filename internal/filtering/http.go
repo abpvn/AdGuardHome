@@ -3,6 +3,7 @@ package filtering
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -457,7 +458,7 @@ func FilterToJSON(f FilterYAML) FilterJSON {
 func ClientFilterToJSON(f ClientFilterYAML) ClientFilterJSON {
 	cfj := ClientFilterJSON{
 		FilterJSON: FilterToJSON(*f.FilterYAML),
-		Names:      f.Names,
+		Names:      maps.Clone(f.Names),
 	}
 	if !f.LastUpdated.IsZero() {
 		cfj.LastUpdated = f.LastUpdated.Format(time.RFC3339)
@@ -482,23 +483,24 @@ func (fj *FilterJSON) ToFilterYAML() FilterYAML {
 
 // Get filtering configuration
 func (d *DNSFilter) handleFilteringStatus(w http.ResponseWriter, r *http.Request) {
-	resp := filteringConfig{}
 	d.conf.filtersMu.RLock()
-	resp.Enabled = d.conf.FilteringEnabled
-	resp.Interval = d.conf.FiltersUpdateIntervalHours
+	resp := filteringConfig{
+		Enabled:          d.conf.FilteringEnabled,
+		Interval:         d.conf.FiltersUpdateIntervalHours,
+		Filters:          make([]FilterJSON, 0, len(d.conf.Filters)),
+		WhitelistFilters: make([]FilterJSON, 0, len(d.conf.WhitelistFilters)),
+		ClientsFilters:   make([]ClientFilterJSON, 0, len(d.conf.ClientsFilters)),
+		UserRules:        slices.Clone(d.conf.UserRules),
+	}
 	for _, f := range d.conf.Filters {
-		fj := FilterToJSON(f)
-		resp.Filters = append(resp.Filters, fj)
+		resp.Filters = append(resp.Filters, FilterToJSON(f))
 	}
 	for _, f := range d.conf.WhitelistFilters {
-		fj := FilterToJSON(f)
-		resp.WhitelistFilters = append(resp.WhitelistFilters, fj)
+		resp.WhitelistFilters = append(resp.WhitelistFilters, FilterToJSON(f))
 	}
 	for _, f := range d.conf.ClientsFilters {
-		fj := ClientFilterToJSON(f)
-		resp.ClientsFilters = append(resp.ClientsFilters, fj)
+		resp.ClientsFilters = append(resp.ClientsFilters, ClientFilterToJSON(f))
 	}
-	resp.UserRules = d.conf.UserRules
 	d.conf.filtersMu.RUnlock()
 
 	aghhttp.WriteJSONResponseOK(r.Context(), d.logger, w, r, resp)

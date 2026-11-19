@@ -379,7 +379,6 @@ export const refreshFilters = async (config: FilterRefreshRequest) => {
     setState('processingRefreshFilters', true);
     try {
         const data = await filteringRefresh(config);
-        setState('processingRefreshFilters', false);
         const updated = data?.updated ?? 0;
         if (updated > 0) {
             addSuccessToast(intl.getPlural('list_updated', updated));
@@ -389,6 +388,7 @@ export const refreshFilters = async (config: FilterRefreshRequest) => {
         await getFilteringStatus();
     } catch (error) {
         addErrorToast({ error });
+    } finally {
         setState('processingRefreshFilters', false);
     }
 };

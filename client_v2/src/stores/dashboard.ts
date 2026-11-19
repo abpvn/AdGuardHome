@@ -92,12 +92,6 @@ const [state, setState] = createStore<DashboardState>(initialState);
 
 const CHECK_TIMEOUT = 1000;
 
-let statusTimeout: ReturnType<typeof setTimeout> | null = null;
-const rmTimeout = (t: ReturnType<typeof setTimeout> | null): null => {
-    if (t) clearTimeout(t);
-    return null;
-};
-
 /** Fetches the server status without redirecting to the login page on 401. */
 const fetchStatus = (): Promise<ServerStatus> =>
     customFetch<ServerStatus>(getStatusUrl(), {
@@ -116,10 +110,9 @@ const checkStatus = async (
     }
     try {
         const data = await fetchStatus();
-        statusTimeout = rmTimeout(statusTimeout);
         const shouldContinue = handleRequestSuccess({ status: 200, data });
         if (shouldContinue === true || data.running === false) {
-            statusTimeout = setTimeout(
+            setTimeout(
                 checkStatus,
                 CHECK_TIMEOUT,
                 handleRequestSuccess,
@@ -128,8 +121,7 @@ const checkStatus = async (
             );
         }
     } catch {
-        statusTimeout = rmTimeout(statusTimeout);
-        statusTimeout = setTimeout(
+        setTimeout(
             checkStatus,
             CHECK_TIMEOUT,
             handleRequestSuccess,

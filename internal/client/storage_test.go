@@ -1582,6 +1582,42 @@ func BenchmarkStorage_Find(b *testing.B) {
 	//	BenchmarkStorage_Find/mac_address-8       	 5776131	       199.7 ns/op	     256 B/op	       3 allocs/op
 }
 
+func TestStorage_ApplyClientFiltering(t *testing.T) {
+	const cliName = "client"
+
+	var (
+		cliIP = netip.MustParseAddr("192.0.2.1")
+		// Deliberately unsorted.  Storage sorts the tags when adding the
+		// client, so filtering must not sort them again.
+		tags     = []string{"os_linux", "device_pc"}
+		wantTags = []string{"device_pc", "os_linux"}
+	)
+
+	s := newStorage(t, []*client.Persistent{{
+		Name:             cliName,
+		IPs:              []netip.Addr{cliIP},
+		Tags:             tags,
+		UseOwnSettings:   true,
+		FilteringEnabled: true,
+		SafeSearchConf:   &filtering.SafeSearchConfig{},
+	}})
+
+	setts := &filtering.Settings{}
+	s.ApplyClientFiltering("", cliIP, setts)
+
+	assert.Equal(t, cliName, setts.ClientName)
+	assert.Equal(t, wantTags, setts.ClientTags)
+	assert.True(t, setts.FilteringEnabled)
+	assert.NotNil(t, setts.ClientTagsSet)
+	assert.NotNil(t, setts.ClientIdentifiersSet)
+
+	// Filtering must not reorder the tags of the stored client, since the
+	// settings now share its read-only slices and prebuilt sets.
+	stored, ok := s.FindByName(cliName)
+	require.True(t, ok)
+	assert.Equal(t, wantTags, stored.Tags)
+}
+
 // BenchmarkStorage_ApplyClientFiltering measures the client lookup that every
 // DNS query performs.  The parallel case reports how well the lookups scale
 // with the number of concurrent queries.

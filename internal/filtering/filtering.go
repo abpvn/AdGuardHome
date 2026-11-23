@@ -46,10 +46,16 @@ type ServiceEntry struct {
 //
 // TODO(s.chzhen):  Move to the client package.
 type Settings struct {
-	ClientName             string
-	ClientIP               netip.Addr
-	ClientTags             []string
-	ClientFilters          []FilterYAML
+	ClientName    string
+	ClientIP      netip.Addr
+	ClientTags    []string
+	ClientFilters []FilterYAML
+
+	// ClientTagsSet and ClientIdentifiersSet are immutable sets built once per
+	// persistent client.  When they are nil, they are built from ClientTags and
+	// ClientName on demand.
+	ClientTagsSet          *container.SortedSliceSet[string]
+	ClientIdentifiersSet   *container.SortedSliceSet[string]
 	ClientWhiteListFilters []FilterYAML
 	UserRules              []string
 
@@ -991,12 +997,24 @@ func (d *DNSFilter) processMatchHost(
 
 	ctx := context.TODO()
 
-	// TODO(f.setrakov): Reuse client tags and identifiers.
+	// NewSortedSliceSet sorts its input in place, so make a copy when there is
+	// no prebuilt set.  Persistent clients provide the sets so that neither the
+	// stored tags nor a fresh slice are allocated here.
+	tagsSet := setts.ClientTagsSet
+	if tagsSet == nil {
+		tagsSet = container.NewSortedSliceSet(slices.Clone(setts.ClientTags)...)
+	}
+
+	identifiersSet := setts.ClientIdentifiersSet
+	if identifiersSet == nil {
+		identifiersSet = container.NewSortedSliceSet(setts.ClientName)
+	}
+
 	ufReq := &urlfilter.DNSRequest{
 		Hostname:          host,
-		ClientTags:        container.NewSortedSliceSet(setts.ClientTags...),
+		ClientTags:        tagsSet,
 		ClientIP:          setts.ClientIP,
-		ClientIdentifiers: container.NewSortedSliceSet(setts.ClientName),
+		ClientIdentifiers: identifiersSet,
 		DNSType:           rrtype,
 	}
 	d.engineLock.RLock()

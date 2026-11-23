@@ -939,16 +939,31 @@ func (d *DNSFilter) enableFiltersLocked(ctx context.Context, async bool) {
 // ApplyAdditionalFiltering enhances the provided filtering settings with
 // blocked services and client-specific configurations.
 func (d *DNSFilter) ApplyAdditionalFiltering(cliAddr netip.Addr, clientID string, setts *Settings) {
+	d.ApplyGlobalFiltering(cliAddr, setts)
+	d.applyClientFiltering(clientID, cliAddr, setts)
+	d.ApplyClientBlockedServices(setts)
+}
+
+// ApplyGlobalFiltering applies the global filtering settings to setts.  It
+// doesn't apply any client-specific settings.
+func (d *DNSFilter) ApplyGlobalFiltering(cliAddr netip.Addr, setts *Settings) {
 	setts.ClientIP = cliAddr
 
 	d.ApplyBlockedServices(setts)
-	d.applyClientFiltering(clientID, cliAddr, setts)
-	if setts.BlockedServices != nil {
-		// TODO(e.burkov):  Get rid of this crutch.
-		setts.ServicesRules = nil
-		svcs := setts.BlockedServices.IDs
-		if !setts.BlockedServices.Schedule.Contains(time.Now()) {
-			d.ApplyBlockedServicesList(setts, svcs)
-		}
+}
+
+// ApplyClientBlockedServices applies the blocked services of the client whose
+// settings are in setts, overriding the global ones.  It is a no-op when the
+// client uses the global blocked services.
+func (d *DNSFilter) ApplyClientBlockedServices(setts *Settings) {
+	if setts.BlockedServices == nil {
+		return
+	}
+
+	// TODO(e.burkov):  Get rid of this crutch.
+	setts.ServicesRules = nil
+	svcs := setts.BlockedServices.IDs
+	if !setts.BlockedServices.Schedule.Contains(time.Now()) {
+		d.ApplyBlockedServicesList(setts, svcs)
 	}
 }

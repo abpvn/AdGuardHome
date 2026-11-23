@@ -9,6 +9,15 @@ import (
 
 // ClientsContainer provides information about preconfigured DNS clients.
 type ClientsContainer interface {
+	// GetClient returns the persistent client identified by clientID or cliAddr,
+	// prioritizing clientID.  The returned client must be treated as read-only.
+	// It is nil when there is no match.
+	GetClient(clientID string, cliAddr netip.Addr) (cli *client.Persistent)
+
+	// ClientCustomUpstreamConfig returns the custom upstream configuration of
+	// cli, if any.  cli may be nil.
+	ClientCustomUpstreamConfig(cli *client.Persistent) (conf *proxy.CustomUpstreamConfig)
+
 	// CustomUpstreamConfig returns the custom client upstream configuration, if
 	// any.  It prioritizes ClientID over client IP address to identify the
 	// client.
@@ -31,6 +40,18 @@ type EmptyClientsContainer struct{}
 
 // type check
 var _ ClientsContainer = EmptyClientsContainer{}
+
+// GetClient implements the [ClientsContainer] interface for
+// EmptyClientsContainer.
+func (EmptyClientsContainer) GetClient(_ string, _ netip.Addr) (cli *client.Persistent) {
+	return nil
+}
+
+// ClientCustomUpstreamConfig implements the [ClientsContainer] interface for
+// EmptyClientsContainer.
+func (EmptyClientsContainer) ClientCustomUpstreamConfig(_ *client.Persistent) (conf *proxy.CustomUpstreamConfig) {
+	return nil
+}
 
 // CustomUpstreamConfig implements the [ClientsContainer] interface for
 // EmptyClientsContainer.

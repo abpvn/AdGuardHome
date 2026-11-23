@@ -13,12 +13,18 @@ import (
 	"github.com/miekg/dns"
 )
 
-// clientRequestFilteringSettings looks up client filtering settings using the
-// client's IP address and ID, if any, from dctx.
+// clientRequestFilteringSettings builds the filtering settings from the global
+// defaults and the client resolved in dctx.  It doesn't look the client up
+// again.
 func (s *Server) clientRequestFilteringSettings(dctx *dnsContext) (setts *filtering.Settings) {
 	setts = s.dnsFilter.Settings()
 	setts.ProtectionEnabled = dctx.protectionEnabled
-	s.dnsFilter.ApplyAdditionalFiltering(dctx.proxyCtx.Addr.Addr(), dctx.clientID, setts)
+
+	s.dnsFilter.ApplyGlobalFiltering(dctx.proxyCtx.Addr.Addr(), setts)
+	if dctx.cli != nil {
+		dctx.cli.ApplyToSettings(setts)
+	}
+	s.dnsFilter.ApplyClientBlockedServices(setts)
 
 	return setts
 }

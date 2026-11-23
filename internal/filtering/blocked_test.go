@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
+	"github.com/miekg/dns"
 )
 
 // blockedBenchIDs is a representative set of blocked-service IDs used by the
@@ -76,5 +77,34 @@ func BenchmarkDNSFilter_ApplyClientBlockedServices(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		d.ApplyClientBlockedServices(setts)
+	}
+}
+
+// BenchmarkDNSFilter_MatchBlockedServicesRules measures the per-query cost of
+// checking a host that is not blocked by any service, which is the common case.
+func BenchmarkDNSFilter_MatchBlockedServicesRules(b *testing.B) {
+	d := newBlockedBenchFilter(b)
+	setts := &Settings{ProtectionEnabled: true}
+	d.ApplyBlockedServices(setts)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = d.matchBlockedServicesRules("example.com", dns.TypeA, setts)
+	}
+}
+
+// BenchmarkDNSFilter_MatchBlockedServicesRulesNoMatcher measures the cost of
+// the pre-Phase-5 path without the compiled matcher prefilter.
+func BenchmarkDNSFilter_MatchBlockedServicesRulesNoMatcher(b *testing.B) {
+	d := newBlockedBenchFilter(b)
+	setts := &Settings{ProtectionEnabled: true}
+	d.ApplyBlockedServices(setts)
+	setts.ServicesMatcher = nil
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = d.matchBlockedServicesRules("example.com", dns.TypeA, setts)
 	}
 }

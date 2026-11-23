@@ -61,6 +61,11 @@ type Settings struct {
 
 	ServicesRules []ServiceEntry
 
+	// ServicesMatcher is a precompiled matcher built from ServicesRules.  It is
+	// used as a fast negative prefilter and is nil when ServicesRules is
+	// assembled manually or when there are no blocked services.
+	ServicesMatcher *urlfilter.DNSEngine
+
 	// BlockedServices is the configuration of blocked services of a client.  It
 	// is nil if the client does not have any blocked services.
 	BlockedServices *BlockedServices
@@ -661,6 +666,19 @@ func (d *DNSFilter) matchBlockedServicesRules(
 	svcs := setts.ServicesRules
 	if len(svcs) == 0 {
 		return Result{}, nil
+	}
+
+	// The matcher uses indexes to reject the overwhelming majority of hosts
+	// without scanning every rule of every blocked service.  It is built from
+	// the same rules as svcs, so a negative result is authoritative.  Keep the
+	// loop below for positive results to preserve the original first-match
+	// order and service attribution.
+	if matcher := setts.ServicesMatcher; matcher != nil {
+		var matchRes urlfilter.DNSResult
+		matched := matcher.MatchRequestInto(&urlfilter.DNSRequest{Hostname: host}, &matchRes)
+		if !matched {
+			return Result{}, nil
+		}
 	}
 
 	req := rules.NewRequestForHostname(host)

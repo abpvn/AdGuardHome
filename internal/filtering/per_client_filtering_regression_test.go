@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/netip"
+	"strings"
 	"sync"
 	"testing"
 
@@ -15,6 +16,35 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// hostsFromRule extracts the domain-shaped tokens of a blocked-service rule
+// and expands them with common subdomains.  Wildcards are replaced with a
+// concrete label so that rules matching only through a wildcard are exercised.
+func hostsFromRule(text string) (hosts []string) {
+	var normalized strings.Builder
+	for _, r := range text {
+		switch {
+		case r == '.' || r == '-' || r == '_' ||
+			(r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9'):
+			normalized.WriteRune(r)
+		default:
+			normalized.WriteByte(' ')
+		}
+	}
+
+	for _, tok := range strings.Fields(normalized.String()) {
+		if strings.Contains(tok, ".") {
+			hosts = append(hosts, tok, "www."+tok, "a.b."+tok)
+		}
+	}
+
+	if strings.Contains(text, "*") {
+		hosts = append(hosts, hostsFromRule(strings.ReplaceAll(text, "*", "x"))...)
+	}
+
+	return hosts
+}
 
 // requireServiceRuleNames asserts that rules hold one entry per want name, in
 // the same order, and that every entry has its rules compiled.
@@ -131,7 +161,7 @@ func TestPerClientFilteringRegression(t *testing.T) {
 		})
 
 		want := []struct {
-			host string
+			host   string
 			reason Reason
 		}{{
 			host:   "tagged.example",
@@ -298,6 +328,54 @@ func TestPerClientFilteringRegression(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, FilteredBlockedService, res.Reason)
 		assert.Equal(t, "facebook", res.ServiceName)
+	})
+
+	t.Run("blocked_services_matcher_equivalence", func(t *testing.T) {
+		InitModule(context.Background(), testLogger)
+		d := newRegressionDNSFilter(t)
+
+		// Cover services with plain domains, subdomains and wildcards.
+		ids := []string{
+			"facebook", "youtube", "spotify", "epic_games", "netflix", "4chan",
+		}
+		cs := d.compiledBlockedServices(ids)
+		require.NotNil(t, cs.matcher)
+		require.Len(t, cs.entries, len(ids))
+
+		hosts := []string{
+			"example.com", "google.com", "amazon.com", "localhost", "",
+		}
+		for _, e := range cs.entries {
+			for _, r := range e.Rules {
+				hosts = append(hosts, hostsFromRule(r.Text())...)
+			}
+		}
+
+		for _, host := range hosts {
+			req := rules.NewRequestForHostname(host)
+			var loopMatched bool
+			for _, e := range cs.entries {
+				for _, r := range e.Rules {
+					if r.Match(req) {
+						loopMatched = true
+
+						break
+					}
+				}
+				if loopMatched {
+					break
+				}
+			}
+
+			_, matcherMatched := cs.matcher.Match(host)
+			require.Equalf(
+				t,
+				loopMatched,
+				matcherMatched,
+				"host %q: loop and matcher disagree",
+				host,
+			)
+		}
 	})
 
 	t.Run("concurrent", func(t *testing.T) {

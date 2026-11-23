@@ -1078,6 +1078,9 @@ func (d *DNSFilter) matchHost(
 		return Result{}, nil
 	}
 	if setts.ClientName != "" && !setts.UseGlobalFilters && !d.HasClientFilteringEngine(setts.ClientName) {
+		// Engines are normally built before the server starts serving queries.
+		// This is a fallback for engines invalidated by a filter update, which
+		// deletes them so that they are rebuilt from fresh filter data.
 		d.InitForClient(setts.ClientName, setts.ClientWhiteListFilters, setts.ClientFilters, setts.UserRules)
 	}
 	return d.processMatchHost(host, rrtype, setts)

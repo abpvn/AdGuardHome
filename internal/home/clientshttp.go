@@ -1,6 +1,7 @@
 package home
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -320,9 +321,7 @@ func (clients *clientsContainer) jsonToClient(
 		c.WhitelistFilters = append(c.WhitelistFilters, fj.ToFilterYAML())
 	}
 
-	if ssc := cj.SafeSearchConf; ssc != nil {
-		c.SafeSearchConf = *ssc
-	}
+	c.SafeSearchConf = cmp.Or(cj.SafeSearchConf, &filtering.SafeSearchConfig{})
 
 	if c.SafeSearchConf.Enabled {
 		logger := clients.baseLogger.With(
@@ -414,8 +413,7 @@ func clientToJSON(c *client.Persistent, isFull bool) (cj *clientJSON) {
 		}
 	}
 	ctx := context.TODO()
-	cloneVal := c.SafeSearchConf
-	safeSearchConf := &cloneVal
+	safeSearchConf := c.SafeSearchConf
 	allowfiltersJSON := make([]filtering.FilterJSON, 0, len(c.WhitelistFilters))
 	blockedfiltersJSON := make([]filtering.FilterJSON, 0, len(c.Filters))
 	globalContext.filters.LoadFilters(ctx, c.WhitelistFilters)

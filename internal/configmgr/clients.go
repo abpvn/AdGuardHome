@@ -1,7 +1,10 @@
 package configmgr
 
 import (
+	"math"
+
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
+	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/validate"
 	"github.com/c2h5oh/datasize"
@@ -33,6 +36,9 @@ type ClientSourcesConfig struct {
 
 	// WHOIS enables the WHOIS source of runtime clients.
 	WHOIS bool `yaml:"whois"`
+
+	// CacheSize is the maximum number of cached runtime client addresses.
+	CacheSize int `yaml:"cache_size"`
 }
 
 // Client represents the on-disk persistent client.
@@ -53,13 +59,23 @@ type Client struct {
 	// Tags are the tags of the client.
 	Tags []string `yaml:"tags"`
 
+	// Filters are the blocking filter lists of the client.
+	Filters []filtering.FilterYAML `yaml:"filters"`
+
+	// WhitelistFilters are the allowing filter lists of the client.
+	WhitelistFilters []filtering.FilterYAML `yaml:"whitelist_filters"`
+
+	// UserRules are the custom filtering rules of the client.
+	UserRules []string `yaml:"user_rules"`
+
 	// Upstreams are the custom upstream DNS servers of the client.
 	Upstreams []string `yaml:"upstreams"`
 
 	// UID is the unique identifier of the persistent client.
 	UID client.UID `yaml:"uid"`
 
-	// UpstreamsCacheSize is the DNS cache size.
+	// UpstreamsCacheSize is the DNS cache size.  It must not be greater than
+	// [math.MaxUint32].
 	UpstreamsCacheSize datasize.ByteSize `yaml:"upstreams_cache_size"`
 
 	// FilteringEnabled indicates if filtering is enabled for the client.
@@ -89,6 +105,9 @@ type Client struct {
 	// UseGlobalSettings indicates if the client uses the global filtering
 	// settings.
 	UseGlobalSettings bool `yaml:"use_global_settings"`
+
+	// UseGlobalFilters indicates if the client uses the global filters.
+	UseGlobalFilters bool `yaml:"use_global_filters"`
 }
 
 // type check
@@ -117,5 +136,5 @@ func (c *Client) Validate() (err error) {
 
 	// TODO(d.kolyshev):  Add more validations.
 
-	return nil
+	return validate.NoGreaterThan("upstreams_cache_size", c.UpstreamsCacheSize, math.MaxUint32)
 }

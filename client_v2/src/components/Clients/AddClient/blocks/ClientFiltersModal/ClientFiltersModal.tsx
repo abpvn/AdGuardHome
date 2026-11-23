@@ -109,11 +109,9 @@ export const ClientFiltersModal = (props: Props) => {
             return;
         }
 
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
         const values: FormValues = {
-            name: (formData.get('name') as string) || '',
-            url: (formData.get('url') as string) || '',
+            name: name(),
+            url: url(),
         };
 
         if (values.url && values.name) {
@@ -209,7 +207,15 @@ export const ClientFiltersModal = (props: Props) => {
                                         id: TAB_TYPE.MANUAL,
                                         label: intl.getMessage('blocklist_add_manual'),
                                         content: (
-                                            <ManualFilterForm class={s.formGroup} />
+                                            <ManualFilterForm
+                                                class={s.formGroup}
+                                                name={name()}
+                                                url={url()}
+                                                urlError={urlError()}
+                                                onNameChange={setName}
+                                                onUrlChange={setUrl}
+                                                onUrlBlur={validateAndSetErrors}
+                                            />
                                         ),
                                     },
                                 ]}

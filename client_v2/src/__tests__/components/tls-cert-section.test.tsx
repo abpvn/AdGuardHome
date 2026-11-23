@@ -152,9 +152,10 @@ describe('TlsCertSection — validation messages', () => {
         hostname: 'example.org',
     });
 
-    // The message states what is wrong; the details below it say which
-    // certificate is installed, which is what the user needs to act on it.
-    it('shows the mismatch message and the certificate details together', () => {
+    // Validation messages are informational for the certificate's own data, so
+    // they stack below the certificate details instead of replacing them, as
+    // they did in the legacy UI.
+    it('shows the mismatch message together with the certificate block', () => {
         renderSection({ valid_pair: false, key_type: 'ECDSA' });
 
         expect(screen.getByText(copyInDom('encryption_key_cert_mismatch'))).toBeInTheDocument();
@@ -162,9 +163,10 @@ describe('TlsCertSection — validation messages', () => {
         expect(
             screen.getByText(copyInDom('encryption_subject', { value: 'example.org' })),
         ).toBeInTheDocument();
+        expect(algorithmLine()).toBeInTheDocument();
     });
 
-    it('shows the warning message and the certificate details together', () => {
+    it('shows the warning message together with the certificate block', () => {
         renderSection({ warning_validation: serverNameWarning });
 
         expect(screen.getByText(serverNameWarning)).toBeInTheDocument();
@@ -175,6 +177,7 @@ describe('TlsCertSection — validation messages', () => {
         expect(
             screen.getByText(copyInDom('encryption_subject', { value: 'example.org' })),
         ).toBeInTheDocument();
+        expect(algorithmLine()).toBeInTheDocument();
     });
 
     it('shows the validation message alone when no certificate is configured', () => {

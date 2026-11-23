@@ -52,6 +52,10 @@ type Persistent struct {
 	// must not be nil after initialization.
 	BlockedServices *filtering.BlockedServices
 
+	// SafeSearchConf is the safe search filtering configuration.  It must not
+	// be nil.
+	SafeSearchConf *filtering.SafeSearchConfig
+
 	// Name of the persistent client.  Must not be empty.
 	Name string
 
@@ -115,10 +119,7 @@ type Persistent struct {
 	// IgnoreStatistics  specifies whether the client requests are counted.
 	IgnoreStatistics bool
 
-	// SafeSearchConf is the safe search filtering configuration.
-	//
-	// TODO(d.kolyshev): Make SafeSearchConf a pointer.
-	SafeSearchConf   filtering.SafeSearchConfig
+	// UseGlobalFilters specifies whether the client uses the global filters.
 	UseGlobalFilters bool
 }
 

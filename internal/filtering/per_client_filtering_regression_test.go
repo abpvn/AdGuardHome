@@ -1,6 +1,7 @@
 package filtering
 
 import (
+	"context"
 	"net/http"
 	"net/netip"
 	"sync"
@@ -14,6 +15,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// requireServiceRuleNames asserts that rules hold one entry per want name, in
+// the same order, and that every entry has its rules compiled.
+func requireServiceRuleNames(tb testing.TB, want []string, entries []ServiceEntry) {
+	tb.Helper()
+
+	names := make([]string, len(entries))
+	for i, e := range entries {
+		names[i] = e.Name
+		require.NotEmpty(tb, e.Rules, "service %q has no rules", e.Name)
+	}
+
+	require.Equal(tb, want, names)
+}
 
 // newRegressionDNSFilter returns a filter with a single global blocking rule.
 func newRegressionDNSFilter(tb testing.TB) (d *DNSFilter) {
@@ -224,6 +239,65 @@ func TestPerClientFilteringRegression(t *testing.T) {
 		res, err = d.matchBlockedServicesRules("aboutfacebook.com", dns.TypeA, setts)
 		require.NoError(t, err)
 		assert.Equal(t, NotFilteredNotFound, res.Reason)
+	})
+
+	t.Run("blocked_services_settings", func(t *testing.T) {
+		d := newRegressionDNSFilter(t)
+		InitModule(context.Background(), testLogger)
+
+		ids := []string{"facebook", "youtube", "instagram"}
+		d.conf.BlockedServices = &BlockedServices{
+			IDs:      ids,
+			Schedule: schedule.EmptyWeekly(),
+		}
+
+		cliAddr := netip.MustParseAddr("192.0.2.10")
+
+		// The global path must build one entry per ID, in the configured order.
+		globalSetts := regressionClientSettings("", true)
+		d.ApplyGlobalFiltering(cliAddr, globalSetts)
+		requireServiceRuleNames(t, ids, globalSetts.ServicesRules)
+
+		// Applying it again must replace the entries, not append to them.
+		d.ApplyGlobalFiltering(cliAddr, globalSetts)
+		requireServiceRuleNames(t, ids, globalSetts.ServicesRules)
+
+		// The client path must override the global entries with its own IDs,
+		// preserving their order.
+		clientIDs := []string{"linkedin", "twitter"}
+		cliSetts := regressionClientSettings("alice", false)
+		cliSetts.BlockedServices = &BlockedServices{
+			IDs:      clientIDs,
+			Schedule: schedule.EmptyWeekly(),
+		}
+		d.ApplyClientBlockedServices(cliSetts)
+		requireServiceRuleNames(t, clientIDs, cliSetts.ServicesRules)
+
+		// A schedule that covers the current time disables the blocked services
+		// for both paths.
+		d.conf.BlockedServices = &BlockedServices{
+			IDs:      ids,
+			Schedule: schedule.FullWeekly(),
+		}
+
+		scheduledSetts := regressionClientSettings("", true)
+		d.ApplyGlobalFiltering(cliAddr, scheduledSetts)
+		assert.Empty(t, scheduledSetts.ServicesRules)
+
+		cliScheduledSetts := regressionClientSettings("alice", false)
+		cliScheduledSetts.BlockedServices = &BlockedServices{
+			IDs:      ids,
+			Schedule: schedule.FullWeekly(),
+		}
+		d.ApplyClientBlockedServices(cliScheduledSetts)
+		assert.Empty(t, cliScheduledSetts.ServicesRules)
+
+		// The entries built by the global path must actually drive matching,
+		// so the client-facing behavior is unchanged.
+		res, err := d.matchBlockedServicesRules("aboutfacebook.com", dns.TypeA, globalSetts)
+		require.NoError(t, err)
+		assert.Equal(t, FilteredBlockedService, res.Reason)
+		assert.Equal(t, "facebook", res.ServiceName)
 	})
 
 	t.Run("concurrent", func(t *testing.T) {

@@ -121,14 +121,20 @@ func (d *DNSFilter) ApplyBlockedServices(setts *Settings) {
 	d.confMu.RLock()
 	defer d.confMu.RUnlock()
 
-	setts.ServicesRules = []ServiceEntry{}
-
 	bsvc := d.conf.BlockedServices
 
 	// TODO(s.chzhen):  Use startTime from [dnsforward.dnsContext].
-	if !bsvc.Schedule.Contains(time.Now()) {
-		d.ApplyBlockedServicesList(setts, bsvc.IDs)
+	if bsvc.Schedule.Contains(time.Now()) {
+		setts.ServicesRules = []ServiceEntry{}
+
+		return
 	}
+
+	// Preallocate the slice to the number of configured services.  Appending
+	// one entry at a time would otherwise grow it several times on every DNS
+	// query.
+	setts.ServicesRules = make([]ServiceEntry, 0, len(bsvc.IDs))
+	d.ApplyBlockedServicesList(setts, bsvc.IDs)
 }
 
 // ApplyBlockedServicesList appends filtering rules to the settings.

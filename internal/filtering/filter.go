@@ -963,7 +963,12 @@ func (d *DNSFilter) ApplyClientBlockedServices(setts *Settings) {
 	// TODO(e.burkov):  Get rid of this crutch.
 	setts.ServicesRules = nil
 	svcs := setts.BlockedServices.IDs
-	if !setts.BlockedServices.Schedule.Contains(time.Now()) {
-		d.ApplyBlockedServicesList(setts, svcs)
+	if setts.BlockedServices.Schedule.Contains(time.Now()) {
+		return
 	}
+
+	// Preallocate for the same reason as in ApplyBlockedServices:  this runs
+	// for every query of a client with its own blocked services.
+	setts.ServicesRules = make([]ServiceEntry, 0, len(svcs))
+	d.ApplyBlockedServicesList(setts, svcs)
 }

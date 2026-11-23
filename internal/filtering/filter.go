@@ -9,7 +9,6 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -371,9 +370,6 @@ func (d *DNSFilter) InitForClient(clientName string, whiteListFilters, filters [
 	d.ClientsFilteringEngine[clientName] = filteringEngine
 	d.ClientsRulesStorageAllow[clientName] = rulesStorageAllow
 	d.ClientsFilteringEngineAllow[clientName] = filteringEngineAllow
-
-	// Make sure that the OS reclaims memory as soon as possible.
-	debug.FreeOSMemory()
 
 	d.logger.InfoContext(ctx, "filtering: finish init client filtering for client", "client", clientName)
 }

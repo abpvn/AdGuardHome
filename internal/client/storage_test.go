@@ -15,6 +15,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/dhcpd"
 	"github.com/AdguardTeam/AdGuardHome/internal/dhcpsvc"
 	"github.com/AdguardTeam/AdGuardHome/internal/dnsforward"
+	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/AdGuardHome/internal/whois"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/hostsfile"
@@ -1579,4 +1580,38 @@ func BenchmarkStorage_Find(b *testing.B) {
 	//	BenchmarkStorage_Find/ip_address-8        	 6831823	       168.6 ns/op	     248 B/op	       2 allocs/op
 	//	BenchmarkStorage_Find/subnet-8            	 7209050	       167.5 ns/op	     256 B/op	       2 allocs/op
 	//	BenchmarkStorage_Find/mac_address-8       	 5776131	       199.7 ns/op	     256 B/op	       3 allocs/op
+}
+
+// BenchmarkStorage_ApplyClientFiltering measures the client lookup that every
+// DNS query performs.  The parallel case reports how well the lookups scale
+// with the number of concurrent queries.
+func BenchmarkStorage_ApplyClientFiltering(b *testing.B) {
+	const cliID = "cid"
+
+	cliIP := netip.MustParseAddr("192.0.2.1")
+	s := newStorage(b, []*client.Persistent{{
+		Name:      "client",
+		ClientIDs: []client.ClientID{cliID},
+		IPs:       []netip.Addr{cliIP},
+		Tags:      []string{"device_pc", "os_linux"},
+	}})
+
+	b.Run("serial", func(b *testing.B) {
+		setts := &filtering.Settings{}
+
+		b.ReportAllocs()
+		for b.Loop() {
+			s.ApplyClientFiltering(cliID, cliIP, setts)
+		}
+	})
+
+	b.Run("parallel", func(b *testing.B) {
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			setts := &filtering.Settings{}
+			for pb.Next() {
+				s.ApplyClientFiltering(cliID, cliIP, setts)
+			}
+		})
+	})
 }

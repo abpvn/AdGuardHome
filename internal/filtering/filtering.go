@@ -902,6 +902,68 @@ func hostResultForOtherQType(dnsres *urlfilter.DNSResult) (res Result) {
 	return Result{}
 }
 
+// HasClientFilteringEngine reports whether a filtering engine has been
+// initialized for the client with the given name.  It must be used instead of
+// direct map access since the map is written by InitForClient and the HTTP
+// handlers.
+func (d *DNSFilter) HasClientFilteringEngine(name string) (ok bool) {
+	d.clientEngineLock.RLock()
+	defer d.clientEngineLock.RUnlock()
+
+	_, ok = d.ClientsFilteringEngine[name]
+
+	return ok
+}
+
+// ClientsWithGlobalCustomRules returns the names of clients which use the
+// global custom rules instead of their own.
+func (d *DNSFilter) ClientsWithGlobalCustomRules() (names []string) {
+	d.clientEngineLock.RLock()
+	defer d.clientEngineLock.RUnlock()
+
+	names = make([]string, 0, len(d.ClientsGlobalCustomRules))
+	for name, ok := range d.ClientsGlobalCustomRules {
+		if ok {
+			names = append(names, name)
+		}
+	}
+
+	return names
+}
+
+// RenameClientEngine moves the filtering engines of the client from oldName to
+// newName, if they exist.
+func (d *DNSFilter) RenameClientEngine(oldName, newName string) {
+	d.clientEngineLock.Lock()
+	defer d.clientEngineLock.Unlock()
+
+	if _, ok := d.ClientsFilteringEngine[oldName]; !ok {
+		return
+	}
+
+	d.ClientsRulesStorage[newName] = d.ClientsRulesStorage[oldName]
+	d.ClientsFilteringEngine[newName] = d.ClientsFilteringEngine[oldName]
+	d.ClientsRulesStorageAllow[newName] = d.ClientsRulesStorageAllow[oldName]
+	d.ClientsFilteringEngineAllow[newName] = d.ClientsFilteringEngineAllow[oldName]
+
+	if ok := d.ClientsGlobalCustomRules[oldName]; ok {
+		delete(d.ClientsGlobalCustomRules, oldName)
+		d.ClientsGlobalCustomRules[newName] = true
+	}
+
+	d.deleteClientEngineLocked(oldName)
+}
+
+// deleteClientEngineLocked removes all the engines of the client.  The caller
+// must hold d.clientEngineLock for writing.  The global-custom-rules flag is
+// left intact, as it describes the client configuration rather than an engine.
+func (d *DNSFilter) deleteClientEngineLocked(name string) {
+	delete(d.ClientsRulesStorage, name)
+	delete(d.ClientsFilteringEngine, name)
+	delete(d.ClientsRulesStorageAllow, name)
+	delete(d.ClientsFilteringEngineAllow, name)
+}
+
 func (d *DNSFilter) getFilteringEngine(setts *Settings) (filteringEngineAllow, filteringEngine *urlfilter.DNSEngine, isClientFiltering bool) {
 	filteringEngineAllow = d.filteringEngineAllow
 	filteringEngine = d.filteringEngine
@@ -997,11 +1059,8 @@ func (d *DNSFilter) matchHost(
 	if !setts.FilteringEnabled {
 		return Result{}, nil
 	}
-	if setts.ClientName != "" && !setts.UseGlobalFilters {
-		_, ok := d.ClientsFilteringEngine[setts.ClientName]
-		if !ok {
-			d.InitForClient(setts.ClientName, setts.ClientWhiteListFilters, setts.ClientFilters, setts.UserRules)
-		}
+	if setts.ClientName != "" && !setts.UseGlobalFilters && !d.HasClientFilteringEngine(setts.ClientName) {
+		d.InitForClient(setts.ClientName, setts.ClientWhiteListFilters, setts.ClientFilters, setts.UserRules)
 	}
 	return d.processMatchHost(host, rrtype, setts)
 }

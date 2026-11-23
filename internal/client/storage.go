@@ -130,8 +130,10 @@ type Storage struct {
 	// not be nil.
 	logger *slog.Logger
 
-	// mu protects index, runtimeIndex, and upstreamManager.
-	mu *sync.Mutex
+	// mu protects index and runtimeIndex.  Read-only lookups take it for
+	// reading, so that they don't serialize DNS queries with each other.  The
+	// upstream manager has its own lock.
+	mu *sync.RWMutex
 
 	// index contains information about persistent clients.
 	index *index
@@ -177,7 +179,7 @@ func NewStorage(ctx context.Context, conf *StorageConfig) (s *Storage, err error
 
 	s = &Storage{
 		logger:                 conf.Logger,
-		mu:                     &sync.Mutex{},
+		mu:                     &sync.RWMutex{},
 		index:                  newIndex(),
 		runtimeIndex:           newRuntimeIndex(),
 		upstreamManager:        newUpstreamManager(conf.BaseLogger, conf.Clock),
@@ -456,8 +458,8 @@ func (s *Storage) Add(ctx context.Context, p *Persistent) (err error) {
 
 // FindByName finds persistent client by name.  And returns its shallow copy.
 func (s *Storage) FindByName(name string) (p *Persistent, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	p, ok = s.index.findByName(name)
 	if ok {
@@ -550,8 +552,8 @@ func (p *FindParams) Set(id string) (err error) {
 // params must not be nil and must have at least one non-empty field.  p must
 // not be modified.
 func (s *Storage) Find(params *FindParams) (p *Persistent, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	isClientID := params.ClientID != ""
 	isRemoteIP := params.RemoteIP != (netip.Addr{})
@@ -582,7 +584,8 @@ func (s *Storage) Find(params *FindParams) (p *Persistent, ok bool) {
 	}
 }
 
-// findByIP finds persistent client by IP address.  s.mu must be locked.
+// findByIP finds persistent client by IP address.  s.mu must be locked for
+// reading at least.
 func (s *Storage) findByIP(addr netip.Addr) (p *Persistent, ok bool) {
 	p, ok = s.index.findByIP(addr)
 	if ok {
@@ -607,8 +610,8 @@ func (s *Storage) findByIP(addr netip.Addr) (p *Persistent, ok bool) {
 //
 // TODO(s.chzhen):  Consider accepting [FindParams].
 func (s *Storage) FindLoose(ip netip.Addr, id string) (p *Persistent, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	p, ok = s.index.find(id)
 	if ok {
@@ -698,8 +701,8 @@ func (s *Storage) RangeByName(f func(c *Persistent) (cont bool)) {
 
 // Size returns the number of persistent clients.
 func (s *Storage) Size() (n int) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.index.size()
 }
@@ -753,8 +756,8 @@ func (s *Storage) CustomUpstreamConfig(
 	id string,
 	addr netip.Addr,
 ) (prxConf *proxy.CustomUpstreamConfig) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	c, ok := s.findByIDOrAddr(id, addr)
 	if !ok {
@@ -768,16 +771,16 @@ func (s *Storage) CustomUpstreamConfig(
 // *Storage.  It prioritizes ClientID over the client IP address to identify the
 // client.
 func (s *Storage) IsPersistentClient(id string, addr netip.Addr) (ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	_, ok = s.findByIDOrAddr(id, addr)
 
 	return ok
 }
 
-// findByIDOrAddr finds a persistent client by ClientID or IP address.  s.mu is
-// expected to be locked.
+// findByIDOrAddr finds a persistent client by ClientID or IP address.  s.mu
+// must be locked for reading at least.
 func (s *Storage) findByIDOrAddr(id string, addr netip.Addr) (c *Persistent, ok bool) {
 	if id != "" {
 		c, ok = s.index.findByClientID(ClientID(id))
@@ -828,8 +831,8 @@ func (s *Storage) ClearUpstreamCacheByName(name string) (ok bool) {
 // ClientID or client IP address, and applies it to the filtering settings.
 // setts must not be nil.
 func (s *Storage) ApplyClientFiltering(id string, addr netip.Addr, setts *filtering.Settings) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	c, ok := s.index.findByClientID(ClientID(id))
 	if !ok {

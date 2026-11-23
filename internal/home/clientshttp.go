@@ -788,18 +788,14 @@ func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, h
 	if globalContext.filters == nil {
 		return
 	}
-	_, ok := globalContext.filters.ClientsFilteringEngine[prev.Name]
+	ok := globalContext.filters.HasClientFilteringEngine(prev.Name)
 	if ok {
 		if !prev.UseGlobalFilters && c.UseGlobalFilters {
 			// Client disable custom filter
 			globalContext.filters.DeleteClientFtlEngine(c.Name)
 		} else if c.Name != prev.Name {
 			// Client change name
-			globalContext.filters.ClientsRulesStorage[c.Name] = globalContext.filters.ClientsRulesStorage[prev.Name]
-			globalContext.filters.ClientsFilteringEngine[c.Name] = globalContext.filters.ClientsFilteringEngine[prev.Name]
-			globalContext.filters.ClientsRulesStorageAllow[c.Name] = globalContext.filters.ClientsRulesStorageAllow[prev.Name]
-			globalContext.filters.ClientsFilteringEngineAllow[c.Name] = globalContext.filters.ClientsFilteringEngineAllow[prev.Name]
-			globalContext.filters.DeleteClientFtlEngine(prev.Name)
+			globalContext.filters.RenameClientEngine(prev.Name, c.Name)
 		} else if hasFilterChange || hasWhiteListFilterChange || hasUserRulesChange {
 			globalContext.filters.DeleteClientFtlEngine(c.Name)
 			globalContext.filters.InitForClient(c.Name, c.WhitelistFilters, c.Filters, c.UserRules)

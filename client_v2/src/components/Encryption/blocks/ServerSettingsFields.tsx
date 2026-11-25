@@ -121,6 +121,7 @@ export const ServerSettingsFields = (props: Props) => {
                     {(name, index) => (
                         <div class={s.serverNameRow}>
                             <Input
+                                class={s.serverNameField}
                                 id={`${id('server_names')}-${index}`}
                                 name="server_names"
                                 value={name()}

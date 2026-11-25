@@ -1042,7 +1042,9 @@ func (d *DNSFilter) processMatchHost(
 	// TODO(e.burkov):  Inspect if the above is true.
 	defer d.engineLock.RUnlock()
 	filteringEngineAllow, filteringEngine, isClientFiltering := d.getFilteringEngine(setts)
-	if setts.ProtectionEnabled && filteringEngineAllow != nil {
+	// Most setups have no allow rules.  Skip the match request in that case;
+	// RulesCount is a simple field read and an empty engine can never match.
+	if setts.ProtectionEnabled && filteringEngineAllow != nil && filteringEngineAllow.RulesCount() > 0 {
 		dnsres, ok := filteringEngineAllow.MatchRequest(ufReq)
 		if ok {
 			res, err = d.matchHostProcessAllowList(ctx, host, dnsres)

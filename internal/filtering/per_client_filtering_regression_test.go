@@ -378,6 +378,38 @@ func TestPerClientFilteringRegression(t *testing.T) {
 		}
 	})
 
+	t.Run("allow_engine", func(t *testing.T) {
+		d := newRegressionDNSFilter(t)
+
+		// No allow rules: the guard must skip the allow engine without
+		// changing the block result.
+		require.Zero(t, d.filteringEngineAllow.RulesCount())
+		setts := regressionClientSettings("alice", true)
+		res, err := d.CheckHostRules("global.example", dns.TypeA, setts)
+		require.NoError(t, err)
+		assert.Equal(t, FilteredBlockList, res.Reason)
+		assert.False(t, res.IsClientFiltered)
+
+		// Add an allow rule covering the blocked host.  The allow engine must
+		// still win over the block engine.
+		allowFilters := []Filter{{
+			ID:   100,
+			Data: []byte("@@||global.example^\n"),
+		}}
+		blockFilters := []Filter{{
+			ID:   1,
+			Data: []byte("||global.example^\n"),
+		}}
+		err = d.initFiltering(context.Background(), allowFilters, blockFilters)
+		require.NoError(t, err)
+		require.Positive(t, d.filteringEngineAllow.RulesCount())
+
+		res, err = d.CheckHostRules("global.example", dns.TypeA, setts)
+		require.NoError(t, err)
+		assert.Equal(t, NotFilteredAllowList, res.Reason)
+		assert.False(t, res.IsFiltered)
+	})
+
 	t.Run("concurrent", func(t *testing.T) {
 		d := newRegressionDNSFilter(t)
 		d.InitForClient("alice", nil, nil, []string{"||alice.example^"})

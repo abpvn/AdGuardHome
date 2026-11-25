@@ -7,6 +7,7 @@ import (
 
 	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
 	"github.com/miekg/dns"
+	"github.com/stretchr/testify/require"
 )
 
 // blockedBenchIDs is a representative set of blocked-service IDs used by the
@@ -106,5 +107,19 @@ func BenchmarkDNSFilter_MatchBlockedServicesRulesNoMatcher(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = d.matchBlockedServicesRules("example.com", dns.TypeA, setts)
+	}
+}
+
+// BenchmarkDNSFilter_CheckHostRules measures the per-query cost of checking a
+// hostname when there are no allow rules, which is the common case.
+func BenchmarkDNSFilter_CheckHostRules(b *testing.B) {
+	d := newRegressionDNSFilter(b)
+	setts := regressionClientSettings("alice", true)
+	require.Zero(b, d.filteringEngineAllow.RulesCount())
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = d.CheckHostRules("example.com", dns.TypeA, setts)
 	}
 }

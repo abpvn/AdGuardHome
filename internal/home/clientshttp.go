@@ -519,6 +519,7 @@ func (clients *clientsContainer) handleAddClient(w http.ResponseWriter, r *http.
 		return
 	}
 
+	clients.ensureClientDNSFtl(c)
 	clients.confModifier.Apply(ctx)
 }
 
@@ -783,28 +784,62 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 	clients.confModifier.Apply(ctx)
 }
 
+// ensureClientDNSFtl builds the filtering engine of c when c uses its own
+// filters.  It is a no-op for clients that use global filters and for clients
+// whose engine is already built.  Building it ahead of the first query keeps
+// filter-file I/O and the engine write lock off the DNS query path.
+func (clients *clientsContainer) ensureClientDNSFtl(c *client.Persistent) {
+	if globalContext.filters == nil || c.UseGlobalFilters {
+		return
+	}
+
+	globalContext.filters.InitForClient(c.Name, c.WhitelistFilters, c.Filters, c.UserRules)
+}
+
+// initAllClientDNSFtl builds the filtering engines of all persistent clients
+// that use their own filters.  It must be called after the filtering module is
+// created and before the DNS server starts serving queries.
+func (clients *clientsContainer) initAllClientDNSFtl() {
+	if globalContext.filters == nil || clients.storage == nil {
+		return
+	}
+
+	// RangeByName holds the storage lock while calling the callback, so collect
+	// the clients first and build the engines afterwards.
+	cs := make([]*client.Persistent, 0, clients.storage.Size())
+	clients.storage.RangeByName(func(c *client.Persistent) (cont bool) {
+		cs = append(cs, c)
+
+		return true
+	})
+
+	for _, c := range cs {
+		clients.ensureClientDNSFtl(c)
+	}
+}
+
 // updateClientDNSFtl Update DNSFilter for client
 func (clients *clientsContainer) updateClientDNSFtl(prev, c client.Persistent, hasFilterChange, hasWhiteListFilterChange, hasUserRulesChange bool) {
 	if globalContext.filters == nil {
 		return
 	}
-	_, ok := globalContext.filters.ClientsFilteringEngine[prev.Name]
+	ok := globalContext.filters.HasClientFilteringEngine(prev.Name)
 	if ok {
 		if !prev.UseGlobalFilters && c.UseGlobalFilters {
 			// Client disable custom filter
 			globalContext.filters.DeleteClientFtlEngine(c.Name)
 		} else if c.Name != prev.Name {
 			// Client change name
-			globalContext.filters.ClientsRulesStorage[c.Name] = globalContext.filters.ClientsRulesStorage[prev.Name]
-			globalContext.filters.ClientsFilteringEngine[c.Name] = globalContext.filters.ClientsFilteringEngine[prev.Name]
-			globalContext.filters.ClientsRulesStorageAllow[c.Name] = globalContext.filters.ClientsRulesStorageAllow[prev.Name]
-			globalContext.filters.ClientsFilteringEngineAllow[c.Name] = globalContext.filters.ClientsFilteringEngineAllow[prev.Name]
-			globalContext.filters.DeleteClientFtlEngine(prev.Name)
+			globalContext.filters.RenameClientEngine(prev.Name, c.Name)
 		} else if hasFilterChange || hasWhiteListFilterChange || hasUserRulesChange {
 			globalContext.filters.DeleteClientFtlEngine(c.Name)
 			globalContext.filters.InitForClient(c.Name, c.WhitelistFilters, c.Filters, c.UserRules)
 		}
 	}
+
+	// A client that switched from global filters to its own, or one whose
+	// engine was invalidated, needs an engine before the next query.
+	clients.ensureClientDNSFtl(&c)
 }
 
 // findClient returns available information about a client by params from the

@@ -357,7 +357,7 @@ func (d *DNSFilter) handleFilteringSetRules(w http.ResponseWriter, r *http.Reque
 	d.conf.UserRules = req.Rules
 	d.conf.ConfModifier.Apply(ctx)
 	d.EnableFilters(true)
-	for clientName := range d.ClientsGlobalCustomRules {
+	for _, clientName := range d.ClientsWithGlobalCustomRules() {
 		d.DeleteClientFtlEngine(clientName)
 	}
 }
@@ -366,10 +366,8 @@ func (d *DNSFilter) handleFilteringSetRules(w http.ResponseWriter, r *http.Reque
 func (d *DNSFilter) DeleteClientFtlEngine(clientName string) {
 	d.clientEngineLock.Lock()
 	defer d.clientEngineLock.Unlock()
-	delete(d.ClientsRulesStorage, clientName)
-	delete(d.ClientsFilteringEngine, clientName)
-	delete(d.ClientsRulesStorageAllow, clientName)
-	delete(d.ClientsFilteringEngineAllow, clientName)
+
+	d.deleteClientEngineLocked(clientName)
 }
 
 func (d *DNSFilter) handleFilteringRefresh(w http.ResponseWriter, r *http.Request) {

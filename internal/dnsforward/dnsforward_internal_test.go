@@ -80,6 +80,10 @@ var _ ClientsContainer = (*clientsContainer)(nil)
 
 // clientsContainer is a mock [ClientsContainer] implementation for tests.
 type clientsContainer struct {
+	OnGetClient func(clientID string, cliAddr netip.Addr) (cli *client.Persistent)
+
+	OnClientCustomUpstreamConfig func(cli *client.Persistent) (conf *proxy.CustomUpstreamConfig)
+
 	OnCustomUpstreamConfig func(
 		clientID string,
 		cliAddr netip.Addr,
@@ -90,6 +94,28 @@ type clientsContainer struct {
 	OnClearUpstreamCache func()
 
 	OnIsPersistentClient func(clientID string, cliAddr netip.Addr) (ok bool)
+}
+
+// GetClient implements the [ClientsContainer] interface for
+// *clientsContainer.
+func (c *clientsContainer) GetClient(clientID string, cliAddr netip.Addr) (cli *client.Persistent) {
+	if c.OnGetClient == nil {
+		return nil
+	}
+
+	return c.OnGetClient(clientID, cliAddr)
+}
+
+// ClientCustomUpstreamConfig implements the [ClientsContainer] interface for
+// *clientsContainer.
+func (c *clientsContainer) ClientCustomUpstreamConfig(
+	cli *client.Persistent,
+) (conf *proxy.CustomUpstreamConfig) {
+	if c.OnClientCustomUpstreamConfig == nil {
+		return nil
+	}
+
+	return c.OnClientCustomUpstreamConfig(cli)
 }
 
 // CustomUpstreamConfig implements the [ClientsContainer] interface for
@@ -134,6 +160,74 @@ func startDeferStop(tb testing.TB, s *Server) {
 	testutil.CleanupAndRequireSuccess(tb, func() (err error) {
 		return s.Stop(testutil.ContextWithTimeout(tb, testTimeout))
 	})
+}
+
+func TestServer_processInitial_resolvesClientOnce(t *testing.T) {
+	const cliID = "test-client"
+
+	var (
+		cli            = &client.Persistent{Name: cliID}
+		getClientCalls int
+		upsConfCalls   int
+	)
+
+	cc := &clientsContainer{
+		OnGetClient: func(id string, _ netip.Addr) (got *client.Persistent) {
+			getClientCalls++
+
+			assert.Equal(t, cliID, id)
+
+			return cli
+		},
+		OnClientCustomUpstreamConfig: func(got *client.Persistent) (conf *proxy.CustomUpstreamConfig) {
+			upsConfCalls++
+
+			assert.Same(t, cli, got)
+
+			return nil
+		},
+		OnUpdateCommonUpstreamConfig: func(_ *client.CommonUpstreamConfig) {},
+		OnClearUpstreamCache:         func() {},
+		OnIsPersistentClient:         func(_ string, _ netip.Addr) (ok bool) { return true },
+	}
+
+	s := createTestServer(t, &filtering.Config{
+		BlockingMode: filtering.BlockingModeDefault,
+	}, ServerConfig{
+		UDPListenAddrs:   []*net.UDPAddr{{}},
+		TCPListenAddrs:   []*net.TCPAddr{{}},
+		TLSConf:          &TLSConfig{},
+		UpstreamMode:     proxy.UpstreamModeLoadBalance,
+		EDNSClientSubnet: &EDNSClientSubnet{},
+		ClientsContainer: cc,
+		ServePlainDNS:    true,
+	}, testTLSManager)
+
+	dctx := &dnsContext{
+		proxyCtx: &proxy.DNSContext{
+			Req:  createTestMessage("host."),
+			Addr: testClientAddrPort,
+		},
+		clientID: cliID,
+	}
+
+	ctx := slogutil.ContextWithLogger(
+		testutil.ContextWithTimeout(t, testTimeout),
+		testLogger,
+	)
+
+	rc := s.processInitial(ctx, testLogger, dctx)
+	require.Equal(t, resultCodeSuccess, rc)
+	require.Equal(t, 1, getClientCalls)
+	require.Same(t, cli, dctx.cli)
+	require.NotNil(t, dctx.setts)
+	assert.Equal(t, cliID, dctx.setts.ClientName)
+
+	// Setting up custom upstreams reuses the resolved client instead of
+	// looking it up again.
+	s.setCustomUpstream(ctx, testLogger, dctx.proxyCtx, dctx.clientID, dctx.cli)
+	assert.Equal(t, 1, getClientCalls)
+	assert.Equal(t, 1, upsConfCalls)
 }
 
 // applyEmptyClientFiltering is a helper function for tests with
@@ -846,10 +940,10 @@ func TestServerCustomClientUpstream(t *testing.T) {
 	)
 
 	s.conf.ClientsContainer = &clientsContainer{
-		OnCustomUpstreamConfig: func(
-			_ string,
-			_ netip.Addr,
-		) (conf *proxy.CustomUpstreamConfig) {
+		OnGetClient: func(_ string, _ netip.Addr) (cli *client.Persistent) {
+			return &client.Persistent{Name: "test-client"}
+		},
+		OnClientCustomUpstreamConfig: func(_ *client.Persistent) (conf *proxy.CustomUpstreamConfig) {
 			return customUpsConf
 		},
 	}

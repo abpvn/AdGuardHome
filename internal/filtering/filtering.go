@@ -46,14 +46,25 @@ type ServiceEntry struct {
 //
 // TODO(s.chzhen):  Move to the client package.
 type Settings struct {
-	ClientName             string
-	ClientIP               netip.Addr
-	ClientTags             []string
-	ClientFilters          []FilterYAML
+	ClientName    string
+	ClientIP      netip.Addr
+	ClientTags    []string
+	ClientFilters []FilterYAML
+
+	// ClientTagsSet and ClientIdentifiersSet are immutable sets built once per
+	// persistent client.  When they are nil, they are built from ClientTags and
+	// ClientName on demand.
+	ClientTagsSet          *container.SortedSliceSet[string]
+	ClientIdentifiersSet   *container.SortedSliceSet[string]
 	ClientWhiteListFilters []FilterYAML
 	UserRules              []string
 
 	ServicesRules []ServiceEntry
+
+	// ServicesMatcher is a precompiled matcher built from ServicesRules.  It is
+	// used as a fast negative prefilter and is nil when ServicesRules is
+	// assembled manually or when there are no blocked services.
+	ServicesMatcher *urlfilter.DNSEngine
 
 	// BlockedServices is the configuration of blocked services of a client.  It
 	// is nil if the client does not have any blocked services.
@@ -640,6 +651,17 @@ func (d *DNSFilter) handleRewriteLoop(
 	return *res
 }
 
+// blockedServicesMayMatch reports whether rules can match host.  A negative
+// result from the compiled matcher is authoritative.
+func blockedServicesMayMatch(host string, matcher *urlfilter.DNSEngine) (ok bool) {
+	if matcher == nil {
+		return true
+	}
+
+	var res urlfilter.DNSResult
+	return matcher.MatchRequestInto(&urlfilter.DNSRequest{Hostname: host}, &res)
+}
+
 // matchBlockedServicesRules checks the host against the blocked services rules
 // in settings, if any.  err is always nil, it is only there to make this a
 // valid hostChecker function.
@@ -654,6 +676,15 @@ func (d *DNSFilter) matchBlockedServicesRules(
 
 	svcs := setts.ServicesRules
 	if len(svcs) == 0 {
+		return Result{}, nil
+	}
+
+	// The matcher uses indexes to reject the overwhelming majority of hosts
+	// without scanning every rule of every blocked service.  It is built from
+	// the same rules as svcs, so a negative result is authoritative.  Keep the
+	// loop below for positive results to preserve the original first-match
+	// order and service attribution.
+	if !blockedServicesMayMatch(host, setts.ServicesMatcher) {
 		return Result{}, nil
 	}
 
@@ -902,6 +933,68 @@ func hostResultForOtherQType(dnsres *urlfilter.DNSResult) (res Result) {
 	return Result{}
 }
 
+// HasClientFilteringEngine reports whether a filtering engine has been
+// initialized for the client with the given name.  It must be used instead of
+// direct map access since the map is written by InitForClient and the HTTP
+// handlers.
+func (d *DNSFilter) HasClientFilteringEngine(name string) (ok bool) {
+	d.clientEngineLock.RLock()
+	defer d.clientEngineLock.RUnlock()
+
+	_, ok = d.ClientsFilteringEngine[name]
+
+	return ok
+}
+
+// ClientsWithGlobalCustomRules returns the names of clients which use the
+// global custom rules instead of their own.
+func (d *DNSFilter) ClientsWithGlobalCustomRules() (names []string) {
+	d.clientEngineLock.RLock()
+	defer d.clientEngineLock.RUnlock()
+
+	names = make([]string, 0, len(d.ClientsGlobalCustomRules))
+	for name, ok := range d.ClientsGlobalCustomRules {
+		if ok {
+			names = append(names, name)
+		}
+	}
+
+	return names
+}
+
+// RenameClientEngine moves the filtering engines of the client from oldName to
+// newName, if they exist.
+func (d *DNSFilter) RenameClientEngine(oldName, newName string) {
+	d.clientEngineLock.Lock()
+	defer d.clientEngineLock.Unlock()
+
+	if _, ok := d.ClientsFilteringEngine[oldName]; !ok {
+		return
+	}
+
+	d.ClientsRulesStorage[newName] = d.ClientsRulesStorage[oldName]
+	d.ClientsFilteringEngine[newName] = d.ClientsFilteringEngine[oldName]
+	d.ClientsRulesStorageAllow[newName] = d.ClientsRulesStorageAllow[oldName]
+	d.ClientsFilteringEngineAllow[newName] = d.ClientsFilteringEngineAllow[oldName]
+
+	if ok := d.ClientsGlobalCustomRules[oldName]; ok {
+		delete(d.ClientsGlobalCustomRules, oldName)
+		d.ClientsGlobalCustomRules[newName] = true
+	}
+
+	d.deleteClientEngineLocked(oldName)
+}
+
+// deleteClientEngineLocked removes all the engines of the client.  The caller
+// must hold d.clientEngineLock for writing.  The global-custom-rules flag is
+// left intact, as it describes the client configuration rather than an engine.
+func (d *DNSFilter) deleteClientEngineLocked(name string) {
+	delete(d.ClientsRulesStorage, name)
+	delete(d.ClientsFilteringEngine, name)
+	delete(d.ClientsRulesStorageAllow, name)
+	delete(d.ClientsFilteringEngineAllow, name)
+}
+
 func (d *DNSFilter) getFilteringEngine(setts *Settings) (filteringEngineAllow, filteringEngine *urlfilter.DNSEngine, isClientFiltering bool) {
 	filteringEngineAllow = d.filteringEngineAllow
 	filteringEngine = d.filteringEngine
@@ -918,6 +1011,32 @@ func (d *DNSFilter) getFilteringEngine(setts *Settings) (filteringEngineAllow, f
 	return filteringEngineAllow, filteringEngine, isClientFiltering
 }
 
+// filteringRequestSets returns the tag and identifier sets for setts.  Prebuilt
+// sets from persistent clients are reused when available.
+func filteringRequestSets(
+	setts *Settings,
+) (tagsSet, identifiersSet *container.SortedSliceSet[string]) {
+	// NewSortedSliceSet sorts its input in place, so make a copy when there is
+	// no prebuilt set.  Persistent clients provide the sets so that neither the
+	// stored tags nor a fresh slice are allocated here.
+	tagsSet = setts.ClientTagsSet
+	if tagsSet == nil {
+		tagsSet = container.NewSortedSliceSet(slices.Clone(setts.ClientTags)...)
+	}
+
+	identifiersSet = setts.ClientIdentifiersSet
+	if identifiersSet == nil {
+		identifiersSet = container.NewSortedSliceSet(setts.ClientName)
+	}
+
+	return tagsSet, identifiersSet
+}
+
+// allowEngineHasRules reports whether engine can produce allow-list matches.
+func allowEngineHasRules(engine *urlfilter.DNSEngine) (ok bool) {
+	return engine != nil && engine.RulesCount() > 0
+}
+
 func (d *DNSFilter) processMatchHost(
 	host string,
 	rrtype uint16,
@@ -928,13 +1047,12 @@ func (d *DNSFilter) processMatchHost(
 	}
 
 	ctx := context.TODO()
-
-	// TODO(f.setrakov): Reuse client tags and identifiers.
+	tagsSet, identifiersSet := filteringRequestSets(setts)
 	ufReq := &urlfilter.DNSRequest{
 		Hostname:          host,
-		ClientTags:        container.NewSortedSliceSet(setts.ClientTags...),
+		ClientTags:        tagsSet,
 		ClientIP:          setts.ClientIP,
-		ClientIdentifiers: container.NewSortedSliceSet(setts.ClientName),
+		ClientIdentifiers: identifiersSet,
 		DNSType:           rrtype,
 	}
 	d.engineLock.RLock()
@@ -944,7 +1062,9 @@ func (d *DNSFilter) processMatchHost(
 	// TODO(e.burkov):  Inspect if the above is true.
 	defer d.engineLock.RUnlock()
 	filteringEngineAllow, filteringEngine, isClientFiltering := d.getFilteringEngine(setts)
-	if setts.ProtectionEnabled && filteringEngineAllow != nil {
+	// Most setups have no allow rules.  Skip the match request in that case;
+	// RulesCount is a simple field read and an empty engine can never match.
+	if setts.ProtectionEnabled && allowEngineHasRules(filteringEngineAllow) {
 		dnsres, ok := filteringEngineAllow.MatchRequest(ufReq)
 		if ok {
 			res, err = d.matchHostProcessAllowList(ctx, host, dnsres)
@@ -997,11 +1117,11 @@ func (d *DNSFilter) matchHost(
 	if !setts.FilteringEnabled {
 		return Result{}, nil
 	}
-	if setts.ClientName != "" && !setts.UseGlobalFilters {
-		_, ok := d.ClientsFilteringEngine[setts.ClientName]
-		if !ok {
-			d.InitForClient(setts.ClientName, setts.ClientWhiteListFilters, setts.ClientFilters, setts.UserRules)
-		}
+	if setts.ClientName != "" && !setts.UseGlobalFilters && !d.HasClientFilteringEngine(setts.ClientName) {
+		// Engines are normally built before the server starts serving queries.
+		// This is a fallback for engines invalidated by a filter update, which
+		// deletes them so that they are rebuilt from fresh filter data.
+		d.InitForClient(setts.ClientName, setts.ClientWhiteListFilters, setts.ClientFilters, setts.UserRules)
 	}
 	return d.processMatchHost(host, rrtype, setts)
 }

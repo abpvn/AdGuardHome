@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AdguardTeam/AdGuardHome/internal/client"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/golibs/netutil"
@@ -17,9 +18,14 @@ import (
 // To transfer information between modules
 //
 // TODO(s.chzhen):  Add lowercased, non-FQDN version of the hostname from the
-// question of the request.  Add persistent client.
+// question of the request.
 type dnsContext struct {
 	proxyCtx *proxy.DNSContext
+
+	// cli is the persistent client resolved for this request.  It is nil when
+	// the client isn't persistent.  It is read-only and is shared between all
+	// the processors of this request.
+	cli *client.Persistent
 
 	// setts are the filtering settings for the client.
 	setts *filtering.Settings
@@ -138,6 +144,12 @@ func (s *Server) processInitial(
 	clientID, ok := clientIDFromContext(ctx)
 	if ok {
 		dctx.clientID = clientID
+	}
+
+	// Resolve the persistent client once for the whole request so that all the
+	// processors reuse it instead of looking it up again.
+	if s.conf.ClientsContainer != nil {
+		dctx.cli = s.conf.ClientsContainer.GetClient(dctx.clientID, pctx.Addr.Addr())
 	}
 
 	// Get the client-specific filtering settings.
@@ -481,7 +493,7 @@ func (s *Server) processUpstream(
 		return resultCodeFinish
 	}
 
-	s.setCustomUpstream(ctx, l, pctx, dctx.clientID)
+	s.setCustomUpstream(ctx, l, pctx, dctx.clientID, dctx.cli)
 
 	// Process the request further since it wasn't filtered.
 	prx := s.proxy()
@@ -530,14 +542,15 @@ func (s *Server) setCustomUpstream(
 	l *slog.Logger,
 	pctx *proxy.DNSContext,
 	clientID string,
+	cli *client.Persistent,
 ) {
-	if !pctx.Addr.IsValid() || s.conf.ClientsContainer == nil {
+	if !pctx.Addr.IsValid() || cli == nil || s.conf.ClientsContainer == nil {
 		return
 	}
 
-	cliAddr := pctx.Addr.Addr()
-	upsConf := s.conf.ClientsContainer.CustomUpstreamConfig(clientID, cliAddr)
+	upsConf := s.conf.ClientsContainer.ClientCustomUpstreamConfig(cli)
 	if upsConf != nil {
+		cliAddr := pctx.Addr.Addr()
 		l.DebugContext(
 			ctx,
 			"using custom upstreams for client with",

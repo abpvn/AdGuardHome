@@ -15,6 +15,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/dnsproxy/upstream"
+	"github.com/AdguardTeam/golibs/container"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 )
@@ -55,6 +56,12 @@ type Persistent struct {
 	// SafeSearchConf is the safe search filtering configuration.  It must not
 	// be nil.
 	SafeSearchConf *filtering.SafeSearchConfig
+
+	// tagsSet and identifiersSet are immutable sets built once before the
+	// client is published in the storage.  They are shared with the filtering
+	// settings of every request of this client.
+	tagsSet        *container.SortedSliceSet[string]
+	identifiersSet *container.SortedSliceSet[string]
 
 	// Name of the persistent client.  Must not be empty.
 	Name string
@@ -121,6 +128,14 @@ type Persistent struct {
 
 	// UseGlobalFilters specifies whether the client uses the global filters.
 	UseGlobalFilters bool
+}
+
+// initRequestSets builds the immutable tag and identifier sets used by the URL
+// filter.  It must be called before the client is published in the storage so
+// that the sets can be safely shared between concurrent requests.
+func (c *Persistent) initRequestSets() {
+	c.tagsSet = container.NewSortedSliceSet(slices.Clone(c.Tags)...)
+	c.identifiersSet = container.NewSortedSliceSet(c.Name)
 }
 
 // validate returns an error if persistent client information contains errors.
@@ -288,6 +303,37 @@ func (c *Persistent) EqualIDs(prev *Persistent) (equal bool) {
 		slices.Equal(c.Subnets, prev.Subnets) &&
 		slices.EqualFunc(c.MACs, prev.MACs, slices.Equal[net.HardwareAddr]) &&
 		slices.Equal(c.ClientIDs, prev.ClientIDs)
+}
+
+// ApplyToSettings applies this client's filtering settings to setts.  The
+// client is expected to be an immutable snapshot, so the slices and the
+// blocked-services and safe-search configurations are shared rather than
+// cloned.  setts must not be nil.
+func (c *Persistent) ApplyToSettings(setts *filtering.Settings) {
+	setts.ClientName = c.Name
+	setts.ClientTags = c.Tags
+	setts.ClientTagsSet = c.tagsSet
+	setts.ClientIdentifiersSet = c.identifiersSet
+	setts.UseGlobalFilters = c.UseGlobalFilters
+	if !c.UseGlobalFilters {
+		setts.ClientFilters = c.Filters
+		setts.ClientWhiteListFilters = c.WhitelistFilters
+		setts.UserRules = c.UserRules
+	}
+
+	if c.UseOwnBlockedServices {
+		setts.BlockedServices = c.BlockedServices
+	}
+
+	if !c.UseOwnSettings {
+		return
+	}
+
+	setts.FilteringEnabled = c.FilteringEnabled
+	setts.SafeSearchEnabled = c.SafeSearchConf.Enabled
+	setts.ClientSafeSearch = c.SafeSearch
+	setts.SafeBrowsingEnabled = c.SafeBrowsingEnabled
+	setts.ParentalEnabled = c.ParentalEnabled
 }
 
 // ShallowClone returns a deep copy of the client, except upstreamConfig,

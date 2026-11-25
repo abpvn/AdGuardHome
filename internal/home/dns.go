@@ -109,6 +109,11 @@ func initDNS(
 		return err
 	}
 
+	// Build the client engines before the DNS server starts, so that the first
+	// query for a client doesn't have to read filter files or take the engine
+	// write lock.
+	globalContext.clients.initAllClientDNSFtl()
+
 	// Download GeoIP database if needed
 	err = downloadGeoIPDatabase(ctx, baseLogger)
 	if err != nil {

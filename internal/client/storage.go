@@ -130,8 +130,10 @@ type Storage struct {
 	// not be nil.
 	logger *slog.Logger
 
-	// mu protects index, runtimeIndex, and upstreamManager.
-	mu *sync.Mutex
+	// mu protects index and runtimeIndex.  Read-only lookups take it for
+	// reading, so that they don't serialize DNS queries with each other.  The
+	// upstream manager has its own lock.
+	mu *sync.RWMutex
 
 	// index contains information about persistent clients.
 	index *index
@@ -177,7 +179,7 @@ func NewStorage(ctx context.Context, conf *StorageConfig) (s *Storage, err error
 
 	s = &Storage{
 		logger:                 conf.Logger,
-		mu:                     &sync.Mutex{},
+		mu:                     &sync.RWMutex{},
 		index:                  newIndex(),
 		runtimeIndex:           newRuntimeIndex(),
 		upstreamManager:        newUpstreamManager(conf.BaseLogger, conf.Clock),
@@ -440,6 +442,7 @@ func (s *Storage) Add(ctx context.Context, p *Persistent) (err error) {
 		return err
 	}
 
+	p.initRequestSets()
 	s.index.add(p)
 	s.upstreamManager.updateCustomUpstreamConfig(p)
 
@@ -456,8 +459,8 @@ func (s *Storage) Add(ctx context.Context, p *Persistent) (err error) {
 
 // FindByName finds persistent client by name.  And returns its shallow copy.
 func (s *Storage) FindByName(name string) (p *Persistent, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	p, ok = s.index.findByName(name)
 	if ok {
@@ -550,8 +553,8 @@ func (p *FindParams) Set(id string) (err error) {
 // params must not be nil and must have at least one non-empty field.  p must
 // not be modified.
 func (s *Storage) Find(params *FindParams) (p *Persistent, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	isClientID := params.ClientID != ""
 	isRemoteIP := params.RemoteIP != (netip.Addr{})
@@ -582,7 +585,8 @@ func (s *Storage) Find(params *FindParams) (p *Persistent, ok bool) {
 	}
 }
 
-// findByIP finds persistent client by IP address.  s.mu must be locked.
+// findByIP finds persistent client by IP address.  s.mu must be locked for
+// reading at least.
 func (s *Storage) findByIP(addr netip.Addr) (p *Persistent, ok bool) {
 	p, ok = s.index.findByIP(addr)
 	if ok {
@@ -607,8 +611,8 @@ func (s *Storage) findByIP(addr netip.Addr) (p *Persistent, ok bool) {
 //
 // TODO(s.chzhen):  Consider accepting [FindParams].
 func (s *Storage) FindLoose(ip netip.Addr, id string) (p *Persistent, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	p, ok = s.index.find(id)
 	if ok {
@@ -679,6 +683,7 @@ func (s *Storage) Update(ctx context.Context, name string, p *Persistent) (err e
 		return err
 	}
 
+	p.initRequestSets()
 	s.index.remove(stored)
 	s.index.add(p)
 
@@ -698,8 +703,8 @@ func (s *Storage) RangeByName(f func(c *Persistent) (cont bool)) {
 
 // Size returns the number of persistent clients.
 func (s *Storage) Size() (n int) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.index.size()
 }
@@ -747,37 +752,54 @@ func (s *Storage) AllowedTags() (tags []string) {
 	return s.allowedTags
 }
 
+// GetClient finds a persistent client by its ClientID or IP address.  It
+// prioritizes ClientID over the client IP address.  The returned client is the
+// stored one and must be treated as read-only: clients are replaced rather than
+// modified when updated.  It is nil when there is no match.
+func (s *Storage) GetClient(id string, addr netip.Addr) (cli *Persistent) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	cli, _ = s.findByIDOrAddr(id, addr)
+
+	return cli
+}
+
+// ClientCustomUpstreamConfig returns the custom upstream configuration of cli.
+// cli may be nil.
+func (s *Storage) ClientCustomUpstreamConfig(
+	cli *Persistent,
+) (prxConf *proxy.CustomUpstreamConfig) {
+	if cli == nil {
+		return nil
+	}
+
+	return s.upstreamManager.customUpstreamConfig(cli.UID, cli.Name)
+}
+
 // CustomUpstreamConfig implements the [dnsforward.ClientsContainer] interface
 // for *Storage
 func (s *Storage) CustomUpstreamConfig(
 	id string,
 	addr netip.Addr,
 ) (prxConf *proxy.CustomUpstreamConfig) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	c, ok := s.findByIDOrAddr(id, addr)
-	if !ok {
-		return nil
-	}
-
-	return s.upstreamManager.customUpstreamConfig(c.UID, c.Name)
+	return s.ClientCustomUpstreamConfig(s.GetClient(id, addr))
 }
 
 // IsPersistentClient implements the [dnsforward.ClientsContainer] interface for
 // *Storage.  It prioritizes ClientID over the client IP address to identify the
 // client.
 func (s *Storage) IsPersistentClient(id string, addr netip.Addr) (ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	_, ok = s.findByIDOrAddr(id, addr)
 
 	return ok
 }
 
-// findByIDOrAddr finds a persistent client by ClientID or IP address.  s.mu is
-// expected to be locked.
+// findByIDOrAddr finds a persistent client by ClientID or IP address.  s.mu
+// must be locked for reading at least.
 func (s *Storage) findByIDOrAddr(id string, addr netip.Addr) (c *Persistent, ok bool) {
 	if id != "" {
 		c, ok = s.index.findByClientID(ClientID(id))
@@ -828,22 +850,8 @@ func (s *Storage) ClearUpstreamCacheByName(name string) (ok bool) {
 // ClientID or client IP address, and applies it to the filtering settings.
 // setts must not be nil.
 func (s *Storage) ApplyClientFiltering(id string, addr netip.Addr, setts *filtering.Settings) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	c, ok := s.index.findByClientID(ClientID(id))
-	if !ok {
-		c, ok = s.index.findByIP(addr)
-	}
-
-	if !ok {
-		foundMAC := s.dhcp.MACByIP(addr)
-		if foundMAC != nil {
-			c, ok = s.index.findByMAC(foundMAC)
-		}
-	}
-
-	if !ok {
+	c := s.GetClient(id, addr)
+	if c == nil {
 		s.logger.Debug("no client filtering settings found", "clientid", id, "addr", addr)
 
 		return
@@ -851,25 +859,5 @@ func (s *Storage) ApplyClientFiltering(id string, addr netip.Addr, setts *filter
 
 	s.logger.Debug("applying custom client filtering settings", "client_name", c.Name)
 
-	if c.UseOwnBlockedServices {
-		setts.BlockedServices = c.BlockedServices.Clone()
-	}
-
-	setts.ClientName = c.Name
-	setts.ClientTags = slices.Clone(c.Tags)
-	setts.UseGlobalFilters = c.UseGlobalFilters
-	if !c.UseGlobalFilters {
-		setts.ClientFilters = c.Filters
-		setts.ClientWhiteListFilters = c.WhitelistFilters
-		setts.UserRules = c.UserRules
-	}
-	if !c.UseOwnSettings {
-		return
-	}
-
-	setts.FilteringEnabled = c.FilteringEnabled
-	setts.SafeSearchEnabled = c.SafeSearchConf.Enabled
-	setts.ClientSafeSearch = c.SafeSearch
-	setts.SafeBrowsingEnabled = c.SafeBrowsingEnabled
-	setts.ParentalEnabled = c.ParentalEnabled
+	c.ApplyToSettings(setts)
 }

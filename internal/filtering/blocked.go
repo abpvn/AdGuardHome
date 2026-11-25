@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
@@ -15,17 +17,47 @@ import (
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/validate"
+	"github.com/AdguardTeam/urlfilter"
+	"github.com/AdguardTeam/urlfilter/filterlist"
 	"github.com/AdguardTeam/urlfilter/rules"
 )
 
 // serviceRules maps a service ID to its filtering rules.
 var serviceRules map[string][]*rules.NetworkRule
 
+// compiledServices is the compiled representation of a set of blocked
+// services.  Instances are cached and shared between queries, so they must be
+// treated as immutable.
+type compiledServices struct {
+	// entries is the rule entries in the configured service-ID order.
+	entries []ServiceEntry
+
+	// matcher is built from the same rules as entries.  It is used as a fast
+	// negative prefilter in matchBlockedServicesRules.  It is nil when entries
+	// is empty.
+	matcher *urlfilter.DNSEngine
+}
+
+// compiledServicesCache caches compiled blocked-service sets keyed by their
+// ordered service-ID list.  The key is the NUL-joined IDs; service IDs never
+// contain NUL.
+var compiledServicesCache = struct {
+	mu    sync.RWMutex
+	items map[string]*compiledServices
+}{
+	items: map[string]*compiledServices{},
+}
+
 // initBlockedServices initializes package-level blocked service data.  l must
 // not be nil.
 func initBlockedServices(ctx context.Context, l *slog.Logger) {
 	svcLen := len(blockedServices)
 	serviceRules = make(map[string][]*rules.NetworkRule, svcLen)
+
+	// The rules may have changed, so previously compiled entries are stale.
+	compiledServicesCache.mu.Lock()
+	compiledServicesCache.items = map[string]*compiledServices{}
+	compiledServicesCache.mu.Unlock()
 
 	for i, s := range blockedServices {
 		netRules := make([]*rules.NetworkRule, 0, len(s.Rules))
@@ -116,19 +148,107 @@ func (s *BlockedServices) Validate() (err error) {
 	return errors.Join(errs...)
 }
 
+// compiledBlockedServices returns the compiled representation of ids.  The
+// result is cached, since the set of blocked services changes rarely while
+// DNS queries are frequent.
+func (d *DNSFilter) compiledBlockedServices(ids []string) (cs *compiledServices) {
+	key := strings.Join(ids, "\x00")
+
+	compiledServicesCache.mu.RLock()
+	cs, ok := compiledServicesCache.items[key]
+	compiledServicesCache.mu.RUnlock()
+	if ok {
+		return cs
+	}
+
+	compiledServicesCache.mu.Lock()
+	defer compiledServicesCache.mu.Unlock()
+
+	// Another goroutine may have built the entry while we waited for the lock.
+	if cs, ok = compiledServicesCache.items[key]; ok {
+		return cs
+	}
+
+	cs = d.buildCompiledBlockedServices(ids)
+	compiledServicesCache.items[key] = cs
+
+	return cs
+}
+
+// buildCompiledBlockedServices builds the compiled representation of ids.  It
+// is only called by compiledBlockedServices under the cache write lock.
+func (d *DNSFilter) buildCompiledBlockedServices(ids []string) (cs *compiledServices) {
+	cs = &compiledServices{
+		entries: make([]ServiceEntry, 0, len(ids)),
+	}
+
+	var ruleText strings.Builder
+	for _, name := range ids {
+		rs, ok := serviceRules[name]
+		if !ok {
+			d.logger.ErrorContext(context.TODO(), "unknown service name", "name", name)
+
+			continue
+		}
+
+		cs.entries = append(cs.entries, ServiceEntry{Name: name, Rules: rs})
+		for _, r := range rs {
+			ruleText.WriteString(r.Text())
+			ruleText.WriteByte('\n')
+		}
+	}
+
+	if len(cs.entries) == 0 {
+		return cs
+	}
+
+	fl := filterlist.NewBytes(&filterlist.BytesConfig{
+		RulesText: []byte(ruleText.String()),
+		ID:        rulelist.IDBlockedService,
+	})
+	st, err := filterlist.NewRuleStorage([]filterlist.Interface{fl})
+	if err != nil {
+		d.logger.ErrorContext(
+			context.TODO(),
+			"creating blocked-services matcher",
+			slogutil.KeyError, err,
+		)
+
+		return cs
+	}
+
+	// The storage is backed by an immutable byte slice and is kept alive by the
+	// engine for the lifetime of the process.  Closing it would invalidate the
+	// engine, and filterlist.Bytes.Close is a no-op anyway.
+	cs.matcher = urlfilter.NewDNSEngine(st)
+
+	return cs
+}
+
+// applyCompiledBlockedServices assigns the cached, prebuilt entries and matcher
+// for ids to setts.
+func (d *DNSFilter) applyCompiledBlockedServices(setts *Settings, ids []string) {
+	cs := d.compiledBlockedServices(ids)
+	setts.ServicesRules = cs.entries
+	setts.ServicesMatcher = cs.matcher
+}
+
 // ApplyBlockedServices - set blocked services settings for this DNS request
 func (d *DNSFilter) ApplyBlockedServices(setts *Settings) {
 	d.confMu.RLock()
 	defer d.confMu.RUnlock()
 
-	setts.ServicesRules = []ServiceEntry{}
-
 	bsvc := d.conf.BlockedServices
 
 	// TODO(s.chzhen):  Use startTime from [dnsforward.dnsContext].
-	if !bsvc.Schedule.Contains(time.Now()) {
-		d.ApplyBlockedServicesList(setts, bsvc.IDs)
+	if bsvc.Schedule.Contains(time.Now()) {
+		setts.ServicesRules = []ServiceEntry{}
+		setts.ServicesMatcher = nil
+
+		return
 	}
+
+	d.applyCompiledBlockedServices(setts, bsvc.IDs)
 }
 
 // ApplyBlockedServicesList appends filtering rules to the settings.

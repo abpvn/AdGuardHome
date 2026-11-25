@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
@@ -78,6 +79,12 @@ type upstreamManager struct {
 	// confUpdate is the timestamp of the latest common upstream configuration
 	// update.
 	confUpdate time.Time
+
+	// mu protects all the fields above.  It is separate from the storage lock
+	// because proxy configurations are built on demand while the storage is
+	// only read for the DNS query.  The read lock allows concurrent DNS queries
+	// to reuse an up-to-date configuration.
+	mu sync.RWMutex
 }
 
 // newUpstreamManager returns the new properly initialized upstream manager.
@@ -93,6 +100,9 @@ func newUpstreamManager(baseLogger *slog.Logger, clock timeutil.Clock) (m *upstr
 // updateCommonUpstreamConfig updates the common upstream configuration and the
 // timestamp of the latest configuration update.
 func (m *upstreamManager) updateCommonUpstreamConfig(conf *CommonUpstreamConfig) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.commonConf = conf
 	m.confUpdate = m.clock.Now()
 }
@@ -102,6 +112,9 @@ func (m *upstreamManager) updateCommonUpstreamConfig(conf *CommonUpstreamConfig)
 // [customUpstreamConfig.isChanged] to true so [customUpstreamConfig.proxyConf]
 // can be updated later in [upstreamManager.customUpstreamConfig].
 func (m *upstreamManager) updateCustomUpstreamConfig(c *Persistent) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	cliConf, ok := m.uidToCustomConf[c.UID]
 	if !ok {
 		cliConf = &customUpstreamConfig{
@@ -123,9 +136,32 @@ func (m *upstreamManager) customUpstreamConfig(
 	uid UID,
 	clientName string,
 ) (proxyConf *proxy.CustomUpstreamConfig) {
+	m.mu.RLock()
 	cliConf, ok := m.uidToCustomConf[uid]
 	if !ok {
+		m.mu.RUnlock()
+
 		// TODO(s.chzhen):  Consider panic.
+		m.logger.Error("no associated custom client upstream config")
+
+		return nil
+	}
+
+	if !m.isConfigChanged(cliConf) {
+		proxyConf = cliConf.proxyConf
+		m.mu.RUnlock()
+
+		return proxyConf
+	}
+	m.mu.RUnlock()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Another goroutine could have rebuilt the configuration while the read
+	// lock was released, so check it once more.
+	cliConf, ok = m.uidToCustomConf[uid]
+	if !ok {
 		m.logger.Error("no associated custom client upstream config")
 
 		return nil
@@ -164,6 +200,9 @@ func (m *upstreamManager) isConfigChanged(cliConf *customUpstreamConfig) (ok boo
 // clearUpstreamCache clears the upstream cache for each stored custom client
 // upstream configuration.
 func (m *upstreamManager) clearUpstreamCache() {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	for _, c := range m.uidToCustomConf {
 		if c.proxyConf != nil {
 			c.proxyConf.ClearCache()
@@ -173,6 +212,9 @@ func (m *upstreamManager) clearUpstreamCache() {
 
 // clearUpstreamCacheForUID clears the upstream cache for a specific client.
 func (m *upstreamManager) clearUpstreamCacheForUID(uid UID) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	cliConf, ok := m.uidToCustomConf[uid]
 	if !ok || cliConf.proxyConf == nil {
 		return
@@ -184,6 +226,9 @@ func (m *upstreamManager) clearUpstreamCacheForUID(uid UID) {
 // remove deletes the custom client upstream configuration and closes
 // [customUpstreamConfig.proxyConf] if necessary.
 func (m *upstreamManager) remove(uid UID) (err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	cliConf, ok := m.uidToCustomConf[uid]
 	if !ok {
 		// TODO(s.chzhen):  Consider panic.
@@ -201,6 +246,9 @@ func (m *upstreamManager) remove(uid UID) (err error) {
 
 // close shuts down each stored custom client upstream configuration.
 func (m *upstreamManager) close() (err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	var errs []error
 	for _, c := range m.uidToCustomConf {
 		if c.proxyConf == nil {

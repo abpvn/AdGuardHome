@@ -31,7 +31,7 @@ const initialState: AccessState = {
 
 const [state, setState] = createStore<AccessState>(initialState);
 
-export const getAccessList = async () => {
+export const getAccessList = async (): Promise<boolean> => {
     setState('processing', true);
     try {
         const data = await accessList();
@@ -44,9 +44,11 @@ export const getAccessList = async () => {
             processing: false,
             initialized: true,
         });
+        return true;
     } catch (error) {
         addErrorToast({ error });
         setState({ processing: false, initialized: true });
+        return false;
     }
 };
 
@@ -56,38 +58,52 @@ export const setAccessList = async (values: {
     blocked_hosts?: string;
     allowed_countries?: string;
     blocked_countries?: string;
-}) => {
+}): Promise<boolean> => {
     setState('processingSet', true);
     try {
+        // The backend replaces all lists on every save, so an omitted field
+        // must keep its current value.  Read it from the server: the store can
+        // be empty after a failed initial read.
+        const current = await accessList();
+        const allowedClients =
+            values.allowed_clients ?? (current.allowed_clients ?? []).join('\n');
+        const disallowedClients =
+            values.disallowed_clients ?? (current.disallowed_clients ?? []).join('\n');
+        const blockedHosts = values.blocked_hosts ?? (current.blocked_hosts ?? []).join('\n');
+        const allowedCountries =
+            values.allowed_countries ?? (current.allowed_countries ?? []).join('\n');
+        const blockedCountries =
+            values.blocked_countries ?? (current.blocked_countries ?? []).join('\n');
+
+        const allowed = splitByNewLine(allowedClients);
+        const disallowed = splitByNewLine(disallowedClients);
+        const blocked = splitByNewLine(blockedHosts);
+        const allowedCountriesList = splitByNewLine(allowedCountries.toUpperCase());
+        const blockedCountriesList = splitByNewLine(blockedCountries.toUpperCase());
+
         const config: AccessList = {
-            allowed_clients:
-                values.allowed_clients !== undefined
-                    ? splitByNewLine(values.allowed_clients)
-                    : undefined,
-            disallowed_clients:
-                values.disallowed_clients !== undefined
-                    ? splitByNewLine(values.disallowed_clients)
-                    : undefined,
-            blocked_hosts:
-                values.blocked_hosts !== undefined
-                    ? splitByNewLine(values.blocked_hosts)
-                    : undefined,
-            allowed_countries:
-                values.allowed_countries !== undefined
-                    ? splitByNewLine(values.allowed_countries.toUpperCase())
-                    : undefined,
-            blocked_countries:
-                values.blocked_countries !== undefined
-                    ? splitByNewLine(values.blocked_countries.toUpperCase())
-                    : undefined,
+            allowed_clients: allowed,
+            disallowed_clients: disallowed,
+            blocked_hosts: blocked,
+            allowed_countries: allowedCountriesList,
+            blocked_countries: blockedCountriesList,
         };
 
         await accessSet(config);
-        setState({ ...values, processingSet: false });
+        setState({
+            allowed_clients: allowed.join('\n'),
+            disallowed_clients: disallowed.join('\n'),
+            blocked_hosts: blocked.join('\n'),
+            allowed_countries: allowedCountriesList.join('\n'),
+            blocked_countries: blockedCountriesList.join('\n'),
+            processingSet: false,
+        });
         addSuccessToast(intl.getMessage('settings_notify_changes_saved'));
+        return true;
     } catch (error) {
         addErrorToast({ error });
         setState('processingSet', false);
+        return false;
     }
 };
 

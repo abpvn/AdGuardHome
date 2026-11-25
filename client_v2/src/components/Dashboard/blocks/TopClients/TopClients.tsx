@@ -12,6 +12,7 @@ import {
 import { Link } from 'panel/common/ui/Link';
 import { RoutePath } from 'panel/components/Routes/Paths';
 import { formatCompactNumber } from 'panel/helpers/helpers';
+import { computePercent, formatPercent } from 'panel/helpers/statistics';
 import theme from 'panel/lib/theme';
 import cn from 'clsx';
 import { useSortedData, TOP_CLIENTS_VISIBLE_ITEMS } from '../../hooks/useSortedData';
@@ -104,9 +105,7 @@ export const TopClients = (props: Props) => {
                     <For each={sortedClients()}>
                         {(client) => {
                             const percent = createMemo(() =>
-                                props.numDnsQueries > 0
-                                    ? (client.count / props.numDnsQueries) * 100
-                                    : 0,
+                                computePercent(client.count, props.numDnsQueries),
                             );
 
                             return (
@@ -179,7 +178,7 @@ export const TopClients = (props: Props) => {
                                                                 s.queryPercent,
                                                             )}
                                                         >
-                                                            ({percent().toFixed(1)}%)
+                                                            ({formatPercent(percent())}%)
                                                         </div>
                                                     </div>
                                                 </div>
@@ -282,7 +281,7 @@ export const TopClients = (props: Props) => {
                                                             s.queryPercent,
                                                         )}
                                                     >
-                                                        ({percent().toFixed(1)}%)
+                                                        ({formatPercent(percent())}%)
                                                     </div>
                                                 </div>
 

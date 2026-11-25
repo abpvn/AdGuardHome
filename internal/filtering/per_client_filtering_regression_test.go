@@ -17,18 +17,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const hostRunes = ".-_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
 // hostsFromRule extracts the domain-shaped tokens of a blocked-service rule
 // and expands them with common subdomains.  Wildcards are replaced with a
 // concrete label so that rules matching only through a wildcard are exercised.
 func hostsFromRule(text string) (hosts []string) {
 	var normalized strings.Builder
 	for _, r := range text {
-		switch {
-		case r == '.' || r == '-' || r == '_' ||
-			(r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
-			(r >= '0' && r <= '9'):
+		if strings.ContainsRune(hostRunes, r) {
 			normalized.WriteRune(r)
-		default:
+		} else {
 			normalized.WriteByte(' ')
 		}
 	}
@@ -89,6 +88,52 @@ func regressionClientSettings(name string, useGlobal bool) (setts *Settings) {
 		UseGlobalFilters:  useGlobal,
 		FilteringEnabled:  true,
 		ProtectionEnabled: true,
+	}
+}
+
+// serviceRuleHosts returns the hosts derived from the service rules, plus a
+// few neutral ones.
+func serviceRuleHosts(entries []ServiceEntry) (hosts []string) {
+	hosts = []string{
+		"example.com", "google.com", "amazon.com", "localhost", "",
+	}
+	for _, e := range entries {
+		for _, r := range e.Rules {
+			hosts = append(hosts, hostsFromRule(r.Text())...)
+		}
+	}
+
+	return hosts
+}
+
+// anyRuleMatches reports whether any of entries' rules matches req.
+func anyRuleMatches(entries []ServiceEntry, req *rules.Request) (matched bool) {
+	for _, e := range entries {
+		for _, r := range e.Rules {
+			if r.Match(req) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// requireMatcherEquivalence checks that the compiled matcher agrees with the
+// original rule loop for every host derived from the service rules.
+func requireMatcherEquivalence(tb testing.TB, cs *compiledServices) {
+	tb.Helper()
+
+	for _, host := range serviceRuleHosts(cs.entries) {
+		loopMatched := anyRuleMatches(cs.entries, rules.NewRequestForHostname(host))
+		_, matcherMatched := cs.matcher.Match(host)
+		require.Equalf(
+			tb,
+			loopMatched,
+			matcherMatched,
+			"host %q: loop and matcher disagree",
+			host,
+		)
 	}
 }
 
@@ -342,40 +387,7 @@ func TestPerClientFilteringRegression(t *testing.T) {
 		require.NotNil(t, cs.matcher)
 		require.Len(t, cs.entries, len(ids))
 
-		hosts := []string{
-			"example.com", "google.com", "amazon.com", "localhost", "",
-		}
-		for _, e := range cs.entries {
-			for _, r := range e.Rules {
-				hosts = append(hosts, hostsFromRule(r.Text())...)
-			}
-		}
-
-		for _, host := range hosts {
-			req := rules.NewRequestForHostname(host)
-			var loopMatched bool
-			for _, e := range cs.entries {
-				for _, r := range e.Rules {
-					if r.Match(req) {
-						loopMatched = true
-
-						break
-					}
-				}
-				if loopMatched {
-					break
-				}
-			}
-
-			_, matcherMatched := cs.matcher.Match(host)
-			require.Equalf(
-				t,
-				loopMatched,
-				matcherMatched,
-				"host %q: loop and matcher disagree",
-				host,
-			)
-		}
+		requireMatcherEquivalence(t, cs)
 	})
 
 	t.Run("allow_engine", func(t *testing.T) {

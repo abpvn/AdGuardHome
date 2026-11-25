@@ -651,6 +651,17 @@ func (d *DNSFilter) handleRewriteLoop(
 	return *res
 }
 
+// blockedServicesMayMatch reports whether rules can match host.  A negative
+// result from the compiled matcher is authoritative.
+func blockedServicesMayMatch(host string, matcher *urlfilter.DNSEngine) (ok bool) {
+	if matcher == nil {
+		return true
+	}
+
+	var res urlfilter.DNSResult
+	return matcher.MatchRequestInto(&urlfilter.DNSRequest{Hostname: host}, &res)
+}
+
 // matchBlockedServicesRules checks the host against the blocked services rules
 // in settings, if any.  err is always nil, it is only there to make this a
 // valid hostChecker function.
@@ -673,12 +684,8 @@ func (d *DNSFilter) matchBlockedServicesRules(
 	// the same rules as svcs, so a negative result is authoritative.  Keep the
 	// loop below for positive results to preserve the original first-match
 	// order and service attribution.
-	if matcher := setts.ServicesMatcher; matcher != nil {
-		var matchRes urlfilter.DNSResult
-		matched := matcher.MatchRequestInto(&urlfilter.DNSRequest{Hostname: host}, &matchRes)
-		if !matched {
-			return Result{}, nil
-		}
+	if !blockedServicesMayMatch(host, setts.ServicesMatcher) {
+		return Result{}, nil
 	}
 
 	req := rules.NewRequestForHostname(host)
@@ -1004,6 +1011,32 @@ func (d *DNSFilter) getFilteringEngine(setts *Settings) (filteringEngineAllow, f
 	return filteringEngineAllow, filteringEngine, isClientFiltering
 }
 
+// filteringRequestSets returns the tag and identifier sets for setts.  Prebuilt
+// sets from persistent clients are reused when available.
+func filteringRequestSets(
+	setts *Settings,
+) (tagsSet, identifiersSet *container.SortedSliceSet[string]) {
+	// NewSortedSliceSet sorts its input in place, so make a copy when there is
+	// no prebuilt set.  Persistent clients provide the sets so that neither the
+	// stored tags nor a fresh slice are allocated here.
+	tagsSet = setts.ClientTagsSet
+	if tagsSet == nil {
+		tagsSet = container.NewSortedSliceSet(slices.Clone(setts.ClientTags)...)
+	}
+
+	identifiersSet = setts.ClientIdentifiersSet
+	if identifiersSet == nil {
+		identifiersSet = container.NewSortedSliceSet(setts.ClientName)
+	}
+
+	return tagsSet, identifiersSet
+}
+
+// allowEngineHasRules reports whether engine can produce allow-list matches.
+func allowEngineHasRules(engine *urlfilter.DNSEngine) (ok bool) {
+	return engine != nil && engine.RulesCount() > 0
+}
+
 func (d *DNSFilter) processMatchHost(
 	host string,
 	rrtype uint16,
@@ -1014,20 +1047,7 @@ func (d *DNSFilter) processMatchHost(
 	}
 
 	ctx := context.TODO()
-
-	// NewSortedSliceSet sorts its input in place, so make a copy when there is
-	// no prebuilt set.  Persistent clients provide the sets so that neither the
-	// stored tags nor a fresh slice are allocated here.
-	tagsSet := setts.ClientTagsSet
-	if tagsSet == nil {
-		tagsSet = container.NewSortedSliceSet(slices.Clone(setts.ClientTags)...)
-	}
-
-	identifiersSet := setts.ClientIdentifiersSet
-	if identifiersSet == nil {
-		identifiersSet = container.NewSortedSliceSet(setts.ClientName)
-	}
-
+	tagsSet, identifiersSet := filteringRequestSets(setts)
 	ufReq := &urlfilter.DNSRequest{
 		Hostname:          host,
 		ClientTags:        tagsSet,
@@ -1044,7 +1064,7 @@ func (d *DNSFilter) processMatchHost(
 	filteringEngineAllow, filteringEngine, isClientFiltering := d.getFilteringEngine(setts)
 	// Most setups have no allow rules.  Skip the match request in that case;
 	// RulesCount is a simple field read and an empty engine can never match.
-	if setts.ProtectionEnabled && filteringEngineAllow != nil && filteringEngineAllow.RulesCount() > 0 {
+	if setts.ProtectionEnabled && allowEngineHasRules(filteringEngineAllow) {
 		dnsres, ok := filteringEngineAllow.MatchRequest(ufReq)
 		if ok {
 			res, err = d.matchHostProcessAllowList(ctx, host, dnsres)

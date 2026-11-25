@@ -57,6 +57,12 @@ type Persistent struct {
 	// be nil.
 	SafeSearchConf *filtering.SafeSearchConfig
 
+	// tagsSet and identifiersSet are immutable sets built once before the
+	// client is published in the storage.  They are shared with the filtering
+	// settings of every request of this client.
+	tagsSet        *container.SortedSliceSet[string]
+	identifiersSet *container.SortedSliceSet[string]
+
 	// Name of the persistent client.  Must not be empty.
 	Name string
 
@@ -122,12 +128,6 @@ type Persistent struct {
 
 	// UseGlobalFilters specifies whether the client uses the global filters.
 	UseGlobalFilters bool
-
-	// tagsSet and identifiersSet are immutable sets built once before the
-	// client is published in the storage.  They are shared with the filtering
-	// settings of every request of this client.
-	tagsSet        *container.SortedSliceSet[string]
-	identifiersSet *container.SortedSliceSet[string]
 }
 
 // initRequestSets builds the immutable tag and identifier sets used by the URL

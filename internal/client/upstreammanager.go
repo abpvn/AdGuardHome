@@ -58,12 +58,6 @@ type customUpstreamConfig struct {
 
 // upstreamManager stores and updates custom client upstream configurations.
 type upstreamManager struct {
-	// mu protects all the fields below.  It is separate from the storage lock
-	// because proxy configurations are built on demand while the storage is
-	// only read for the DNS query.  The read lock allows concurrent DNS queries
-	// to reuse an up-to-date configuration.
-	mu sync.RWMutex
-
 	// baseLogger is used to create loggers for client upstream configurations.
 	// It should not have a prefix and must not be nil.
 	baseLogger *slog.Logger
@@ -85,6 +79,12 @@ type upstreamManager struct {
 	// confUpdate is the timestamp of the latest common upstream configuration
 	// update.
 	confUpdate time.Time
+
+	// mu protects all the fields above.  It is separate from the storage lock
+	// because proxy configurations are built on demand while the storage is
+	// only read for the DNS query.  The read lock allows concurrent DNS queries
+	// to reuse an up-to-date configuration.
+	mu sync.RWMutex
 }
 
 // newUpstreamManager returns the new properly initialized upstream manager.
